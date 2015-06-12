@@ -10,6 +10,8 @@ static FILE * f;
 static int 
 nextc(void)
 {
+	if(tokval[sizeof(tokval) - 2]) != 0) 
+		error("token too large!");
 	return fgetc(f);
 }
 
@@ -56,7 +58,10 @@ next(void)
 	p = tokval;
 	c = nextc();
 	*p++ = c;
-	if(isalpha(c)) {
+	if (c == EOF) {
+		tok = TOKEOF;
+		return;
+	} else if(isalpha(c)) {
 		for(;;) {
 			c = nextc();
 			if (!isalpha(c)) {
@@ -84,18 +89,31 @@ next(void)
 		c2 = nextc();
 		if(c == '/' && c2 == '*') {
 			for (;;) {
-				while(nextc() != '*');
-				if (nextc() == '/') {
-					next();
+				do {
+					c = nextc();
+					if(c == EOF) {
+						tok = TOKEOF;
+						return;
+					}
+				} while(c != '*');
+				c = nextc();
+				if(c == EOF) {
+					tok = TOKEOF;
 					return;
 				}
+				if(c == '/') {
+					goto again;
+				}
 			}
-			next();
-			return;
 		} else if(c == '/' && c2 == '/') {
-			while(nextc() != '\n');
-			next();
-			return;
+			do {
+				c = nextc();
+				if (c == EOF) {
+					tok = TOKEOF;
+					return;
+				}
+			} while(c != '\n');
+			goto again;
 		} else if(c == '+' && c2 == '+') tok = TOKPOSINC;
 		  else if(c == '+' && c2 == '=') tok = TOKADDASS;
 		  else if(c == '-' && c2 == '-') tok = TOKPOSDEC;
