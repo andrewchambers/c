@@ -12,9 +12,9 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-    if (argc != 1) 
+    if (argc != 2) 
         usage();
-    cppinit();
+    cppinit(argv[1]);
     parse();
     emit();
     exit(0);

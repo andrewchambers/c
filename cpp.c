@@ -1,16 +1,15 @@
 #include "cc.h"
+#include <stdio.h>
 
 int tok;
 char tokval[4096];
-static char *tokend;
-static char *tokp;
 
 static FILE * f;
 
 static int 
 nextc(void)
 {
-	if(tokval[sizeof(tokval) - 2]) != 0) 
+	if(tokval[sizeof(tokval) - 2] != 0) 
 		error("token too large!");
 	return fgetc(f);
 }
@@ -24,15 +23,15 @@ ungetch(int c) /* avoid name conflict */
 void
 cppinit(char *p)
 {
-	f = fopen(p);
+	f = fopen(p, "r");
 	if (!f)
 		error("error opening file %s.\n", p);
 }
 
-static struct {char *kw, int t} keywordlut[] = {
+static struct {char *kw; int t;} keywordlut[] = {
 	{"return", TOKRETURN},
-	{0, 0},
-}
+	{0, 0}
+};
 
 static int
 isnumeric(int c)
@@ -51,7 +50,7 @@ next(void)
 {
 	char *p;
 	int c,c2;
-
+  again:
 	p = tokval;
 	while(*p++)
 		*p = 0;
@@ -66,22 +65,20 @@ next(void)
 			c = nextc();
 			if (!isalpha(c)) {
 				*p = 0;
-				ungetch();
-				if (issym) {
-					tok = TOKIDENT;
-					return
-				}
+				ungetch(c);
+				tok = TOKIDENT;
+				return;
 			}
 			*p++ = c;
 		}
 	} else if(isnumeric(c)) {
 		for(;;) {
 			c = nextc();
-			if (!isnumber(c)) {
+			if (!isnumeric(c)) {
 				*p = 0;
-				ungetch();
+				ungetch(c);
 				tok = TOKNUMBER;
-				return
+				return;
 			}
 			*p++ = c;
 		}

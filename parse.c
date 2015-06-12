@@ -1,4 +1,3 @@
-#include <stdarg.h>
 #include <stdio.h>
 #include "cc.h"
 
@@ -14,35 +13,21 @@ Node* stmt(void);
 Node* exprstmt(void);
 void  expect(int);
 
-int   tok;
-char *tokval;
-int   line;
-int   col;
 
 char *
 tokstr(int t) 
 {
 	switch(t) {
-		default:
-			return "unknown";
+	default:
+		return "unknown";
 	}
-}
-
-void
-parse_error(char *fmt, ...)
-{
-	va_list va;
-
-	va_start(va, fmt);
-	vfprintf(stderr, fmt, va);
-	va_end(va);
 }
 
 void
 expect(int kind) 
 {
 	if(tok != kind)
-		parse_error("expected token %s", tokstr(kind));
+		error("expected token %s", tokstr(kind));
 }
 
 void 
@@ -59,7 +44,7 @@ parse(void)
 Node *
 decl(void) 
 {
-
+	puts(tokval);
 }
 
 Node *

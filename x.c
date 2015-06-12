@@ -1,13 +1,20 @@
 #include "cc.h"
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-void error(char *s)
+void
+error(char *fmt, ...)
 {
-	fputs(s, stderr);
+	va_list va;
+
+	va_start(va, fmt);
+	vfprintf(stderr, fmt, va);
+	va_end(va);
 	exit(1);
 }
+
 
 void *ccmalloc(int n) 
 {
