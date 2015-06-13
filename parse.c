@@ -21,12 +21,11 @@ tok2str(int t)
 	case TOKIDENT:  return "ident";
 	case TOKNUMBER: return "number";
 	case '(':       return "(";
-	case ')':       return ")";	
-	case '{':       return "{";
-	case '}':       return "}";
-	case ';':       return ";";
-	default:
-		return "unknown";
+	case ')':		return ")";	
+	case '{':		return "{";
+	case '}':		return "}";
+	case ';':		return ";";
+	default:		return "unknown";
 	}
 }
 
@@ -59,17 +58,19 @@ stmt(void)
 {
 	switch(tok) {
 	case TOKIF:
-		pif();
+		return pif();
 	case TOKFOR:
-		pfor();
+		return pfor();
 	case TOKWHILE:
-		pwhile();
+		return pwhile();
 	case TOKDO:
-		dowhile();
+		return dowhile();
 	case TOKRETURN:
-		preturn();
+		return preturn();
+	case '{':
+		return pblock();
 	default:
-		exprstmt();
+		return exprstmt();
 	}
 }
 
@@ -79,9 +80,8 @@ pif(void)
 	expect(TOKIF);
 	if(tok == '{') {
 		expect('{');
-		for(;;) {
+		for(;;)
 			stmt();		
-		}
 		expect('}');
 	}
 }
@@ -89,7 +89,8 @@ pif(void)
 Node *
 pfor(void)
 {
-
+	expect(TOKFOR);
+	ex
 }
 
 Node *
@@ -114,4 +115,13 @@ Node *
 preturn(void)
 {
 
+}
+
+Node *
+pblock(void)
+{
+	expect('{');
+	while(tok != '}' && tok != TOKEOF)
+		pstmt();
+	expect('}');
 }

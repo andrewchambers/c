@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 int tok;
-// TODO: limit len.
+/* TODO: limit len - this can be standard max. */
 char tokval[4096];
 
 static FILE * f;
@@ -55,7 +55,7 @@ next(void)
 {
 	char *p;
 	int c,c2;
-	
+
   again:
 	p = tokval;
 	while(*p++)

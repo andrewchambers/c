@@ -14,6 +14,7 @@ void  emit(void);
 char *tok2str(int);
 
 typedef struct {
+	/* type tag */
 	int t;
 	union {
 		struct {
@@ -48,6 +49,18 @@ typedef struct {
 		} Unop;
 	};
 } Node;
+
+typedef struct {
+	/* type tag */
+	int t;
+	union {
+		struct {
+
+		} Ptr;
+		int prim;
+	}
+
+} CTy;
 
 /* TODO: implement enum, then swap. */
 /* TODO: appropriate start point */
