@@ -7,10 +7,11 @@ extern int   col;
 
 void  error(char*, ...);
 void *ccmalloc(int);
-void  next();
-void  cppinit();
-void  parse();
-void  emit();
+void  next(void);
+void  cppinit(char *);
+void  parse(void);
+void  emit(void);
+char *tok2str(int);
 
 typedef struct {
 	int t;

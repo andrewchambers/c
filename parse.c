@@ -15,9 +15,16 @@ void  expect(int);
 
 
 char *
-tokstr(int t) 
+tok2str(int t) 
 {
 	switch(t) {
+	case TOKIDENT:  return "ident";
+	case TOKNUMBER: return "number";
+	case '(':       return "(";
+	case ')':       return ")";	
+	case '{':       return "{";
+	case '}':       return "}";
+	case ';':       return ";";
 	default:
 		return "unknown";
 	}
@@ -27,7 +34,7 @@ void
 expect(int kind) 
 {
 	if(tok != kind)
-		error("expected token %s", tokstr(kind));
+		error("expected token %s", tok2str(kind));
 }
 
 void 
@@ -35,7 +42,7 @@ parse(void)
 {
 	for(;;) {
 		next();
-		if(tok == EOF)
+		if(tok == TOKEOF)
 			break;
 		decl();
 	}
@@ -44,7 +51,7 @@ parse(void)
 Node *
 decl(void) 
 {
-	puts(tokval);
+	printf("%s %s\n", tok2str(tok), tokval);
 }
 
 Node *

@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 int tok;
+// TODO: limit len.
 char tokval[4096];
 
 static FILE * f;
@@ -9,8 +10,6 @@ static FILE * f;
 static int 
 nextc(void)
 {
-	if(tokval[sizeof(tokval) - 2] != 0) 
-		error("token too large!");
 	return fgetc(f);
 }
 
@@ -34,15 +33,21 @@ static struct {char *kw; int t;} keywordlut[] = {
 };
 
 static int
-isnumeric(int c)
+numberc(int c)
 {
 	return c >= '0' && c <= '9';  
 }
 
 static int
-ialpha(int c)
+identc(int c)
 {
 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');  
+}
+
+static int
+wsc(int c)
+{
+	return (c == '\r' || c == '\n' || c == ' ' || c == '\t');
 }
 
 void
@@ -50,6 +55,7 @@ next(void)
 {
 	char *p;
 	int c,c2;
+	
   again:
 	p = tokval;
 	while(*p++)
@@ -57,13 +63,23 @@ next(void)
 	p = tokval;
 	c = nextc();
 	*p++ = c;
-	if (c == EOF) {
+	if(c == EOF) {
 		tok = TOKEOF;
 		return;
-	} else if(isalpha(c)) {
+	} else if(wsc(c)) {
+		do {
+			c = nextc();
+			if(c == EOF) {
+				tok = TOKEOF;
+				return;
+			}
+		} while(wsc(c));
+		ungetch(c);
+		goto again;
+	} else if(identc(c)) {
 		for(;;) {
 			c = nextc();
-			if (!isalpha(c)) {
+			if (!identc(c)) {
 				*p = 0;
 				ungetch(c);
 				tok = TOKIDENT;
@@ -71,10 +87,10 @@ next(void)
 			}
 			*p++ = c;
 		}
-	} else if(isnumeric(c)) {
+	} else if(numberc(c)) {
 		for(;;) {
 			c = nextc();
-			if (!isnumeric(c)) {
+			if(!numberc(c)) {
 				*p = 0;
 				ungetch(c);
 				tok = TOKNUMBER;
@@ -85,7 +101,7 @@ next(void)
 	} else {
 		c2 = nextc();
 		if(c == '/' && c2 == '*') {
-			for (;;) {
+			for(;;) {
 				do {
 					c = nextc();
 					if(c == EOF) {
