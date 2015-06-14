@@ -1,13 +1,28 @@
 
+#define NDOWHILE 0
+#define NFOR 1
+#define NNUMBER 2
+
+
 typedef struct {
+	char *file;
+	int   line;
+	int   col;
+} SrcPos;
+
+typedef struct Node Node;
+
+struct Node {
 	/* type tag */
 	int t;
+	SrcPos pos;
 	union {
 		struct {
 
 		} If;
 		struct {
-
+			Node *stmt;
+			Node *expr;
 		} DoWhile;
 		struct {
 
@@ -33,8 +48,12 @@ typedef struct {
 		struct {
 
 		} Unop;
+		struct {
+			/* TODO: parse to int */
+			char *v;
+		} Number;
 	};
-} Node;
+};
 
 typedef struct {
 	/* type tag */
@@ -73,12 +92,6 @@ typedef struct {
 #define TOKCHAR    1020
 #define TOKINT     1021
 #define TOKELSE    1022
-
-typedef struct {
-	char *file;
-	int   line;
-	int   col;
-} SrcPos;
 
 typedef struct {
 	int   k;

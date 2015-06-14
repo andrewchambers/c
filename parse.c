@@ -19,6 +19,15 @@ void  expect(int);
 Tok *tok;
 Tok *nexttok;
 
+static Node *
+mknode(int type) {
+	Node *n;
+
+	n = ccmalloc(sizeof(Node));
+	n->t = type;
+	return n;
+}
+
 void
 next() {
 	tok = nexttok;
@@ -113,11 +122,14 @@ pwhile(void)
 Node *
 dowhile(void)
 {
+	Node *n;
+
+	n = mknode(NDOWHILE);
 	expect(TOKDO);
-	stmt();
+	n->DoWhile.stmt = stmt();
 	expect(TOKWHILE);
 	expect('(');
-	expr();
+	n->DoWhile.expr = expr();
 	expect(')');
 	expect(';');
 	return 0;
@@ -126,17 +138,24 @@ dowhile(void)
 Node *
 expr(void)
 {
+	Node *n;
+
+	n = mknode(NNUMBER);
+	n->pos = tok->pos;
+	n->Number.v = tok->v;
 	expect(TOKNUMBER);
-	return 0;
+	return n;
 }
 
 
 Node *
 exprstmt(void)
 {
-	expr();
+	Node *n;
+
+	n = expr();
 	expect(';');
-	return 0;
+	return n;
 }
 
 Node *
