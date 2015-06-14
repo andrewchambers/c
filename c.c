@@ -1,11 +1,12 @@
 #include <unistd.h>
 #include <stdlib.h>
-#include "cc.h"
+#include <stdio.h>
+#include "c.h"
 
 void
 usage(void)
 {
-    puts("Usage: cc file.c");
+    puts("Usage: c file.c");
     exit(1);
 }
 

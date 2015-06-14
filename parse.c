@@ -1,5 +1,6 @@
 #include <stdio.h>
-#include "cc.h"
+#include <string.h>
+#include "c.h"
 
 void  parse(void);
 Node* decl(void);
@@ -8,40 +9,35 @@ Node* pif(void);
 Node* pfor(void);
 Node* dowhile(void);
 Node* pwhile(void);
+Node* block(void);
 Node* preturn(void);
 Node* stmt(void);
 Node* exprstmt(void);
 void  expect(int);
 
+Tok *tok;
+Tok *nexttok;
 
-char *
-tok2str(int t) 
-{
-	switch(t) {
-	case TOKIDENT:  return "ident";
-	case TOKNUMBER: return "number";
-	case '(':       return "(";
-	case ')':		return ")";	
-	case '{':		return "{";
-	case '}':		return "}";
-	case ';':		return ";";
-	default:		return "unknown";
-	}
+void
+next() {
+	tok = nexttok;
+	nexttok = lex();
 }
 
 void
 expect(int kind) 
 {
-	if(tok != kind)
-		error("expected token %s", tok2str(kind));
+	if(tok->k != kind)
+		error("expected %s", tokktostr(kind));
 }
 
 void 
 parse(void)
 {
+	next();
 	for(;;) {
 		next();
-		if(tok == TOKEOF)
+		if(tok->k == TOKEOF)
 			break;
 		decl();
 	}
@@ -50,13 +46,13 @@ parse(void)
 Node *
 decl(void) 
 {
-	printf("%s %s\n", tok2str(tok), tokval);
+	/* puts(tokktostr(tok->k)); */
 }
 
 Node *
 stmt(void)
 {
-	switch(tok) {
+	switch(tok->k) {
 	case TOKIF:
 		return pif();
 	case TOKFOR:
@@ -68,7 +64,7 @@ stmt(void)
 	case TOKRETURN:
 		return preturn();
 	case '{':
-		return pblock();
+		return block();
 	default:
 		return exprstmt();
 	}
@@ -78,7 +74,7 @@ Node *
 pif(void)
 {
 	expect(TOKIF);
-	if(tok == '{') {
+	if(tok->k == '{') {
 		expect('{');
 		for(;;)
 			stmt();		
@@ -90,7 +86,6 @@ Node *
 pfor(void)
 {
 	expect(TOKFOR);
-	ex
 }
 
 Node *
@@ -118,10 +113,10 @@ preturn(void)
 }
 
 Node *
-pblock(void)
+block(void)
 {
 	expect('{');
-	while(tok != '}' && tok != TOKEOF)
-		pstmt();
+	while(tok->k != '}' && tok->k != TOKEOF)
+		stmt();
 	expect('}');
 }
