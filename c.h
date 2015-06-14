@@ -1,5 +1,4 @@
 
-
 typedef struct {
 	/* type tag */
 	int t;
@@ -73,9 +72,10 @@ typedef struct {
 #define TOKVOID    1019
 #define TOKCHAR    1020
 #define TOKINT     1021
+#define TOKELSE    1022
 
 typedef struct {
-	char *fname;
+	char *file;
 	int   line;
 	int   col;
 } SrcPos;
@@ -88,11 +88,25 @@ typedef struct {
 	SrcPos pos;
 } Tok;
 
+/* 	Singly linked list.
+	A null pointer is the empty list. */
+typedef struct List {
+	struct List *rest;
+	void *v;
+} List;
+
 void  error(char*, ...);
+void  errorpos(SrcPos *, char *, ...);
 void *ccmalloc(int);
 char *ccstrdup(char*);
+/* cpp functions */
+char *tokktostr(int);
 Tok  *lex(void);
 void  cppinit(char *);
+/* parser functions */
 void  parse(void);
+/* backend functions */
 void  emit(void);
-char *tokktostr(int);
+
+
+

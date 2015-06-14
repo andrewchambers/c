@@ -15,6 +15,17 @@ error(char *fmt, ...)
 	exit(1);
 }
 
+void errorpos(SrcPos *p, char *fmt, ...)
+{
+	va_list va;
+
+	va_start(va, fmt);
+	vfprintf(stderr, fmt, va);
+	va_end(va);
+	fprintf(stderr, " at %s:%d:%d\n", p->file, p->line, p->col);
+	exit(1);
+}
+
 
 void *ccmalloc(int n) 
 {
@@ -23,6 +34,7 @@ void *ccmalloc(int n)
 	v = malloc(n);
 	if(!v)
 		error("out of memory\n");
+	memset(v, 0, n);
 	return v;
 }
 
@@ -35,4 +47,14 @@ char *ccstrdup(char *s)
 	r = ccmalloc(l);
 	strcpy(r, s);
 	return r;
+}
+
+List *addlist(List *l, void *v)
+{
+	List *nl;
+
+	nl = ccmalloc(sizeof(List));
+	nl->rest = l;
+	nl->v = v;
+	return nl;
 }

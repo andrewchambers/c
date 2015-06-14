@@ -1,6 +1,9 @@
 #include "c.h"
 #include <stdio.h>
+#include <string.h>
 
+int line;
+int col;
 static FILE * f;
 
 char *
@@ -18,8 +21,9 @@ tokktostr(int t)
 	case '{':		return "{";
 	case '}':		return "}";
 	case ';':		return ";";
-	default:		return "unknown";
 	}
+	error("tokktostr: internal error\n");
+	return 0;
 }
 
 /* makes a token, copies v */
@@ -31,6 +35,8 @@ mktok(int kind, char *v) {
 	r->k = kind;
 	if (v)
 		r->v = ccstrdup(v);
+	else
+		r->v = tokktostr(kind);
 	return r;
 }
 

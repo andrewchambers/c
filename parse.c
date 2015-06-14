@@ -13,6 +13,7 @@ Node* block(void);
 Node* preturn(void);
 Node* stmt(void);
 Node* exprstmt(void);
+Node* expr(void);
 void  expect(int);
 
 Tok *tok;
@@ -28,7 +29,7 @@ void
 expect(int kind) 
 {
 	if(tok->k != kind)
-		error("expected %s", tokktostr(kind));
+		errorpos(&tok->pos,"expected %s", tokktostr(kind));
 }
 
 void 
@@ -46,7 +47,7 @@ parse(void)
 Node *
 decl(void) 
 {
-	/* puts(tokktostr(tok->k)); */
+	return 0;
 }
 
 Node *
@@ -74,42 +75,77 @@ Node *
 pif(void)
 {
 	expect(TOKIF);
-	if(tok->k == '{') {
-		expect('{');
-		for(;;)
-			stmt();		
-		expect('}');
-	}
+	stmt();
+	if(tok->k != TOKELSE)
+		return 0;
+	expect(TOKELSE);
+	stmt();
+	return 0;
 }
 
 Node *
 pfor(void)
 {
 	expect(TOKFOR);
+	expect('(');
+	if(tok->k != ';')
+		expr();
+	if(tok->k != ';')
+		expr();
+	if(tok->k != ')')
+		expr();
+	expect(')');
+	stmt();
+	return 0;
 }
 
 Node *
 pwhile(void)
 {
-
+	expect(TOKWHILE);
+	expect('(');
+	expr();
+	expect(')');
+	stmt();
+	return 0;
 }
 
 Node *
 dowhile(void)
 {
-
+	expect(TOKDO);
+	stmt();
+	expect(TOKWHILE);
+	expect('(');
+	expr();
+	expect(')');
+	expect(';');
+	return 0;
 }
+
+Node *
+expr(void)
+{
+	expect(TOKNUMBER);
+	return 0;
+}
+
 
 Node *
 exprstmt(void)
 {
-
+	expr();
+	expect(';');
+	return 0;
 }
 
 Node *
 preturn(void)
 {
-
+	expect(TOKRETURN);
+	expr();
+	expect(';');
+	return 0;
 }
 
 Node *
@@ -119,4 +155,5 @@ block(void)
 	while(tok->k != '}' && tok->k != TOKEOF)
 		stmt();
 	expect('}');
+	return 0;
 }
