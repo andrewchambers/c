@@ -94,8 +94,6 @@ paramdecl(void)
  A delcarator missing an identifier.
 */
 
- A delcarator missing an identifier.
-
 static CTy *
 declarator(CTy *basety, int abstract) 
 {
