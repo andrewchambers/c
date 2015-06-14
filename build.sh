@@ -1,2 +1,2 @@
 set -e
-gcc -std=c89 -Wall -g -O0 *.c -o c
+gcc -std=c89 -Werror -Wall -g -O0 *.c -o c
