@@ -1,8 +1,39 @@
 
-#define NDOWHILE 0
-#define NFOR 1
-#define NNUMBER 2
+/* AST Node types */
+enum {
+	NDOWHILE,
+	NFOR,
+	NNUMBER
+};
 
+/* Token types */
+enum {
+	TOKNUMBER = 256,
+	TOKIDENT,
+	TOKIF,
+	TOKDO,
+	TOKFOR,
+	TOKWHILE,
+	TOKRETURN,
+	TOKEOF,
+	TOKINC,
+	TOKADDASS,
+	TOKDEC,
+	TOKSUBASS,
+	TOKMULASS,
+	TOKDIVASS,
+	TOKMODASS,
+	TOKGTEQL,
+	TOKLTEQL,
+	TOKNEQL,
+	TOKEQL,
+	TOKVOID,
+	TOKCHAR,
+	TOKINT,
+	TOKELSE,
+	TOKVOLATILE,
+	TOKCONST
+};
 
 typedef struct {
 	char *file;
@@ -58,6 +89,7 @@ struct Node {
 typedef struct {
 	/* type tag */
 	int t;
+	int sclass;
 	union {
 		struct {
 
@@ -65,33 +97,6 @@ typedef struct {
 		int prim;
 	};
 } CTy;
-
-/* TODO: implement enum, then swap */
-/* TODO: appropriate start point */
-/* TODO: order logically */
-#define TOKNUMBER  1000
-#define TOKIDENT   1001
-#define TOKIF      1002
-#define	TOKDO      1003
-#define	TOKFOR     1004
-#define	TOKWHILE   1005
-#define TOKRETURN  1006
-#define TOKEOF     1007
-#define TOKINC     1008
-#define TOKADDASS  1009
-#define TOKDEC     1010
-#define TOKSUBASS  1011
-#define TOKMULASS  1012
-#define TOKDIVASS  1013
-#define TOKMODASS  1014
-#define TOKGTEQL   1015
-#define TOKLTEQL   1016
-#define TOKNEQL    1017
-#define TOKEQL     1018
-#define TOKVOID    1019
-#define TOKCHAR    1020
-#define TOKINT     1021
-#define TOKELSE    1022
 
 typedef struct {
 	int   k;
@@ -108,6 +113,7 @@ typedef struct List {
 	void *v;
 } List;
 
+/* helper functions */
 void  error(char*, ...);
 void  errorpos(SrcPos *, char *, ...);
 void *ccmalloc(int);

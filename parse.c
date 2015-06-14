@@ -3,18 +3,21 @@
 #include "c.h"
 
 void  parse(void);
-Node* decl(void);
-Node* stmt(void);
-Node* pif(void);
-Node* pfor(void);
-Node* dowhile(void);
-Node* pwhile(void);
-Node* block(void);
-Node* preturn(void);
-Node* stmt(void);
-Node* exprstmt(void);
-Node* expr(void);
-void  expect(int);
+static Node *decl(void);
+static Node *stmt(void);
+static Node *pif(void);
+static Node *pfor(void);
+static Node *dowhile(void);
+static Node *pwhile(void);
+static Node *block(void);
+static Node *preturn(void);
+static Node *stmt(void);
+static Node *exprstmt(void);
+static Node *expr(void);
+static Node *assignexpr(void);
+static CTy  *declarator(CTy*, int abstract); 
+static CTy  *declaratortail(CTy*);
+static void  expect(int);
 
 Tok *tok;
 Tok *nexttok;
@@ -28,13 +31,13 @@ mknode(int type) {
 	return n;
 }
 
-void
-next() {
+static void
+next(void) {
 	tok = nexttok;
 	nexttok = lex();
 }
 
-void
+static void
 expect(int kind) 
 {
 	if(tok->k != kind)
@@ -53,13 +56,80 @@ parse(void)
 	}
 }
 
-Node *
+static Node *
 decl(void) 
 {
+	declarator(0, 0);
 	return 0;
 }
 
-Node *
+static void
+paramdecl(void)
+{
+	/* TODO */
+	expect(TOKINT);
+	expect(TOKIDENT);
+}
+
+static CTy *
+declarator(CTy *basety, int abstract) 
+{
+	while (tok->k == TOKCONST || tok->k == TOKVOLATILE)
+		next();
+	switch(tok->k) {
+	case '*':
+		next();
+		declarator(basety, abstract);
+		return 0;
+	case '(':
+		next();
+		declarator(0, abstract);
+		expect(')');
+		declaratortail(basety);
+		return 0;
+	case TOKIDENT:
+		next();
+		declaratortail(basety);
+		return 0;
+	default:
+		if(abstract) {
+			declaratortail(basety);
+			return 0;
+		}
+		errorpos(&tok->pos, "expected ident, '(' or '*' but got %s", tokktostr(tok->k));
+	}
+	error("unreachable");
+	return 0;
+}
+
+static CTy *
+declaratortail(CTy *basety)
+{
+	for(;;) {
+		switch (tok->k) {
+		case '[':
+			next();
+			if (tok->k != ']')
+				assignexpr();
+			expect(']');
+		case '(':
+			next();
+			for(;;) {
+				if(tok->k == ')')
+					break;
+				paramdecl();
+				if(nexttok->k != ')')
+					expect(',');
+			}
+			expect(')');
+			return 0;
+		default:
+			return basety;
+		}
+	}
+}
+
+static Node *
 stmt(void)
 {
 	switch(tok->k) {
@@ -80,7 +150,7 @@ stmt(void)
 	}
 }
 
-Node *
+static Node *
 pif(void)
 {
 	expect(TOKIF);
@@ -92,7 +162,7 @@ pif(void)
 	return 0;
 }
 
-Node *
+static Node *
 pfor(void)
 {
 	expect(TOKFOR);
@@ -108,7 +178,7 @@ pfor(void)
 	return 0;
 }
 
-Node *
+static Node *
 pwhile(void)
 {
 	expect(TOKWHILE);
@@ -119,7 +189,7 @@ pwhile(void)
 	return 0;
 }
 
-Node *
+static Node *
 dowhile(void)
 {
 	Node *n;
@@ -135,20 +205,7 @@ dowhile(void)
 	return 0;
 }
 
-Node *
-expr(void)
-{
-	Node *n;
-
-	n = mknode(NNUMBER);
-	n->pos = tok->pos;
-	n->Number.v = tok->v;
-	expect(TOKNUMBER);
-	return n;
-}
-
-
-Node *
+static Node *
 exprstmt(void)
 {
 	Node *n;
@@ -158,7 +215,7 @@ exprstmt(void)
 	return n;
 }
 
-Node *
+static Node *
 preturn(void)
 {
 	expect(TOKRETURN);
@@ -167,7 +224,7 @@ preturn(void)
 	return 0;
 }
 
-Node *
+static Node *
 block(void)
 {
 	expect('{');
@@ -175,4 +232,31 @@ block(void)
 		stmt();
 	expect('}');
 	return 0;
+}
+
+static Node *
+expr(void)
+{
+	Node *n;
+	
+	/* TODO: comma node. */
+	for(;;) {
+		n = assignexpr();
+		if (tok->k != ',')
+			break;
+		next();
+	}
+	return n;
+}
+
+static Node *
+assignexpr(void)
+{
+	Node *n;
+
+	n = mknode(NNUMBER);
+	n->pos = tok->pos;
+	n->Number.v = tok->v;
+	expect(TOKNUMBER);
+	return n;
 }
