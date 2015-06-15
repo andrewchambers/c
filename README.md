@@ -42,7 +42,7 @@ Multiply all of these by the number of cpu architectures you want and by 2 if yo
 
 ## Design choices
 
-- Between Follow 80/20. We should be able to be far faster than gcc, 
+- We should be able to be *MUCH* faster than gcc, 
 but still generate decent code. Choose fast algorithms. They will also make the code simpler.
 - Die on error, I don't need to see 1 good error and 50 junk errors caused by the first.
 - Few/No warnings. Building is different to checking, if you want warnings, use something like clang static checker.
