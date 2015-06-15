@@ -1,6 +1,6 @@
 # A better C compiler
 
-How? Unlike gcc and clang.
+How? Unlike gcc and clang...
 
 - Be fast.
 - Be lightweight.
