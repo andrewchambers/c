@@ -272,14 +272,256 @@ expr(void)
 	return n;
 }
 
-static Node *
-assignexpr(void)
-{
-	Node *n;
 
-	n = mknode(NNUMBER);
-	n->pos = tok->pos;
-	n->Number.v = tok->v;
-	expect(TOKNUMBER);
-	return n;
+static Node *
+assignexpr()
+{
+	condexpr();
+	if(isassignmentop(tok->k)) {
+		next();
+		assignexpr();
+	}
+    return 0;
 }
+
+// Aka Ternary operator.
+static Node *
+condexpr()
+{
+	return logorexpr();
+}
+
+static Node *
+logorexpr()
+{
+    logandexpr();
+	while(tok->k == TOKLOR) {
+		next();
+		logandexpr();
+	}
+	return 0;
+}
+
+static Node *
+logandexpr()
+{
+	orexpr();
+	while(tok->k == TOKLAND) {
+		next();
+		orexpr();
+	}
+	return 0;
+}
+
+static Node *
+orexpr()
+{
+	xorexpr();
+	while(tok->k == '|') {
+		next();
+		xorexpr();
+	}
+	return 0;
+}
+
+static Node *
+xorexpr()
+{
+	andexpr();
+	while(tok->k == '^') {
+		next();
+		andexpr();
+	}
+	return 0;
+}
+
+static Node *
+andexpr() 
+{
+	eqlexpr()
+	while(tok->k == '&') {
+		next();
+		eqlexpr();
+	}
+	return 0;
+}
+
+static Node *
+eqlexpr()
+{
+	relexpr()
+	while(tok->k == TOKEQL || tok->k == TOKNEQ) {
+		next();
+		relexpr();
+	}
+	return 0;
+}
+
+static Node *
+relexpr()
+{
+	shiftexpr();
+	while(tok->k == '>' || tok->k == '<' 
+	      || tok->k == TOKLEQ || tok->k == TOKGEQ) {
+		next();
+		shiftexpr();
+	}
+	return 0;
+}
+
+static Node *
+shiftexpr()
+{
+	addexpr();
+	while(tok->k == TOKSHL || tok->k == TOKSHR) {
+		next();
+		addexpr();
+	}
+	return 0;
+}
+
+static Node *
+addexpr()
+{
+	mulexpr();
+	while(tok->k == '+' || tok->k == '-') {
+		next();
+		mulexpr();
+	}
+	return 0;
+}
+
+static Node *
+mulexpr()
+{
+	l := p.CastExpr()
+	while(tok->k == '*' || tok->k == '/' || tok->k == '%') {
+		next();
+		castexpr();
+	}
+	return 0;
+}
+
+static int
+isdeclstart(Tok *t)
+{
+    /* TODO */
+    return 0;
+}
+
+static Node *
+castexpr()
+{
+	// Cast
+	if(tok->k == '(' && isdeclstart(nexttok)) {
+		expect('(');
+		typename();
+		expect(')');
+		unaryexpr();
+		return 0;
+	}
+	return unaryexpr();
+}
+
+static CTy *
+typename() {
+	declspecs();
+	declarator(0, 1);
+	return 0;
+}
+
+static Node *
+unaryexpr()
+{
+	switch (tok->k) {
+	case TOKINC, TOKDEC:
+		next();
+		unaryexpr();
+		return 0;
+	case '*', '+', '-', '!', '~', '&':
+		next();
+		castexpr();
+		return 0;
+	}
+	return postexpr();
+}
+
+static Node *
+postexpr()
+{
+	primaryexpr();
+	for(;;) {
+		switch tok->k {
+		case '[':
+			next();
+			expr();
+			expect(']');
+			break;
+		case '.':
+			next();
+			expect(TOKIDENT);
+			break;
+		case TOKARROW:
+			next();
+			expect(TOKIDENT);
+			break;
+		case '(':
+			next();
+			if tok->k != ')' {
+				for(;;) {
+					assignexpr();
+					if(tok->k != ',') {
+						break;
+					}
+					next();
+				}
+			}
+			expect(')');
+			return 0;
+		case TOKINC:
+			next();
+			break;
+		case TOKDEC:
+			next();
+			break;
+		default:
+			goto done;
+		}
+	}
+    done:
+	return 0;
+}
+
+
+static Node *
+primaryexpr() 
+{
+    Sym *sym;
+    
+	switch (tok->k) {
+	case TOKIDENT:
+		sym = symlookup(tok->v);
+		if(!sym)
+			errorpos(&tok->pos, "undefined symbol %s", tok->v);
+		next();
+		return 0;
+	case TOKCONSTANT:
+		next();
+		return 0;
+	case cpp.CHAR_CONSTANT:
+		next();
+		return 0;
+	case cpp.STRING:
+		next();
+		return 0;
+	case '(':
+		next();
+		expr();
+		expect(')');
+		return 0;
+	default:
+		errorpos(&tok->pos, "expected an identifier, constant, string or Expr");
+	}
+	error("unreachable.");
+}
+
