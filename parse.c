@@ -3,6 +3,7 @@
 #include "c.h"
 
 void  parse(void);
+
 static Node *decl(void);
 static Node *stmt(void);
 static Node *pif(void);
@@ -15,9 +16,28 @@ static Node *stmt(void);
 static Node *exprstmt(void);
 static Node *expr(void);
 static Node *assignexpr(void);
+static Node *condexpr(void);
+static Node *logorexpr(void);
+static Node *logandexpr(void);
+static Node *orexpr(void);
+static Node *xorexpr(void);
+static Node *andexpr(void);
+static Node *eqlexpr(void);
+static Node *relexpr(void);
+static Node *shiftexpr(void);
+static Node *addexpr(void);
+static Node *mulexpr(void);
+static Node *castexpr(void);
+static Node *unaryexpr(void);
+static Node *postexpr(void);
+static Node *primaryexpr(void); 
+static CTy  *typename(void);
 static CTy  *declarator(CTy*, int abstract); 
 static CTy  *declaratortail(CTy*);
+static void  declspecs();
 static void  expect(int);
+static int   isdeclstart(Tok *t);
+static int   isassignmentop(int);
 
 Tok *tok;
 Tok *nexttok;
@@ -42,6 +62,11 @@ expect(int kind)
 {
 	if(tok->k != kind)
 		errorpos(&tok->pos,"expected %s", tokktostr(kind));
+}
+
+static Sym *symlookup()
+{
+    return 0;
 }
 
 void 
@@ -274,7 +299,7 @@ expr(void)
 
 
 static Node *
-assignexpr()
+assignexpr(void)
 {
 	condexpr();
 	if(isassignmentop(tok->k)) {
@@ -284,15 +309,16 @@ assignexpr()
     return 0;
 }
 
-// Aka Ternary operator.
+/* Aka Ternary operator. */
 static Node *
-condexpr()
+condexpr(void)
 {
+    /* TODO: implement */
 	return logorexpr();
 }
 
 static Node *
-logorexpr()
+logorexpr(void)
 {
     logandexpr();
 	while(tok->k == TOKLOR) {
@@ -303,7 +329,7 @@ logorexpr()
 }
 
 static Node *
-logandexpr()
+logandexpr(void)
 {
 	orexpr();
 	while(tok->k == TOKLAND) {
@@ -314,7 +340,7 @@ logandexpr()
 }
 
 static Node *
-orexpr()
+orexpr(void)
 {
 	xorexpr();
 	while(tok->k == '|') {
@@ -325,7 +351,7 @@ orexpr()
 }
 
 static Node *
-xorexpr()
+xorexpr(void)
 {
 	andexpr();
 	while(tok->k == '^') {
@@ -336,9 +362,9 @@ xorexpr()
 }
 
 static Node *
-andexpr() 
+andexpr(void) 
 {
-	eqlexpr()
+	eqlexpr();
 	while(tok->k == '&') {
 		next();
 		eqlexpr();
@@ -347,9 +373,9 @@ andexpr()
 }
 
 static Node *
-eqlexpr()
+eqlexpr(void)
 {
-	relexpr()
+	relexpr();
 	while(tok->k == TOKEQL || tok->k == TOKNEQ) {
 		next();
 		relexpr();
@@ -358,7 +384,7 @@ eqlexpr()
 }
 
 static Node *
-relexpr()
+relexpr(void)
 {
 	shiftexpr();
 	while(tok->k == '>' || tok->k == '<' 
@@ -370,7 +396,7 @@ relexpr()
 }
 
 static Node *
-shiftexpr()
+shiftexpr(void)
 {
 	addexpr();
 	while(tok->k == TOKSHL || tok->k == TOKSHR) {
@@ -381,7 +407,7 @@ shiftexpr()
 }
 
 static Node *
-addexpr()
+addexpr(void)
 {
 	mulexpr();
 	while(tok->k == '+' || tok->k == '-') {
@@ -392,9 +418,9 @@ addexpr()
 }
 
 static Node *
-mulexpr()
+mulexpr(void)
 {
-	l := p.CastExpr()
+	castexpr();
 	while(tok->k == '*' || tok->k == '/' || tok->k == '%') {
 		next();
 		castexpr();
@@ -410,7 +436,7 @@ isdeclstart(Tok *t)
 }
 
 static Node *
-castexpr()
+castexpr(void)
 {
 	// Cast
 	if(tok->k == '(' && isdeclstart(nexttok)) {
@@ -424,21 +450,28 @@ castexpr()
 }
 
 static CTy *
-typename() {
+typename(void)
+{
 	declspecs();
 	declarator(0, 1);
 	return 0;
 }
 
 static Node *
-unaryexpr()
+unaryexpr(void)
 {
 	switch (tok->k) {
-	case TOKINC, TOKDEC:
+	case TOKINC:
+	case TOKDEC:
 		next();
 		unaryexpr();
 		return 0;
-	case '*', '+', '-', '!', '~', '&':
+	case '*':
+	case '+':
+	case '-':
+	case '!':
+	case '~':
+	case '&':
 		next();
 		castexpr();
 		return 0;
@@ -447,11 +480,11 @@ unaryexpr()
 }
 
 static Node *
-postexpr()
+postexpr(void)
 {
 	primaryexpr();
 	for(;;) {
-		switch tok->k {
+		switch(tok->k) {
 		case '[':
 			next();
 			expr();
@@ -467,7 +500,7 @@ postexpr()
 			break;
 		case '(':
 			next();
-			if tok->k != ')' {
+			if(tok->k != ')') {
 				for(;;) {
 					assignexpr();
 					if(tok->k != ',') {
@@ -494,7 +527,7 @@ postexpr()
 
 
 static Node *
-primaryexpr() 
+primaryexpr(void) 
 {
     Sym *sym;
     
@@ -505,7 +538,7 @@ primaryexpr()
 			errorpos(&tok->pos, "undefined symbol %s", tok->v);
 		next();
 		return 0;
-	case TOKCONSTANT:
+	case TOKCNUMBER:
 		next();
 		return 0;
 	case cpp.CHAR_CONSTANT:

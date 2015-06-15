@@ -32,7 +32,15 @@ enum {
 	TOKINT,
 	TOKELSE,
 	TOKVOLATILE,
-	TOKCONST
+	TOKCONST,
+	TOKLOR,
+	TOKLAND,
+	TOKNEQ,
+	TOKLEQ,
+	TOKGEQ,
+	TOKSHL,
+	TOKSHR,
+	TOKARROW,
 };
 
 typedef struct {
@@ -85,6 +93,10 @@ struct Node {
 		} Number;
 	};
 };
+
+typedef struct {
+
+} Sym;
 
 typedef struct {
 	/* type tag */
