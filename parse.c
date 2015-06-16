@@ -116,11 +116,6 @@ expect(int kind)
 		errorpos(&tok->pos,"expected %s", tokktostr(kind));
 }
 
-static Sym *symlookup()
-{
-    return 0;
-}
-
 Node * 
 parse()
 {
@@ -596,7 +591,7 @@ primaryexpr(void)
     
 	switch (tok->k) {
 	case TOKIDENT:
-		sym = symlookup(tok->v);
+		sym = lookupsym(vars, tok->v);
 		if(!sym)
 			errorpos(&tok->pos, "undefined symbol %s", tok->v);
 		next();
