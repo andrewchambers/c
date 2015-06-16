@@ -13,10 +13,13 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+    Node *n;
+
     if (argc != 2) 
         usage();
     cppinit(argv[1]);
-    parse();
-    emit();
-    exit(0);
+    n = parse();
+    n = check(n);
+    emit(n);
+    return 0;
 }

@@ -49,7 +49,7 @@ char *ccstrdup(char *s)
 	return r;
 }
 
-List *addlist(List *l, void *v)
+List *listadd(List *l, void *v)
 {
 	List *nl;
 
@@ -58,3 +58,45 @@ List *addlist(List *l, void *v)
 	nl->v = v;
 	return nl;
 }
+
+typedef struct MapEnt MapEnt;
+struct MapEnt {
+    char *k;
+    void *v;
+};
+
+Map *map()
+{
+    Map *m;
+    
+    m = ccmalloc(sizeof(Map));
+    return m;
+}
+
+void mapset(Map *m, char *k, void *v)
+{
+    List *l;
+    MapEnt *me;
+
+    me = ccmalloc(sizeof(MapEnt));
+    me->k = k;
+    me->v = v;
+    m->l = listadd(m->l, me);
+}
+
+void *mapget(Map *m, char *k)
+{
+    List *l;
+    MapEnt *me;
+    
+    l = m->l;
+    while(l) {
+        me = l->v;
+        if(strcmp(me->k, k) == 0)
+            return me->v;
+        l = l->rest;
+    }
+    return 0;
+}
+
+

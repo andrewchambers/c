@@ -2,7 +2,7 @@
 #include <string.h>
 #include "c.h"
 
-void  parse(void);
+Node  *parse(void);
 
 static Node *decl(void);
 static Node *stmt(void);
@@ -36,10 +36,15 @@ static CTy  *declarator(CTy*, int abstract);
 static CTy  *declaratortail(CTy*);
 static void  declspecs();
 static void  expect(int);
-static int   isdeclstart(Tok *t);
+static int   isdeclstart(Tok*);
 
 Tok *tok;
 Tok *nexttok;
+
+List *structs;
+List *types;
+List *vars;
+List *labels;
 
 static Node *
 mknode(int type) {
@@ -68,8 +73,8 @@ static Sym *symlookup()
     return 0;
 }
 
-void 
-parse(void)
+Node * 
+parse()
 {
 	next();
 	for(;;) {

@@ -51,7 +51,6 @@ typedef struct {
 } SrcPos;
 
 typedef struct Node Node;
-
 struct Node {
 	/* type tag */
 	int t;
@@ -121,10 +120,17 @@ typedef struct {
 
 /* 	Singly linked list.
 	A null pointer is the empty list. */
-typedef struct List {
-	struct List *rest;
+
+typedef struct List List;
+struct List {
+	List *rest;
 	void *v;
-} List;
+};
+
+typedef struct Map Map;
+struct Map {
+    List *l;
+};
 
 /* helper functions */
 void  error(char*, ...);
@@ -136,9 +142,11 @@ char *tokktostr(int);
 Tok  *lex(void);
 void  cppinit(char *);
 /* parser functions */
-void  parse(void);
+Node *parse(void);
+/* parser functions */
+Node *check(Node*);
 /* backend functions */
-void  emit(void);
+void  emit(Node*);
 
 
 
