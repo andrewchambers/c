@@ -37,7 +37,6 @@ static CTy  *declaratortail(CTy*);
 static void  declspecs();
 static void  expect(int);
 static int   isdeclstart(Tok *t);
-static int   isassignmentop(int);
 
 Tok *tok;
 Tok *nexttok;
@@ -86,6 +85,12 @@ decl(void)
 {
 	declarator(0, 0);
 	return 0;
+}
+
+static void
+declspecs()
+{
+
 }
 
 static void
@@ -297,12 +302,18 @@ expr(void)
 	return n;
 }
 
+static int
+isassignop(int k)
+{
+	/* TODO: other assign ops. */
+	return k == '=';
+}
 
 static Node *
 assignexpr(void)
 {
 	condexpr();
-	if(isassignmentop(tok->k)) {
+	if(isassignop(tok->k)) {
 		next();
 		assignexpr();
 	}
@@ -438,7 +449,6 @@ isdeclstart(Tok *t)
 static Node *
 castexpr(void)
 {
-	// Cast
 	if(tok->k == '(' && isdeclstart(nexttok)) {
 		expect('(');
 		typename();
@@ -538,13 +548,10 @@ primaryexpr(void)
 			errorpos(&tok->pos, "undefined symbol %s", tok->v);
 		next();
 		return 0;
-	case TOKCNUMBER:
+	case TOKNUM:
 		next();
 		return 0;
-	case cpp.CHAR_CONSTANT:
-		next();
-		return 0;
-	case cpp.STRING:
+	case TOKSTR:
 		next();
 		return 0;
 	case '(':
@@ -556,5 +563,6 @@ primaryexpr(void)
 		errorpos(&tok->pos, "expected an identifier, constant, string or Expr");
 	}
 	error("unreachable.");
+	return 0;
 }
 

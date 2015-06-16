@@ -15,7 +15,7 @@ tokktostr(int t)
 	case TOKVOID:   return "void";
 	case TOKCHAR:   return "char";
 	case TOKINT:    return "int";
-	case TOKNUMBER: return "number";
+	case TOKNUM:    return "number";
 	case '(':       return "(";
 	case ')':		return ")";	
 	case '{':		return "{";
@@ -140,7 +140,7 @@ lex(void)
 			if(!numberc(c)) {
 				*p = 0;
 				ungetch(c);
-				return mktok(TOKNUMBER, tokval);
+				return mktok(TOKNUM, tokval);
 			}
 			*p++ = c;
 		}

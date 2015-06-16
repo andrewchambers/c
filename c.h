@@ -8,7 +8,7 @@ enum {
 
 /* Token types */
 enum {
-	TOKNUMBER = 256,
+	TOKNUM = 256,
 	TOKIDENT,
 	TOKIF,
 	TOKDO,
@@ -41,6 +41,7 @@ enum {
 	TOKSHL,
 	TOKSHR,
 	TOKARROW,
+	TOKSTR,
 };
 
 typedef struct {
