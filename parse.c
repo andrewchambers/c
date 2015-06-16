@@ -32,19 +32,67 @@ static Node *unaryexpr(void);
 static Node *postexpr(void);
 static Node *primaryexpr(void); 
 static CTy  *typename(void);
-static CTy  *declarator(CTy*, int abstract); 
-static CTy  *declaratortail(CTy*);
+static CTy  *declarator(CTy *, int abstract); 
+static CTy  *declaratortail(CTy *);
 static void  declspecs();
 static void  expect(int);
-static int   isdeclstart(Tok*);
+static int   isdeclstart(Tok *);
 
 Tok *tok;
 Tok *nexttok;
 
-List *structs;
-List *types;
-List *vars;
-List *labels;
+#define MAXSCOPES 1024
+
+static int nscopes;
+static Map *structs[MAXSCOPES];
+static Map *types[MAXSCOPES];
+static Map *vars[MAXSCOPES];
+
+static void
+pushscope()
+{
+    nscopes -= 1;
+    if (nscopes < 0)
+        error("bug: scope underflow");
+    structs[nscopes] = 0;
+}
+
+static void
+popscope()
+{
+    structs[nscopes] = map();
+    nscopes += 1;
+    if (nscopes > MAXSCOPES)
+        error("scope depth exceeded maximum");
+}
+
+static int
+definesym(Map *scope[], char *k, void *v)
+{
+    Map *m;
+    
+    m = scope[nscopes - 1];
+    if(mapget(m, k))
+        return 1;
+    mapset(m, k, v);
+    return 0; 
+}
+
+static void *
+lookupsym(Map *scope[], char *k)
+{
+    int i;
+    Map *m;
+    void *v;
+    
+    i = nscopes;
+    while(i--) {
+        v = mapget(scope[i], k);
+        if(v)
+            return v;
+    }
+    return 0;
+}
 
 static Node *
 mknode(int type) {

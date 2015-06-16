@@ -15,7 +15,8 @@ error(char *fmt, ...)
 	exit(1);
 }
 
-void errorpos(SrcPos *p, char *fmt, ...)
+void
+errorpos(SrcPos *p, char *fmt, ...)
 {
 	va_list va;
 
@@ -27,7 +28,8 @@ void errorpos(SrcPos *p, char *fmt, ...)
 }
 
 
-void *ccmalloc(int n) 
+void *
+ccmalloc(int n) 
 {
 	void *v;
 
@@ -38,7 +40,8 @@ void *ccmalloc(int n)
 	return v;
 }
 
-char *ccstrdup(char *s)
+char *
+ccstrdup(char *s)
 {
 	int l;
 	char *r;
@@ -49,7 +52,8 @@ char *ccstrdup(char *s)
 	return r;
 }
 
-List *listadd(List *l, void *v)
+List *
+listadd(List *l, void *v)
 {
 	List *nl;
 
@@ -73,7 +77,8 @@ Map *map()
     return m;
 }
 
-void mapset(Map *m, char *k, void *v)
+void 
+mapset(Map *m, char *k, void *v)
 {
     List *l;
     MapEnt *me;
@@ -84,7 +89,8 @@ void mapset(Map *m, char *k, void *v)
     m->l = listadd(m->l, me);
 }
 
-void *mapget(Map *m, char *k)
+void *
+mapget(Map *m, char *k)
 {
     List *l;
     MapEnt *me;

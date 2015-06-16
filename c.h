@@ -136,7 +136,12 @@ struct Map {
 void  error(char*, ...);
 void  errorpos(SrcPos *, char *, ...);
 void *ccmalloc(int);
-char *ccstrdup(char*);
+char *ccstrdup(char *);
+List *listadd(List *, void *);
+Map  *map();
+void *mapget(Map *, char *);
+void  mapset(Map *, char *, void *);
+
 /* cpp functions */
 char *tokktostr(int);
 Tok  *lex(void);
@@ -144,9 +149,9 @@ void  cppinit(char *);
 /* parser functions */
 Node *parse(void);
 /* parser functions */
-Node *check(Node*);
+Node *check(Node *);
 /* backend functions */
-void  emit(Node*);
+void  emit(Node *);
 
 
 
