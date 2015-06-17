@@ -42,13 +42,31 @@ enum {
 	TOKSHR,
 	TOKARROW,
 	TOKSTR,
+	TOKTYPEDEF,
+	TOKSIGNED,
+	TOKUNSIGNED,
+	TOKSHORT,
+	TOKLONG,
+	TOKFLOAT,
+	TOKDOUBLE,
+	TOKSTRUCT,
+	TOKUNION,
+	TOKGOTO,
+	TOKSWITCH,
+	TOKREGISTER,
+	TOKEXTERN,
+	TOKSTATIC,
+	TOKAUTO,
+	TOKENUM,
 };
 
-typedef struct {
+
+typedef struct SrcPos SrcPos;
+struct SrcPos {
 	char *file;
 	int   line;
 	int   col;
-} SrcPos;
+};
 
 typedef struct Node Node;
 struct Node {

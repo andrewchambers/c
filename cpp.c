@@ -2,28 +2,55 @@
 #include <stdio.h>
 #include <string.h>
 
-int line;
-int col;
 static FILE * f;
+static char *fname;
+static int line;
+static int col;
+static int mline;
+static int mcol;
+
+void
+cppinit(char *p)
+{
+	line = 1;
+	col = 1;
+	fname = p;
+	f = fopen(p, "r");
+	if (!f)
+		error("error opening file %s.\n", p);
+}
 
 char *
 tokktostr(int t) 
 {
 	switch(t) {
-	case TOKIDENT:  return "ident";
-	case TOKRETURN: return "return";
-	case TOKVOID:   return "void";
-	case TOKCHAR:   return "char";
-	case TOKINT:    return "int";
-	case TOKNUM:    return "number";
-	case '(':       return "(";
-	case ')':		return ")";	
-	case '{':		return "{";
-	case '}':		return "}";
-	case ';':		return ";";
+	case TOKIDENT:   return "ident";
+	case TOKRETURN:  return "return";
+	case TOKVOID:    return "void";
+	case TOKCHAR:    return "char";
+	case TOKINT:     return "int";
+	case TOKNUM:     return "number";
+	case TOKTYPEDEF: return "typedef";
+	case '(':        return "(";
+	case ')':		 return ")";	
+	case '{':		 return "{";
+	case '}':		 return "}";
+	case ';':		 return ";";
+	case '+':		 return "+";
+	case '-':		 return "-";
+	case '/':		 return "/";
+	case '*':		 return "*";
+	case '#':		 return "#";
 	}
-	error("tokktostr: internal error\n");
+	error("tokktostr: unknown tok %d %c\n", t, t);
 	return 0;
+}
+
+static void 
+markstart()
+{
+	mline = line;
+	mcol = col;
 }
 
 /* makes a token, copies v */
@@ -32,6 +59,9 @@ mktok(int kind, char *v) {
 	Tok* r;
 
 	r = ccmalloc(sizeof(Tok));
+	r->pos.line = mline;
+	r->pos.col = mcol;
+	r->pos.file = fname;
 	r->k = kind;
 	if (v)
 		r->v = ccstrdup(v);
@@ -43,7 +73,17 @@ mktok(int kind, char *v) {
 static int 
 nextc(void)
 {
-	return fgetc(f);
+	int c;
+
+	c = fgetc(f);
+	if(c == '\n') {
+		line += 1;
+		col = 1;
+	} else if(c == '\t')
+		col += 4;
+	else 
+		col += 1;
+	return c;
 }
 
 static void
@@ -52,19 +92,30 @@ ungetch(int c) /* avoid name conflict */
 	ungetc(c, f);
 }
 
-void
-cppinit(char *p)
-{
-	f = fopen(p, "r");
-	if (!f)
-		error("error opening file %s.\n", p);
-}
-
 static struct {char *kw; int t;} keywordlut[] = {
 	{"void", TOKVOID},
+	{"signed", TOKSIGNED},
+	{"unsigned", TOKUNSIGNED},
 	{"char", TOKCHAR},
+	{"short", TOKSHORT},
 	{"int", TOKINT},
+	{"long", TOKLONG},
+	{"float", TOKFLOAT},
+	{"double", TOKDOUBLE},
 	{"return", TOKRETURN},
+	{"typedef", TOKTYPEDEF},
+	{"struct", TOKSTRUCT},
+	{"union", TOKUNION},
+	{"goto", TOKGOTO},
+	{"switch", TOKSWITCH},
+	{"for", TOKFOR},
+	{"while", TOKWHILE},
+	{"if", TOKIF},
+	{"else", TOKELSE},
+	{"register", TOKREGISTER},
+	{"static", TOKSTATIC},
+	{"extern", TOKEXTERN},
+	{"auto", TOKAUTO},
 	{0, 0}
 };
 
@@ -73,6 +124,7 @@ static int
 identkind(char *s) {
 	int i;
 
+	/* TODO: improve on linear lookup. */
 	i = 0;
 	while(keywordlut[i].kw) {
 		if(strcmp(keywordlut[i].kw, s) == 0)
@@ -89,9 +141,23 @@ numberc(int c)
 }
 
 static int
-identc(int c)
+identfirstc(int c)
 {
-	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');  
+	if(c == '_')
+		return 1;
+	if(c >= 'a' && c <= 'z')
+		return 1;
+	if(c >= 'A' && c <= 'Z')
+		return 1;
+	return 0;  
+}
+
+static int
+identtailc(int c)
+{
+	if(numberc(c) || identfirstc(c))
+		return 1;
+	return 0;
 }
 
 static int
@@ -110,6 +176,7 @@ lex(void)
 
   again:
 	p = tokval;
+	markstart();
 	c = nextc();
 	if(c == EOF) {
 		return mktok(TOKEOF, 0);
@@ -122,11 +189,11 @@ lex(void)
 		} while(wsc(c));
 		ungetch(c);
 		goto again;
-	} else if(identc(c)) {
+	} else if(identfirstc(c)) {
 		*p++ = c;
 		for(;;) {
 			c = nextc();
-			if (!identc(c)) {
+			if (!identtailc(c)) {
 				*p = 0;
 				ungetch(c);
 				return mktok(identkind(tokval), tokval);

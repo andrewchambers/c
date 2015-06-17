@@ -30,11 +30,14 @@ static Node *mulexpr(void);
 static Node *castexpr(void);
 static Node *unaryexpr(void);
 static Node *postexpr(void);
-static Node *primaryexpr(void); 
+static Node *primaryexpr(void);
+static void  pstruct();
+static void  declspecs();
+static void  penum();
 static CTy  *typename(void);
 static CTy  *declarator(CTy *, int abstract); 
 static CTy  *declaratortail(CTy *);
-static void  declspecs();
+
 static void  expect(int);
 static int   isdeclstart(Tok *);
 
@@ -49,23 +52,34 @@ static Map *types[MAXSCOPES];
 static Map *vars[MAXSCOPES];
 
 static void
-pushscope()
+popscope()
 {
     nscopes -= 1;
     if (nscopes < 0)
-        error("bug: scope underflow");
+        error("bug: scope underflow\n");
+    vars[nscopes] = 0;
+    types[nscopes] = 0;
     structs[nscopes] = 0;
 }
 
 static void
-popscope()
+pushscope()
 {
+    vars[nscopes] = map();
+    types[nscopes] = map();
     structs[nscopes] = map();
     nscopes += 1;
     if (nscopes > MAXSCOPES)
-        error("scope depth exceeded maximum");
+        error("scope depth exceeded maximum\n");
 }
 
+static int
+isglobal()
+{
+	return nscopes == 1;
+}
+
+/*
 static int
 definesym(Map *scope[], char *k, void *v)
 {
@@ -77,12 +91,12 @@ definesym(Map *scope[], char *k, void *v)
     mapset(m, k, v);
     return 0; 
 }
+*/
 
 static void *
 lookupsym(Map *scope[], char *k)
 {
     int i;
-    Map *m;
     void *v;
     
     i = nscopes;
@@ -119,6 +133,8 @@ expect(int kind)
 Node * 
 parse()
 {
+	nscopes = 0;
+	pushscope();
 	next();
 	for(;;) {
 		next();
@@ -126,19 +142,66 @@ parse()
 			break;
 		decl();
 	}
+	popscope();
+	return 0;
 }
 
+
 static Node *
-decl(void) 
+decl() 
 {
+	declspecs();
 	declarator(0, 0);
+	if(isglobal() && tok->k == '{') {
+		block();
+		return 0;
+	}
+	expect(';');
 	return 0;
 }
 
 static void
 declspecs()
 {
+	int done;
+	Sym *sym;
 
+	done = 0;
+	while(!done) {
+		switch(tok->k) {
+		case TOKEXTERN:
+		case TOKSTATIC:
+		case TOKREGISTER:
+		case TOKAUTO:
+		case TOKTYPEDEF:
+			next();
+			continue;
+		case TOKSTRUCT:
+			pstruct();
+			done = 1;
+			break;
+		case TOKENUM:
+			penum();
+			done = 1;
+			break;
+		case TOKVOID:
+		case TOKCHAR:
+		case TOKSHORT:
+		case TOKINT:
+		case TOKLONG:
+		case TOKFLOAT:
+		case TOKDOUBLE:
+		case TOKSIGNED:
+		case TOKUNSIGNED:
+			next();
+			break;
+		case TOKIDENT:
+			sym = lookupsym(types, tok->v);
+			if(!sym)
+				done = 1;
+			break;
+		}
+	}
 }
 
 static void
@@ -228,6 +291,38 @@ declaratortail(CTy *basety)
 			return basety;
 		}
 	}
+}
+
+static void
+pstruct() 
+{
+	expect(TOKSTRUCT);
+	if(tok->k == TOKIDENT) 
+		next();
+	expect('{');
+	while(tok->k != '}') {
+		expect(TOKINT);
+		expect(TOKIDENT);
+		expect(';');
+	}
+	expect('}');
+}
+
+static void
+penum()
+{
+	expect(TOKENUM);
+	if(tok->k == TOKIDENT) 
+		next();
+	expect('{');
+	while(1) {
+		if(tok->k == '}')
+			break;
+		expect(TOKIDENT);
+		if(tok->k == ',')
+			next();
+	}
+	expect('}');
 }
 
 static Node *
@@ -328,10 +423,12 @@ preturn(void)
 static Node *
 block(void)
 {
+	pushscope();
 	expect('{');
 	while(tok->k != '}' && tok->k != TOKEOF)
 		stmt();
 	expect('}');
+	popscope();
 	return 0;
 }
 

@@ -80,7 +80,6 @@ Map *map()
 void 
 mapset(Map *m, char *k, void *v)
 {
-    List *l;
     MapEnt *me;
 
     me = ccmalloc(sizeof(MapEnt));
