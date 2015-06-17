@@ -110,7 +110,8 @@ lookupsym(Map *scope[], char *k)
 }
 
 static Node *
-mknode(int type) {
+mknode(int type)
+{
 	Node *n;
 
 	n = ccmalloc(sizeof(Node));
@@ -119,7 +120,8 @@ mknode(int type) {
 }
 
 static void
-next(void) {
+next(void)
+{
 	tok = nexttok;
 	nexttok = lex();
 }
@@ -323,54 +325,12 @@ penum()
 }
 
 static Node *
-stmt(void)
-{
-    Sym *sym;
-
-	switch(tok->k) {
-	case TOKIF:
-		return pif();
-	case TOKFOR:
-		return pfor();
-	case TOKWHILE:
-		return pwhile();
-	case TOKDO:
-		return dowhile();
-	case TOKRETURN:
-		return preturn();
-	case '{':
-		return block();
-	case TOKREGISTER:
-	case TOKSTATIC:
-	case TOKAUTO:
-	case TOKCONST:
-	case TOKVOLATILE:
-	case TOKVOID:
-	case TOKCHAR:
-	case TOKSHORT:
-	case TOKINT:
-	case TOKLONG:
-	case TOKSIGNED:
-	case TOKUNSIGNED:
-	case TOKREGISTER:
-	case TOKFLOAT:
-	case TOKDOUBLE:
-	case TOKREGISTER:
-	    return decl();
-	case TOKIDENT:
-	    sym = lookupsym(types, tok->v);
-	    if(sym)
-	        decl();
-	    /* Not decl, try expr. */
-	default:
-		return exprstmt();
-	}
-}
-
-static Node *
 pif(void)
 {
 	expect(TOKIF);
+	expect('(');
+	expr();
+	expect(')');
 	stmt();
 	if(tok->k != TOKELSE)
 		return 0;
@@ -423,6 +383,51 @@ dowhile(void)
 }
 
 static Node *
+stmt(void)
+{
+    Sym *sym;
+
+	switch(tok->k) {
+	case TOKIF:
+		return pif();
+	case TOKFOR:
+		return pfor();
+	case TOKWHILE:
+		return pwhile();
+	case TOKDO:
+		return dowhile();
+	case TOKRETURN:
+		return preturn();
+	case '{':
+		return block();
+	case TOKREGISTER:
+	case TOKSTATIC:
+	case TOKAUTO:
+	case TOKCONST:
+	case TOKVOLATILE:
+	case TOKVOID:
+	case TOKCHAR:
+	case TOKSHORT:
+	case TOKINT:
+	case TOKLONG:
+	case TOKSIGNED:
+	case TOKUNSIGNED:
+	case TOKREGISTER:
+	case TOKFLOAT:
+	case TOKDOUBLE:
+	case TOKREGISTER:
+	    return decl();
+	case TOKIDENT:
+	    sym = lookupsym(types, tok->v);
+	    if(sym)
+	        decl();
+	    /* Not decl, try expr. */
+	default:
+		return exprstmt();
+	}
+}
+
+static Node *
 exprstmt(void)
 {
 	Node *n;
@@ -471,8 +476,16 @@ expr(void)
 static int
 isassignop(int k)
 {
-	/* TODO: other assign ops. */
-	return k == '=';
+	switch(k) {
+	case '=':
+	case TOKADDASS:
+	case TOKSUBASS:
+	case TOKMULASS:
+	case TOKDIVASS:
+	case TOKMODASS:
+	    return 1;
+	}
+	return 0;
 }
 
 static Node *
