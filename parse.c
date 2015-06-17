@@ -200,6 +200,9 @@ declspecs()
 			if(!sym)
 				done = 1;
 			break;
+		default:
+			done = 1;
+			break;
 		}
 	}
 }

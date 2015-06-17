@@ -4,6 +4,42 @@
 #include <stdlib.h>
 #include <string.h>
 
+static void
+printpos(SrcPos *p)
+{
+	FILE *f;
+	int line;
+	int c;
+	int i;
+
+	line = 1;
+	f = fopen(p->file, "r");
+	if (!f)
+		return;
+	while(1) {
+		if(p->line == line)
+			break;
+		c = fgetc(f);
+		if(c == EOF)
+			goto cleanup;
+		if(c == '\n')
+			line += 1;
+	}
+	while(1) {
+		c = fgetc(f);
+		if(c == EOF)
+			goto cleanup;
+		fputc(c, stderr);
+		if(c == '\n')
+			break;
+	}
+	for(i = 0; i < p->col; i++)
+		fputc(' ', stderr);
+	fputs("^\n", stderr);
+	cleanup:
+	fclose(f);
+}
+
 void
 error(char *fmt, ...)
 {
@@ -24,6 +60,7 @@ errorpos(SrcPos *p, char *fmt, ...)
 	vfprintf(stderr, fmt, va);
 	va_end(va);
 	fprintf(stderr, " at %s:%d:%d\n", p->file, p->line, p->col);
+	printpos(p);
 	exit(1);
 }
 
