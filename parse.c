@@ -35,7 +35,8 @@ static void  pstruct();
 static void  declspecs();
 static void  penum();
 static CTy  *typename(void);
-static CTy  *declarator(CTy *, int abstract); 
+static CTy  *declarator(CTy *, int abstract);
+static CTy  *directdeclarator(CTy *, int abstract); 
 static CTy  *declaratortail(CTy *);
 
 static void  expect(int);
@@ -128,6 +129,7 @@ expect(int kind)
 {
 	if(tok->k != kind)
 		errorpos(&tok->pos,"expected %s", tokktostr(kind));
+    next();
 }
 
 Node * 
@@ -197,9 +199,12 @@ declspecs()
 			break;
 		case TOKIDENT:
 			sym = lookupsym(types, tok->v);
-			if(!sym)
+			if(sym) {
+				next();
 				done = 1;
-			break;
+				break;
+			}
+			/* fallthrough */
 		default:
 			done = 1;
 			break;
@@ -216,8 +221,7 @@ paramdecl(void)
 }
 
 /* Declarator is what introduces names into the program.
-   'Abstract' means name is optional. */
-
+   abstract means the ident is optional. */
 static CTy *
 declarator(CTy *basety, int abstract) 
 {
@@ -226,11 +230,22 @@ declarator(CTy *basety, int abstract)
 	switch(tok->k) {
 	case '*':
 		next();
-		declarator(basety, abstract);
+		declarator(basety, 1);
 		return 0;
+	default:
+	    directdeclarator(basety, abstract);
+	    return 0;
+	}
+
+}
+
+static CTy *
+directdeclarator(CTy *basety, int abstract) 
+{
+    switch(tok->k) {
 	case '(':
-		next();
-		declarator(0, abstract);
+		expect('(');
+	    declarator(0, abstract);
 		expect(')');
 		declaratortail(basety);
 		return 0;
@@ -239,11 +254,10 @@ declarator(CTy *basety, int abstract)
 		declaratortail(basety);
 		return 0;
 	default:
-		if(abstract) {
-			declaratortail(basety);
-			return 0;
-		}
-		errorpos(&tok->pos, "expected ident, '(' or '*' but got %s", tokktostr(tok->k));
+		if(!abstract)
+		    errorpos(&tok->pos, "expected ident, ( or * but got %s", tokktostr(tok->k));
+		declaratortail(basety);
+		return 0;
 	}
 	error("unreachable");
 	return 0;
@@ -255,12 +269,12 @@ declaratortail(CTy *basety)
 	for(;;) {
 		switch (tok->k) {
 		case '[':
-			next();
+			expect('[');
 			if (tok->k != ']')
 				assignexpr();
 			expect(']');
 		case '(':
-			next();
+			expect('(');
 			for(;;) {
 				if(tok->k == ')')
 					break;
