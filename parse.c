@@ -331,6 +331,8 @@ penum()
 static Node *
 stmt(void)
 {
+    Sym *sym;
+
 	switch(tok->k) {
 	case TOKIF:
 		return pif();
@@ -344,6 +346,28 @@ stmt(void)
 		return preturn();
 	case '{':
 		return block();
+	case TOKREGISTER:
+	case TOKSTATIC:
+	case TOKAUTO:
+	case TOKCONST:
+	case TOKVOLATILE:
+	case TOKVOID:
+	case TOKCHAR:
+	case TOKSHORT:
+	case TOKINT:
+	case TOKLONG:
+	case TOKSIGNED:
+	case TOKUNSIGNED:
+	case TOKREGISTER:
+	case TOKFLOAT:
+	case TOKDOUBLE:
+	case TOKREGISTER:
+	    return decl();
+	case TOKIDENT:
+	    sym = lookupsym(types, tok->v);
+	    if(sym)
+	        decl();
+	    /* Not decl, try expr. */
 	default:
 		return exprstmt();
 	}
