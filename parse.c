@@ -15,6 +15,7 @@ static Node *stmt(void);
 static Node *exprstmt(void);
 static Node *expr(void);
 static Node *assignexpr(void);
+static Node *constantexpr(void);
 static Node *condexpr(void);
 static Node *logorexpr(void);
 static Node *logandexpr(void);
@@ -323,6 +324,10 @@ penum()
 		if(tok->k == '}')
 			break;
 		expect(TOKIDENT);
+		if(tok->k == '=') {
+			next();
+			constantexpr();
+		}
 		if(tok->k == ',')
 			next();
 	}
@@ -500,6 +505,12 @@ assignexpr(void)
 		assignexpr();
 	}
     return 0;
+}
+
+static Node *
+constantexpr()
+{
+	return condexpr();
 }
 
 /* Aka Ternary operator. */
