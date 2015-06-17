@@ -4,7 +4,6 @@
 
 Node  *parse(void);
 
-static Node *decl(void);
 static Node *stmt(void);
 static Node *pif(void);
 static Node *pfor(void);
@@ -31,8 +30,10 @@ static Node *castexpr(void);
 static Node *unaryexpr(void);
 static Node *postexpr(void);
 static Node *primaryexpr(void);
-static void  pstruct();
+static Node *decl(void);
+static Node *globaldecl(void);
 static void  declspecs();
+static void  pstruct();
 static void  penum();
 static CTy  *typename(void);
 static CTy  *declarator(CTy *, int abstract);
@@ -40,7 +41,6 @@ static CTy  *directdeclarator(CTy *, int abstract);
 static CTy  *declaratortail(CTy *);
 
 static void  expect(int);
-static int   isdeclstart(Tok *);
 
 Tok *tok;
 Tok *nexttok;
@@ -144,18 +144,24 @@ parse()
 		next();
 		if(tok->k == TOKEOF)
 			break;
-		decl();
+		globaldecl();
 	}
 	popscope();
 	return 0;
 }
 
-
 static Node *
-decl() 
+decl()
 {
 	declspecs();
 	declarator(0, 0);
+	return 0;
+}
+
+static Node *
+globaldecl()
+{
+	decl();
 	if(isglobal() && tok->k == '{') {
 		block();
 		return 0;
@@ -176,10 +182,11 @@ declspecs()
 		case TOKEXTERN:
 		case TOKSTATIC:
 		case TOKREGISTER:
+		case TOKCONST:
 		case TOKAUTO:
 		case TOKTYPEDEF:
 			next();
-			continue;
+			break;
 		case TOKSTRUCT:
 			pstruct();
 			done = 1;
@@ -215,11 +222,15 @@ declspecs()
 }
 
 static void
-paramdecl(void)
+params(void)
 {
-	/* TODO */
-	expect(TOKINT);
-	expect(TOKIDENT);
+	if(tok->k == ')')
+		return;
+	decl();
+	while(tok->k == ',') {
+		expect(',');
+		decl();
+	}
 }
 
 /* Declarator is what introduces names into the program.
@@ -277,13 +288,7 @@ declaratortail(CTy *basety)
 			expect(']');
 		case '(':
 			expect('(');
-			for(;;) {
-				if(tok->k == ')')
-					break;
-				paramdecl();
-				if(nexttok->k != ')')
-					expect(',');
-			}
+			params();
 			expect(')');
 			return 0;
 		default:
@@ -617,7 +622,7 @@ mulexpr(void)
 }
 
 static int
-isdeclstart(Tok *t)
+istypestart(Tok *t)
 {
     /* TODO */
     return 0;
@@ -626,7 +631,7 @@ isdeclstart(Tok *t)
 static Node *
 castexpr(void)
 {
-	if(tok->k == '(' && isdeclstart(nexttok)) {
+	if(tok->k == '(' && istypestart(nexttok)) {
 		expect('(');
 		typename();
 		expect(')');

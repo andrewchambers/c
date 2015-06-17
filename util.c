@@ -33,7 +33,7 @@ printpos(SrcPos *p)
 		if(c == '\n')
 			break;
 	}
-	for(i = 0; i < p->col; i++)
+	for(i = 0; i < p->col-1; i++)
 		fputc(' ', stderr);
 	fputs("^\n", stderr);
 	cleanup:

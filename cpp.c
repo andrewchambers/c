@@ -45,6 +45,7 @@ tokktostr(int t)
 	case '/':		 return "/";
 	case '*':		 return "*";
 	case '#':		 return "#";
+	case ',':		 return ",";
 	}
 	error("tokktostr: unknown tok %d %c\n", t, t);
 	return 0;
@@ -119,6 +120,8 @@ static struct {char *kw; int t;} keywordlut[] = {
 	{"while", TOKWHILE},
 	{"if", TOKIF},
 	{"else", TOKELSE},
+	{"const", TOKCONST},
+	{"volatile", TOKVOLATILE},
 	{"register", TOKREGISTER},
 	{"static", TOKSTATIC},
 	{"extern", TOKEXTERN},
