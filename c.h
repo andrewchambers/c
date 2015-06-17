@@ -151,7 +151,7 @@ struct Map {
 };
 
 /* helper functions */
-void  error(char*, ...);
+void  error(char *, ...);
 void  errorpos(SrcPos *, char *, ...);
 void *ccmalloc(int);
 char *ccstrdup(char *);

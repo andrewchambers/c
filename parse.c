@@ -412,10 +412,8 @@ stmt(void)
 	case TOKLONG:
 	case TOKSIGNED:
 	case TOKUNSIGNED:
-	case TOKREGISTER:
 	case TOKFLOAT:
 	case TOKDOUBLE:
-	case TOKREGISTER:
 	    return decl();
 	case TOKIDENT:
 	    sym = lookupsym(types, tok->v);
