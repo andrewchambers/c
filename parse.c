@@ -215,28 +215,8 @@ paramdecl(void)
 	expect(TOKIDENT);
 }
 
-
-/*
- Declarator
-
- A declarator is the part of a Decl that specifies
- the name that is to be introduced into the program.
-
- unsigned int a, *b, **c, *const*d *volatile*e ;
-              ^  ^^  ^^^  ^^^^^^^^ ^^^^^^^^^^^
-
- Direct Declarator
-
- A direct declarator is missing the pointer prefix.
-
- e.g.
- unsigned int *a[32], b[];
-               ^^^^^  ^^^
-
- Abstract Declarator
-
- A delcarator missing an identifier.
-*/
+/* Declarator is what introduces names into the program.
+   'Abstract' means name is optional. */
 
 static CTy *
 declarator(CTy *basety, int abstract) 

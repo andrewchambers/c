@@ -6,6 +6,9 @@ static FILE * f;
 static char *fname;
 static int line;
 static int col;
+static int prevline;
+static int prevcol;
+/* Marked start of token */
 static int mline;
 static int mcol;
 
@@ -24,6 +27,7 @@ char *
 tokktostr(int t) 
 {
 	switch(t) {
+	case TOKEOF:     return "end of file";
 	case TOKIDENT:   return "ident";
 	case TOKRETURN:  return "return";
 	case TOKVOID:    return "void";
@@ -74,7 +78,8 @@ static int
 nextc(void)
 {
 	int c;
-
+    prevcol = col;
+    prevline = line;
 	c = fgetc(f);
 	if(c == '\n') {
 		line += 1;
@@ -89,6 +94,8 @@ nextc(void)
 static void
 ungetch(int c) /* avoid name conflict */
 {
+    col = prevcol;
+    line = prevline;
 	ungetc(c, f);
 }
 
