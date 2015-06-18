@@ -801,7 +801,7 @@ primaryexpr(void)
 		expect(')');
 		return 0;
 	default:
-		errorpos(&tok->pos, "expected an ident, constant, string or expression");
+		errorpos(&tok->pos, "expected an ident, constant, string or (");
 	}
 	error("unreachable.");
 	return 0;
