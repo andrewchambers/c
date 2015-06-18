@@ -186,8 +186,9 @@ decl()
     	symtab = types;
     else
     	symtab = vars;
-    if(!definesym(symtab, name, "TODO"))
-        errorpos(pos, "redefinition of symbol %s", name);
+    if(name)
+    	if(!definesym(symtab, name, "TODO"))
+        	errorpos(pos, "redefinition of symbol %s", name);
     if(isglobal() && tok->k == '{') {
 		block();
 		return 0;
@@ -196,8 +197,9 @@ decl()
 	    next();
 	    pos = &tok->pos;
 	    declarator(basety, &name);
-        if(!definesym(symtab, name, "TODO"))
-            errorpos(pos, "redefinition of symbol %s", name);
+        if(name)
+        	if(!definesym(symtab, name, "TODO"))
+            	errorpos(pos, "redefinition of symbol %s", name);
 	}
 	return 0;
 }
@@ -466,11 +468,16 @@ stmt(void)
 	case TOKUNSIGNED:
 	case TOKFLOAT:
 	case TOKDOUBLE:
-	    return decl();
+	    decl();
+	    expect(';');
+	    return 0;
 	case TOKIDENT:
 	    sym = lookupsym(types, tok->v);
-	    if(sym)
+	    if(sym) {
 	        decl();
+	        expect(';');
+	        return 0;
+	    }
 	    /* Not decl, try expr. */
 	default:
 		return exprstmt();
