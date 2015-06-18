@@ -270,7 +270,7 @@ directdeclarator(CTy *basety, int abstract)
 		return 0;
 	default:
 		if(!abstract)
-		    errorpos(&tok->pos, "expected ident, ( or * but got %s", tokktostr(tok->k));
+		    errorpos(&tok->pos, "expected ident or ( but got %s", tokktostr(tok->k));
 		declaratortail(basety);
 		return 0;
 	}
