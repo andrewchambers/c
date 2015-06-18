@@ -23,32 +23,76 @@ cppinit(char *p)
 		error("error opening file %s.\n", p);
 }
 
+
+
+static char *tok2strab[TOKEOF+1] = {
+    [TOKNUM]      = "number",
+    [TOKIDENT]    = "ident",
+    [TOKIF]       = "if",
+    [TOKDO]       = "do",
+    [TOKFOR]      = "for",
+    [TOKWHILE]    = "while",
+    [TOKRETURN]   = "return",
+    [TOKELSE]     = "else",
+    [TOKVOLATILE] = "volatile",
+    [TOKCONST]    = "const",
+    [TOKSTRUCT]   = "struct",
+    [TOKUNION]    = "union",
+    [TOKGOTO]     = "goto",
+    [TOKSWITCH]   = "switch",
+    [TOKREGISTER] = "register",
+    [TOKEXTERN]   = "extern",
+    [TOKSTATIC]   = "static",
+    [TOKAUTO]     = "auto",
+    [TOKENUM]     = "enum",
+    [TOKSTR]      = "string",
+    [TOKTYPEDEF]  = "typedef",
+    [TOKSIGNED]   = "signed",
+    [TOKUNSIGNED] = "unsigned",
+    [TOKVOID]     = "void",
+    [TOKCHAR]     = "char",
+    [TOKINT]      = "int",
+    [TOKSHORT]    = "short",
+    [TOKLONG]     = "long",
+    [TOKFLOAT]    = "float",
+    [TOKDOUBLE]   = "double",
+    [TOKEOF]      = "end of file",
+    [TOKINC]      = "++",
+    [TOKDEC]      = "--",
+    [TOKADDASS]   = "+=",
+    [TOKSUBASS]   = "-=",
+    [TOKMULASS]   = "*=",
+    [TOKDIVASS]   = "/=",
+    [TOKMODASS]   = "%=",
+    [TOKGTEQL]    = ">=",
+    [TOKLTEQL]    = "<=",
+    [TOKNEQL]     = "!=",
+    [TOKEQL]      = "==",
+    [TOKLOR]      = "||",
+    [TOKLAND]     = "&&",
+    [TOKNEQ]      = "!=",
+    [TOKLEQ]      = "<=",
+    [TOKGEQ]      = ">=",
+    [TOKSHL]      = "<<",
+    [TOKSHR]      = ">>",
+    [TOKARROW]    = "->",
+    ['=']         = "=",
+    ['!']         = "!",
+    ['~']         = "~",
+    ['+']         = "+",
+    ['-']         = "-",
+    ['/']         = "/",
+    ['*']         = "*",
+    ['%']         = "%",
+    ['&']         = "&",
+    ['|']         = "|",
+    ['^']         = "^"
+};
+
 char *
 tokktostr(int t) 
 {
-	switch(t) {
-	case TOKEOF:     return "end of file";
-	case TOKIDENT:   return "ident";
-	case TOKRETURN:  return "return";
-	case TOKVOID:    return "void";
-	case TOKCHAR:    return "char";
-	case TOKINT:     return "int";
-	case TOKNUM:     return "number";
-	case TOKTYPEDEF: return "typedef";
-	case '(':        return "(";
-	case ')':		 return ")";	
-	case '{':		 return "{";
-	case '}':		 return "}";
-	case ';':		 return ";";
-	case '+':		 return "+";
-	case '-':		 return "-";
-	case '/':		 return "/";
-	case '*':		 return "*";
-	case '#':		 return "#";
-	case ',':		 return ",";
-	}
-	error("tokktostr: unknown tok %d %c\n", t, t);
-	return 0;
+	return tok2strab[t];
 }
 
 static void 
@@ -183,6 +227,7 @@ lex(void)
 	char tokval[4096];
 	char *p;
 	int c,c2;
+	int k;
 
   again:
 	p = tokval;
@@ -206,7 +251,10 @@ lex(void)
 			if (!identtailc(c)) {
 				*p = 0;
 				ungetch(c);
-				return mktok(identkind(tokval), tokval);
+				k = identkind(tokval);
+				if(k == TOKIDENT)
+				    return mktok(k, tokval);
+				return mktok(k, 0);
 			}
 			*p++ = c;
 		}

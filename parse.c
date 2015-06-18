@@ -15,7 +15,7 @@ static Node *stmt(void);
 static Node *exprstmt(void);
 static Node *expr(void);
 static Node *assignexpr(void);
-static Node *constantexpr(void);
+static Node *constexpr(void);
 static Node *condexpr(void);
 static Node *logorexpr(void);
 static Node *logandexpr(void);
@@ -49,7 +49,7 @@ Tok *nexttok;
 #define MAXSCOPES 1024
 
 static int nscopes;
-static Map *structs[MAXSCOPES];
+static Map *tags[MAXSCOPES];
 static Map *types[MAXSCOPES];
 static Map *vars[MAXSCOPES];
 
@@ -60,28 +60,21 @@ popscope()
     if (nscopes < 0)
         error("bug: scope underflow\n");
     vars[nscopes] = 0;
+    tags[nscopes] = 0;
     types[nscopes] = 0;
-    structs[nscopes] = 0;
 }
 
 static void
 pushscope()
 {
     vars[nscopes] = map();
+    tags[nscopes] = map();
     types[nscopes] = map();
-    structs[nscopes] = map();
     nscopes += 1;
     if (nscopes > MAXSCOPES)
         error("scope depth exceeded maximum\n");
 }
 
-static int
-isglobal()
-{
-	return nscopes == 1;
-}
-
-/*
 static int
 definesym(Map *scope[], char *k, void *v)
 {
@@ -93,7 +86,6 @@ definesym(Map *scope[], char *k, void *v)
     mapset(m, k, v);
     return 0; 
 }
-*/
 
 static void *
 lookupsym(Map *scope[], char *k)
@@ -156,16 +148,25 @@ decl()
 {
 	declspecs();
 	declarator(0, 0);
+	while(tok->k == ',') {
+	    next();
+	    declarator(0, 0);
+	}
 	return 0;
 }
 
 static Node *
 globaldecl()
 {
-	decl();
-	if(isglobal() && tok->k == '{') {
+	declspecs();
+	declarator(0, 0);
+	if(tok->k == '{') {
 		block();
 		return 0;
+	}
+	while(tok->k == ',') {
+	    next();
+	    declarator(0, 0);
 	}
 	expect(';');
 	return 0;
@@ -229,7 +230,7 @@ params(void)
 		return;
 	decl();
 	while(tok->k == ',') {
-		expect(',');
+		next();
 		decl();
 	}
 }
@@ -283,12 +284,12 @@ declaratortail(CTy *basety)
 	for(;;) {
 		switch (tok->k) {
 		case '[':
-			expect('[');
+			next();
 			if (tok->k != ']')
 				assignexpr();
 			expect(']');
 		case '(':
-			expect('(');
+		    next();
 			params();
 			expect(')');
 			return 0;
@@ -301,13 +302,24 @@ declaratortail(CTy *basety)
 static void
 pstruct() 
 {
-	expect(TOKSTRUCT);
-	if(tok->k == TOKIDENT) 
+    int rc;
+
+    if(tok->k != TOKUNION && tok->k != TOKSTRUCT)
+	    errorpos(&tok->pos, "expected union or struct");
+	next();
+	if(tok->k == TOKIDENT) {
+		rc = definesym(tags, tok->v, "TODO");
+		if(!rc)
+		    errorpos(&tok->pos, "redefinition of tag %s", tok->v);
 		next();
+	}
 	expect('{');
 	while(tok->k != '}') {
-		expect(TOKINT);
-		expect(TOKIDENT);
+		decl();
+		if(tok->k == ':') {
+		    next();
+		    constexpr();
+		}
 		expect(';');
 	}
 	expect('}');
@@ -316,17 +328,26 @@ pstruct()
 static void
 penum()
 {
+    int rc;
+
 	expect(TOKENUM);
-	if(tok->k == TOKIDENT) 
+	if(tok->k == TOKIDENT) {
+		rc = definesym(tags, tok->v, "TODO");
+		if(!rc)
+		    errorpos(&tok->pos, "redefinition of tag %s", tok->v);
 		next();
+	}
 	expect('{');
 	while(1) {
 		if(tok->k == '}')
 			break;
+		rc = definesym(vars, tok->v, "TODO");
+		if(!rc)
+		    errorpos(&tok->pos, "redefinition of symbol %s", tok->v);
 		expect(TOKIDENT);
 		if(tok->k == '=') {
 			next();
-			constantexpr();
+			constexpr();
 		}
 		if(tok->k == ',')
 			next();
@@ -508,7 +529,7 @@ assignexpr(void)
 }
 
 static Node *
-constantexpr()
+constexpr()
 {
 	return condexpr();
 }
@@ -753,7 +774,7 @@ primaryexpr(void)
 		expect(')');
 		return 0;
 	default:
-		errorpos(&tok->pos, "expected an identifier, constant, string or Expr");
+		errorpos(&tok->pos, "expected an ident, constant, string or expression");
 	}
 	error("unreachable.");
 	return 0;

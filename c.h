@@ -15,7 +15,6 @@ enum {
 	TOKFOR,
 	TOKWHILE,
 	TOKRETURN,
-	TOKEOF,
 	TOKINC,
 	TOKDEC,
 	TOKADDASS,
@@ -58,6 +57,7 @@ enum {
 	TOKSTATIC,
 	TOKAUTO,
 	TOKENUM,
+	TOKEOF, /* EOF needs to be the last. */
 };
 
 
