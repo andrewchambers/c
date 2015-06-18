@@ -143,18 +143,45 @@ parse()
 	return 0;
 }
 
+static void
+params(void)
+{
+	int sclass;
+	CTy *basety;
+	char *name;
+
+	if(tok->k == ')')
+		return;
+	declspecs(&sclass, &basety);
+	declarator(basety, &name);
+	while(tok->k == ',') {
+		next();
+		declspecs(&sclass, &basety);
+		declarator(basety, &name);
+	}
+}
+
 static Node *
 decl()
 {
-	int sclass;
-	char *name;
-	CTy  *basety;
+    int sclass;
+    char *name;
+    CTy  *basety;
+    SrcPos *pos;
 
-	declspecs(&sclass, &basety);
-	declarator(0, &name);
+    pos = &tok->pos;
+    declspecs(&sclass, &basety);
+    declarator(basety, &name);
+    if(sclass == SCTYPEDEF)
+        if(!definesym(types, name, "TODO"))
+	        errorpos(pos, "redefinition of symbol %s", name);
 	while(tok->k == ',') {
 	    next();
-	    declarator(0, 0);
+	    pos = &tok->pos;
+	    declarator(basety, &name);
+    	if(sclass == SCTYPEDEF)
+	        if(!definesym(types, name, "TODO"))
+	            errorpos(pos, "redefinition of symbol %s", name);
 	}
 	return 0;
 }
@@ -167,14 +194,14 @@ globaldecl()
 	char *name;
 
 	declspecs(&sclass, &basety);
-	declarator(0, &name);
+	declarator(basety, &name);
 	if(tok->k == '{') {
 		block();
 		return 0;
 	}
 	while(tok->k == ',') {
 	    next();
-	    declarator(0, &name);
+	    declarator(basety, &name);
 	}
 	expect(';');
 	return 0;
@@ -236,24 +263,6 @@ declspecs(int *sclass, CTy **basety)
 	}
 }
 
-static void
-params(void)
-{
-	int sclass;
-	CTy *basety;
-	char *name;
-
-	if(tok->k == ')')
-		return;
-	declspecs(&sclass, &basety);
-	declarator(basety, &name);
-	while(tok->k == ',') {
-		next();
-		declspecs(&sclass, &basety);
-		declarator(basety, &name);
-	}
-}
-
 /* Declarator is what introduces names into the program. */
 static CTy *
 declarator(CTy *basety, char **name) 
@@ -275,6 +284,7 @@ declarator(CTy *basety, char **name)
 static CTy *
 directdeclarator(CTy *basety, char **name) 
 {
+    *name = 0;
     switch(tok->k) {
 	case '(':
 		expect('(');
@@ -329,8 +339,7 @@ pstruct()
 	    errorpos(&tok->pos, "expected union or struct");
 	next();
 	if(tok->k == TOKIDENT) {
-		rc = definesym(tags, tok->v, "TODO");
-		if(!rc)
+		if(!definesym(tags, tok->v, "TODO"))
 		    errorpos(&tok->pos, "redefinition of tag %s", tok->v);
 		next();
 	}
@@ -353,8 +362,7 @@ penum()
 
 	expect(TOKENUM);
 	if(tok->k == TOKIDENT) {
-		rc = definesym(tags, tok->v, "TODO");
-		if(!rc)
+		if(!definesym(tags, tok->v, "TODO"))
 		    errorpos(&tok->pos, "redefinition of tag %s", tok->v);
 		next();
 	}
