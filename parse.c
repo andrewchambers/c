@@ -33,12 +33,12 @@ static Node *postexpr(void);
 static Node *primaryexpr(void);
 static Node *decl(void);
 static Node *globaldecl(void);
-static void  declspecs();
+static void  declspecs(int *specs, CTy **ty);
 static void  pstruct();
 static void  penum();
 static CTy  *typename(void);
-static CTy  *declarator(CTy *, int abstract);
-static CTy  *directdeclarator(CTy *, int abstract); 
+static CTy  *declarator(CTy *, char **name);
+static CTy  *directdeclarator(CTy *, char **name); 
 static CTy  *declaratortail(CTy *);
 
 static void  expect(int);
@@ -82,9 +82,9 @@ definesym(Map *scope[], char *k, void *v)
     
     m = scope[nscopes - 1];
     if(mapget(m, k))
-        return 1;
+        return 0;
     mapset(m, k, v);
-    return 0; 
+    return 1; 
 }
 
 static void *
@@ -146,8 +146,12 @@ parse()
 static Node *
 decl()
 {
-	declspecs();
-	declarator(0, 0);
+	int sclass;
+	char *name;
+	CTy  *basety;
+
+	declspecs(&sclass, &basety);
+	declarator(0, &name);
 	while(tok->k == ',') {
 	    next();
 	    declarator(0, 0);
@@ -158,26 +162,31 @@ decl()
 static Node *
 globaldecl()
 {
-	declspecs();
-	declarator(0, 0);
+	int sclass;
+	CTy *basety;
+	char *name;
+
+	declspecs(&sclass, &basety);
+	declarator(0, &name);
 	if(tok->k == '{') {
 		block();
 		return 0;
 	}
 	while(tok->k == ',') {
 	    next();
-	    declarator(0, 0);
+	    declarator(0, &name);
 	}
 	expect(';');
 	return 0;
 }
 
 static void
-declspecs()
+declspecs(int *sclass, CTy **basety)
 {
 	int done;
 	Sym *sym;
 
+	*sclass = SCAUTO;
 	done = 0;
 	while(!done) {
 		switch(tok->k) {
@@ -186,7 +195,10 @@ declspecs()
 		case TOKREGISTER:
 		case TOKCONST:
 		case TOKAUTO:
+			next();
+			break;
 		case TOKTYPEDEF:
+			*sclass = SCTYPEDEF;
 			next();
 			break;
 		case TOKSTRUCT:
@@ -226,50 +238,57 @@ declspecs()
 static void
 params(void)
 {
+	int sclass;
+	CTy *basety;
+	char *name;
+
 	if(tok->k == ')')
 		return;
-	decl();
+	declspecs(&sclass, &basety);
+	declarator(basety, &name);
 	while(tok->k == ',') {
 		next();
-		decl();
+		declspecs(&sclass, &basety);
+		declarator(basety, &name);
 	}
 }
 
-/* Declarator is what introduces names into the program.
-   abstract means the ident is optional. */
+/* Declarator is what introduces names into the program. */
 static CTy *
-declarator(CTy *basety, int abstract) 
+declarator(CTy *basety, char **name) 
 {
 	while (tok->k == TOKCONST || tok->k == TOKVOLATILE)
 		next();
 	switch(tok->k) {
 	case '*':
 		next();
-		declarator(basety, 1);
+		declarator(basety, name);
 		return 0;
 	default:
-	    directdeclarator(basety, abstract);
+	    directdeclarator(basety, name);
 	    return 0;
 	}
 
 }
 
 static CTy *
-directdeclarator(CTy *basety, int abstract) 
+directdeclarator(CTy *basety, char **name) 
 {
     switch(tok->k) {
 	case '(':
 		expect('(');
-	    declarator(0, abstract);
+	    declarator(0, name);
 		expect(')');
 		declaratortail(basety);
 		return 0;
 	case TOKIDENT:
+		if(name)
+			*name = tok->v;
 		next();
 		declaratortail(basety);
 		return 0;
 	default:
-		if(!abstract)
+		if(!name)
 		    errorpos(&tok->pos, "expected ident or ( but got %s", tokktostr(tok->k));
 		declaratortail(basety);
 		return 0;
@@ -286,13 +305,14 @@ declaratortail(CTy *basety)
 		case '[':
 			next();
 			if (tok->k != ']')
-				assignexpr();
+				constexpr();
 			expect(']');
+			break;
 		case '(':
 		    next();
 			params();
 			expect(')');
-			return 0;
+			break;
 		default:
 			return basety;
 		}
@@ -676,8 +696,12 @@ castexpr(void)
 static CTy *
 typename(void)
 {
-	declspecs();
-	declarator(0, 1);
+	int sclass;
+	CTy *basety;
+	char *name;
+
+	declspecs(&sclass, &basety);
+	declarator(basety, &name);
 	return 0;
 }
 

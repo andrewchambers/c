@@ -60,6 +60,12 @@ enum {
 	TOKEOF, /* EOF needs to be the last. */
 };
 
+/* Storage classes */
+enum {
+	SCGLOBAL,
+	SCTYPEDEF,
+	SCAUTO,
+};
 
 typedef struct SrcPos SrcPos;
 struct SrcPos {

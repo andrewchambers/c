@@ -27,12 +27,11 @@ printpos(SrcPos *p)
 	}
 	while(1) {
 		c = fgetc(f);
-		if(c == EOF)
-			goto cleanup;
-		fputc(c, stderr);
-		if(c == '\n')
+		if(c == EOF || c == '\n')
 			break;
+		fputc(c, stderr);
 	}
+	fputc('\n', stderr);
 	for(i = 0; i < p->col-1; i++)
 		fputc(' ', stderr);
 	fputs("^\n", stderr);

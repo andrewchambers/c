@@ -23,8 +23,6 @@ cppinit(char *p)
 		error("error opening file %s.\n", p);
 }
 
-
-
 static char *tok2strab[TOKEOF+1] = {
     [TOKNUM]      = "number",
     [TOKIDENT]    = "ident",
@@ -86,7 +84,15 @@ static char *tok2strab[TOKEOF+1] = {
     ['%']         = "%",
     ['&']         = "&",
     ['|']         = "|",
-    ['^']         = "^"
+    ['^']         = "^",
+	['(']         = "(",
+	[')']         = ")",
+	['[']         = "[",
+	[']']         = "]",
+	['{']         = "{",
+	['}']         = "}",
+	[',']         = ",",
+	[';']         = ";",
 };
 
 char *
@@ -157,6 +163,7 @@ static struct {char *kw; int t;} keywordlut[] = {
 	{"return", TOKRETURN},
 	{"typedef", TOKTYPEDEF},
 	{"struct", TOKSTRUCT},
+	{"enum", TOKENUM},
 	{"union", TOKUNION},
 	{"goto", TOKGOTO},
 	{"switch", TOKSWITCH},
