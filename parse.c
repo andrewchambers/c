@@ -202,6 +202,7 @@ declspecs(int *sclass, CTy **basety)
 			next();
 			break;
 		case TOKSTRUCT:
+		case TOKUNION:
 			pstruct();
 			done = 1;
 			break;
@@ -451,6 +452,8 @@ stmt(void)
 		return preturn();
 	case '{':
 		return block();
+	case TOKSTRUCT:
+	case TOKUNION:
 	case TOKREGISTER:
 	case TOKSTATIC:
 	case TOKAUTO:
