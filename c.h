@@ -57,6 +57,7 @@ enum {
 	TOKSTATIC,
 	TOKAUTO,
 	TOKENUM,
+	TOKELLIPSIS,
 	TOKEOF, /* EOF needs to be the last. */
 };
 

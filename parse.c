@@ -32,7 +32,6 @@ static Node *unaryexpr(void);
 static Node *postexpr(void);
 static Node *primaryexpr(void);
 static Node *decl(void);
-static Node *globaldecl(void);
 static void  declspecs(int *specs, CTy **ty);
 static void  pstruct();
 static void  penum();
@@ -73,6 +72,12 @@ pushscope()
     nscopes += 1;
     if (nscopes > MAXSCOPES)
         error("scope depth exceeded maximum\n");
+}
+
+static int
+isglobal()
+{
+	return nscopes == 1;
 }
 
 static int
@@ -137,7 +142,7 @@ parse()
 		next();
 		if(tok->k == TOKEOF)
 			break;
-		globaldecl();
+		decl();
 	}
 	popscope();
 	return 0;
@@ -156,6 +161,10 @@ params(void)
 	declarator(basety, &name);
 	while(tok->k == ',') {
 		next();
+		if(tok->k == TOKELLIPSIS) {
+			next();
+			break;
+		}
 		declspecs(&sclass, &basety);
 		declarator(basety, &name);
 	}
@@ -168,42 +177,30 @@ decl()
     char *name;
     CTy  *basety;
     SrcPos *pos;
+    Map **symtab;
 
     pos = &tok->pos;
     declspecs(&sclass, &basety);
     declarator(basety, &name);
     if(sclass == SCTYPEDEF)
-        if(!definesym(types, name, "TODO"))
-	        errorpos(pos, "redefinition of symbol %s", name);
-	while(tok->k == ',') {
-	    next();
-	    pos = &tok->pos;
-	    declarator(basety, &name);
-    	if(sclass == SCTYPEDEF)
-	        if(!definesym(types, name, "TODO"))
-	            errorpos(pos, "redefinition of symbol %s", name);
-	}
-	return 0;
-}
-
-static Node *
-globaldecl()
-{
-	int sclass;
-	CTy *basety;
-	char *name;
-
-	declspecs(&sclass, &basety);
-	declarator(basety, &name);
-	if(tok->k == '{') {
+    	symtab = types;
+    else
+    	symtab = vars;
+    if(name)
+    	if(!definesym(symtab, name, "TODO"))
+        	errorpos(pos, "redefinition of symbol %s", name);
+    if(isglobal() && tok->k == '{') {
 		block();
 		return 0;
 	}
 	while(tok->k == ',') {
 	    next();
+	    pos = &tok->pos;
 	    declarator(basety, &name);
+        if(name)
+        	if(!definesym(symtab, name, "TODO"))
+            	errorpos(pos, "redefinition of symbol %s", name);
 	}
-	expect(';');
 	return 0;
 }
 
@@ -333,8 +330,6 @@ declaratortail(CTy *basety)
 static void
 pstruct() 
 {
-    int rc;
-
     if(tok->k != TOKUNION && tok->k != TOKSTRUCT)
 	    errorpos(&tok->pos, "expected union or struct");
 	next();
@@ -358,8 +353,6 @@ pstruct()
 static void
 penum()
 {
-    int rc;
-
 	expect(TOKENUM);
 	if(tok->k == TOKIDENT) {
 		if(!definesym(tags, tok->v, "TODO"))
@@ -370,8 +363,7 @@ penum()
 	while(1) {
 		if(tok->k == '}')
 			break;
-		rc = definesym(vars, tok->v, "TODO");
-		if(!rc)
+		if(!definesym(vars, tok->v, "TODO"))
 		    errorpos(&tok->pos, "redefinition of symbol %s", tok->v);
 		expect(TOKIDENT);
 		if(tok->k == '=') {
@@ -476,11 +468,16 @@ stmt(void)
 	case TOKUNSIGNED:
 	case TOKFLOAT:
 	case TOKDOUBLE:
-	    return decl();
+	    decl();
+	    expect(';');
+	    return 0;
 	case TOKIDENT:
 	    sym = lookupsym(types, tok->v);
-	    if(sym)
+	    if(sym) {
 	        decl();
+	        expect(';');
+	        return 0;
+	    }
 	    /* Not decl, try expr. */
 	default:
 		return exprstmt();

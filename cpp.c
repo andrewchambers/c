@@ -74,6 +74,7 @@ static char *tok2strab[TOKEOF+1] = {
     [TOKSHL]      = "<<",
     [TOKSHR]      = ">>",
     [TOKARROW]    = "->",
+    [TOKELLIPSIS] = "...",
     ['=']         = "=",
     ['!']         = "!",
     ['~']         = "~",
@@ -302,6 +303,12 @@ lex(void)
 				}
 			} while(c != '\n');
 			goto again;
+		} else if(c == '.' && c2 == '.') {
+			/* TODO, errorpos? */
+			c = nextc();
+			if(c != '.')
+				error("expected ...\n");
+			return mktok(TOKELLIPSIS, 0);
 		} else if(c == '+' && c2 == '=') return mktok(TOKADDASS, 0);
 		  else if(c == '-' && c2 == '=') return mktok(TOKSUBASS, 0);
 		  else if(c == '*' && c2 == '=') return mktok(TOKMULASS, 0);
