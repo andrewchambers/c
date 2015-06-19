@@ -46,6 +46,7 @@ enum {
 	TOKUNSIGNED,
 	TOKSHORT,
 	TOKLONG,
+	TOKSIZEOF,
 	TOKFLOAT,
 	TOKDOUBLE,
 	TOKSTRUCT,
@@ -67,6 +68,10 @@ enum {
 
 /* Storage classes */
 enum {
+    SCNONE,
+    SCEXTERN,
+    SCSTATIC,
+    SCREGISTER,
 	SCGLOBAL,
 	SCTYPEDEF,
 	SCAUTO,
@@ -127,25 +132,48 @@ typedef struct {
 
 } Sym;
 
-typedef struct {
+enum {
+    CVOID,
+    CENUM,
+    CCHAR,
+    CSHORT,
+    CINT,
+    CLONG,
+    CLLONG,
+    CFLOAT,
+    CDOUBLE,
+    CSTRUCT,
+    CPTR,
+    CFUNC,
+};
+
+typedef struct CTy CTy;
+struct CTy {
 	/* type tag */
 	int t;
+	int flags;
 	int sclass;
 	union {
 		struct {
 
-		} Ptr;
-		int prim;
-	};
-} CTy;
+		} Func;
+		struct {
 
-typedef struct {
+		} Struct;
+		struct {
+            CTy *subty;
+		} Ptr;
+	};
+};
+
+typedef struct Tok Tok;
+struct Tok {
 	int   k;
 	char *v;
 	/* Set if the tok was preceeded by an unescaped newline */
 	int newline;
 	SrcPos pos;
-} Tok;
+};
 
 /* 	Singly linked list.
 	A null pointer is the empty list. */

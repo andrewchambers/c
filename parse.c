@@ -113,6 +113,16 @@ lookupsym(Map *scope[], char *k)
     return 0;
 }
 
+static CTy *
+mktype(int type)
+{
+	CTy *t;
+
+	t = ccmalloc(sizeof(CTy));
+	t->t = type;
+	return t;
+}
+
 static Node *
 mknode(int type)
 {
@@ -210,27 +220,76 @@ decl()
 	return 0;
 }
 
+static int
+issclasstok(Tok *t) {
+	switch(tok->k) {
+	case TOKEXTERN:
+	case TOKSTATIC:
+	case TOKREGISTER:
+	case TOKCONST:
+	case TOKAUTO:
+	    return 1;
+	}
+	return 0;
+}
+
 static void
 declspecs(int *sclass, CTy **basety)
 {
 	int done;
+	int voidcnt;
+	int signedcnt;
+	int unsignedcnt;
+	int charcnt;
+	int intcnt;
+	int shortcnt;
+	int longcnt;
+	int floatcnt;
+	int doublecnt;
 	Sym *sym;
-
-	*sclass = SCAUTO;
+	
+	*sclass = SCNONE;
 	done = 0;
+	
+	voidcnt = 0;
+	signedcnt = 0;
+	unsignedcnt = 0;
+	charcnt = 0;
+	intcnt = 0;
+	shortcnt = 0;
+	longcnt = 0;
+	floatcnt = 0;
+	doublecnt = 0;
+	
 	while(!done) {
+		if(issclasstok(tok))
+	        if(*sclass != SCNONE)
+	            errorpos(&tok->pos, "multiple storage classes in declaration specifiers.");
 		switch(tok->k) {
 		case TOKEXTERN:
+			*sclass = SCEXTERN;
+			next();
+			break;    
 		case TOKSTATIC:
+		    *sclass = SCSTATIC;
+			next();
+			break;
 		case TOKREGISTER:
-		case TOKCONST:
+		    *sclass = SCREGISTER;
+			next();
+			break;
 		case TOKAUTO:
+		    *sclass = SCAUTO;
 			next();
 			break;
 		case TOKTYPEDEF:
 			*sclass = SCTYPEDEF;
 			next();
 			break;
+		case TOKCONST:
+		case TOKVOLATILE:
+		    next();
+		    break;
 		case TOKSTRUCT:
 		case TOKUNION:
 			pstruct();
@@ -241,14 +300,39 @@ declspecs(int *sclass, CTy **basety)
 			done = 1;
 			break;
 		case TOKVOID:
+		    voidcnt += 1;
+		    next();
+		    break;
 		case TOKCHAR:
+		    charcnt += 1;
+		    next();
+		    break;
 		case TOKSHORT:
+		    shortcnt += 1;
+		    next();
+		    break;
 		case TOKINT:
+		    intcnt += 1;
+		    next();
+		    break;
 		case TOKLONG:
+		    longcnt += 1;
+		    next();
+		    break;
 		case TOKFLOAT:
+		    floatcnt += 1;
+		    next();
+		    break;
 		case TOKDOUBLE:
+		    doublecnt += 1;
+		    next();
+		    break;
 		case TOKSIGNED:
+		    signedcnt += 1;
+		    next();
+		    break;
 		case TOKUNSIGNED:
+		    unsignedcnt += 1;
 			next();
 			break;
 		case TOKIDENT:
@@ -264,22 +348,26 @@ declspecs(int *sclass, CTy **basety)
 			break;
 		}
 	}
+	*basety = mktype(CINT);
 }
 
 /* Declarator is what introduces names into the program. */
 static CTy *
 declarator(CTy *basety, char **name) 
 {
+    CTy *t, *subt;
+
 	while (tok->k == TOKCONST || tok->k == TOKVOLATILE)
 		next();
 	switch(tok->k) {
 	case '*':
 		next();
-		declarator(basety, name);
-		return 0;
+		subt = declarator(basety, name);
+		t = mktype(CPTR);
+		t->Ptr.subty = subt;
+		return t;
 	default:
-	    directdeclarator(basety, name);
-	    return 0;
+	    return directdeclarator(basety, name);
 	}
 
 }
@@ -291,21 +379,18 @@ directdeclarator(CTy *basety, char **name)
     switch(tok->k) {
 	case '(':
 		expect('(');
-	    declarator(0, name);
+	    basety = declarator(basety, name);
 		expect(')');
-		declaratortail(basety);
-		return 0;
+		return declaratortail(basety);
 	case TOKIDENT:
 		if(name)
 			*name = tok->v;
 		next();
-		declaratortail(basety);
-		return 0;
+		return declaratortail(basety);
 	default:
 		if(!name)
 		    errorpos(&tok->pos, "expected ident or ( but got %s", tokktostr(tok->k));
-		declaratortail(basety);
-		return 0;
+		return declaratortail(basety);
 	}
 	error("unreachable");
 	return 0;
@@ -459,47 +544,65 @@ dowhile(void)
 	return 0;
 }
 
-static Node *
-declorstmt()
+static int
+istypestart(Tok *t)
 {
-    Sym *sym;
+    switch(t->k) {
+    case TOKSTRUCT:
+    case TOKUNION:
+    case TOKVOID:
+    case TOKCHAR:
+    case TOKSHORT:
+    case TOKINT:
+    case TOKLONG:
+    case TOKSIGNED:
+    case TOKUNSIGNED:
+        return 1;
+    case TOKIDENT:    
+        if(lookupsym(types, nexttok->v))
+            return 1;
+    }
+    return 0;
+}
 
-	switch(tok->k) {
-	case TOKSTRUCT:
-	case TOKUNION:
+static int
+isdeclstart(Tok *t)
+{
+    if(istypestart(t))
+        return 1;
+    switch(tok->k) {
 	case TOKREGISTER:
 	case TOKSTATIC:
 	case TOKAUTO:
 	case TOKCONST:
 	case TOKVOLATILE:
-	case TOKVOID:
-	case TOKCHAR:
-	case TOKSHORT:
-	case TOKINT:
-	case TOKLONG:
-	case TOKSIGNED:
-	case TOKUNSIGNED:
-	case TOKFLOAT:
-	case TOKDOUBLE:
+	    return 1;
+	case TOKIDENT:
+	    if(lookupsym(types, t->v))
+	        return 1;
+	}
+	return 0;
+}
+
+static Node *
+declorstmt()
+{
+    Sym *sym;
+    
+    if(isdeclstart(tok)) {
 	    decl();
 	    expect(';');
 	    return 0;
-	case TOKIDENT:
+    }
+	if(tok->k == TOKIDENT) {
 	    if(nexttok->k == ':') {
 	        next();
 	        next();
 	        stmt();
 	        return 0;
 	    }
-	    sym = lookupsym(types, tok->v);
-	    if(sym) {
-	        decl();
-	        expect(';');
-	        return 0;
-	    }
-	default:
-		return stmt();
 	}
+	return stmt();
 }
 
 static Node *
@@ -773,13 +876,6 @@ mulexpr(void)
 	return 0;
 }
 
-static int
-istypestart(Tok *t)
-{
-    /* TODO */
-    return 0;
-}
-
 static Node *
 castexpr(void)
 {
@@ -808,6 +904,8 @@ typename(void)
 static Node *
 unaryexpr(void)
 {
+    Sym *sym;
+
 	switch (tok->k) {
 	case TOKINC:
 	case TOKDEC:
@@ -823,6 +921,16 @@ unaryexpr(void)
 		next();
 		castexpr();
 		return 0;
+	case TOKSIZEOF:
+        next();
+        if (tok->k == '(' && istypestart(nexttok)) {
+            expect('(');
+            typename();
+            expect(')');
+            return 0;
+	    }
+        unaryexpr();
+        return 0;
 	}
 	return postexpr();
 }
