@@ -938,8 +938,11 @@ unaryexpr(void)
 static Node *
 postexpr(void)
 {
+    int done;
+
 	primaryexpr();
-	for(;;) {
+	done = 0;
+	while(!done) {
 		switch(tok->k) {
 		case '[':
 			next();
@@ -974,10 +977,9 @@ postexpr(void)
 			next();
 			break;
 		default:
-			goto done;
+			done = 1;
 		}
 	}
-    done:
 	return 0;
 }
 
