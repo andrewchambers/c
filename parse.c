@@ -11,6 +11,11 @@ static Node *dowhile(void);
 static Node *pwhile(void);
 static Node *block(void);
 static Node *preturn(void);
+static Node *pswitch(void);
+static Node *pdefault(void);
+static Node *pcase(void);
+static Node *pcontinue(void);
+static Node *pbreak(void);
 static Node *stmt(void);
 static Node *exprstmt(void);
 static Node *expr(void);
@@ -31,10 +36,11 @@ static Node *castexpr(void);
 static Node *unaryexpr(void);
 static Node *postexpr(void);
 static Node *primaryexpr(void);
+static Node *declorstmt(void);
 static Node *decl(void);
 static void  declspecs(int *specs, CTy **ty);
-static void  pstruct();
-static void  penum();
+static void  pstruct(void);
+static void  penum(void);
 static CTy  *typename(void);
 static CTy  *declarator(CTy *, char **name);
 static CTy  *directdeclarator(CTy *, char **name); 
@@ -330,24 +336,43 @@ declaratortail(CTy *basety)
 static void
 pstruct() 
 {
+    char *tagname;
+    /* TODO: replace with predeclarations */
+    int shoulddefine;
+    int sclass;
+    char *name;
+    CTy *basety;
+
+    tagname = 0;
+    shoulddefine = 0;
     if(tok->k != TOKUNION && tok->k != TOKSTRUCT)
 	    errorpos(&tok->pos, "expected union or struct");
 	next();
 	if(tok->k == TOKIDENT) {
-		if(!definesym(tags, tok->v, "TODO"))
-		    errorpos(&tok->pos, "redefinition of tag %s", tok->v);
+        tagname = tok->v;
 		next();
 	}
-	expect('{');
-	while(tok->k != '}') {
-		decl();
-		if(tok->k == ':') {
-		    next();
-		    constexpr();
-		}
-		expect(';');
+	if (tok->k == '{') {
+	    shoulddefine = 1;
+	    expect('{');
+	    while(tok->k != '}') {
+	        declspecs(&sclass, &basety);
+            declarator(basety, &name);
+	        while(tok->k == ',') {
+	            next();
+	            declarator(basety, &name);
+	        }
+		    if(tok->k == ':') {
+		        next();
+		        constexpr();
+		    }
+		    expect(';');
+	    }
+	    expect('}');
 	}
-	expect('}');
+	if(tagname && shoulddefine)
+		if(!definesym(tags, tagname, "TODO"))
+		    errorpos(&tok->pos, "redefinition of tag %s", tagname);
 }
 
 static void
@@ -435,23 +460,11 @@ dowhile(void)
 }
 
 static Node *
-stmt(void)
+declorstmt()
 {
     Sym *sym;
 
 	switch(tok->k) {
-	case TOKIF:
-		return pif();
-	case TOKFOR:
-		return pfor();
-	case TOKWHILE:
-		return pwhile();
-	case TOKDO:
-		return dowhile();
-	case TOKRETURN:
-		return preturn();
-	case '{':
-		return block();
 	case TOKSTRUCT:
 	case TOKUNION:
 	case TOKREGISTER:
@@ -472,13 +485,51 @@ stmt(void)
 	    expect(';');
 	    return 0;
 	case TOKIDENT:
+	    if(nexttok->k == ':') {
+	        next();
+	        next();
+	        stmt();
+	        return 0;
+	    }
 	    sym = lookupsym(types, tok->v);
 	    if(sym) {
 	        decl();
 	        expect(';');
 	        return 0;
 	    }
-	    /* Not decl, try expr. */
+	default:
+		return stmt();
+	}
+}
+
+static Node *
+stmt(void)
+{
+    Sym *sym;
+
+	switch(tok->k) {
+	case TOKIF:
+		return pif();
+	case TOKFOR:
+		return pfor();
+	case TOKWHILE:
+		return pwhile();
+	case TOKDO:
+		return dowhile();
+	case TOKRETURN:
+		return preturn();
+	case TOKSWITCH:
+	    return pswitch();
+	case TOKCASE:
+	    return pcase();
+	case TOKDEFAULT:
+	    return pdefault();
+	case TOKBREAK:
+	    return pbreak();
+	case TOKCONTINUE:
+	    return pcontinue();
+	case '{':
+		return block();
 	default:
 		return exprstmt();
 	}
@@ -504,12 +555,53 @@ preturn(void)
 }
 
 static Node *
+pswitch(void)
+{
+	expect(TOKSWITCH);
+	expect('(');
+	expr();
+	expect(')');
+	stmt();
+}
+
+static Node *
+pcontinue(void)
+{
+	expect(TOKCONTINUE);
+	expect(';');
+}
+
+static Node *
+pbreak(void)
+{
+	expect(TOKBREAK);
+	expect(';');
+}
+
+static Node *
+pdefault(void)
+{
+	expect(TOKDEFAULT);
+	expect(':');
+	stmt();
+}
+
+static Node *
+pcase(void)
+{
+	expect(TOKCASE);
+	constexpr();
+	expect(':');
+	stmt();
+}
+
+static Node *
 block(void)
 {
 	pushscope();
 	expect('{');
 	while(tok->k != '}' && tok->k != TOKEOF)
-		stmt();
+		declorstmt();
 	expect('}');
 	popscope();
 	return 0;
@@ -557,7 +649,7 @@ assignexpr(void)
 }
 
 static Node *
-constexpr()
+constexpr(void)
 {
 	return condexpr();
 }
