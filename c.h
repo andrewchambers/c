@@ -185,13 +185,10 @@ struct CTy {
 		} Ptr;
 		struct {
             CTy *subty;
-		} Ptr;
-		struct {
-            CTy *subty;
 		} Arr;
 		struct {
             int issigned;
-            CTy *subty;
+            int type;
 		} Prim;
 	};
 };

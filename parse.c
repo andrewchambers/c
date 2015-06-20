@@ -236,6 +236,7 @@ issclasstok(Tok *t) {
 static void
 declspecs(int *sclass, CTy **basety)
 {
+	CTy *t;
 	SrcPos *pos;
 	Sym *sym;
 	int bits;
@@ -375,50 +376,97 @@ declspecs(int *sclass, CTy **basety)
 	done:
 	switch(bits){
 	case BITFLOAT:
-		break;
+		t = mktype(CPRIM);
+		t->Prim.type = PRIMFLOAT;
+		t->Prim.issigned = 0;
+		*basety = t;
+		return;
 	case BITDOUBLE:
-		break;
-	case BITCHAR:
+		t = mktype(CPRIM);
+		t->Prim.type = PRIMDOUBLE;
+		t->Prim.issigned = 0;
+		*basety = t;
+		return;
 	case BITSIGNED|BITCHAR:
-		break;
+	case BITCHAR:
+		t = mktype(CPRIM);
+		t->Prim.type = PRIMCHAR;
+		t->Prim.issigned = 1;
+		*basety = t;
+		return;
 	case BITUNSIGNED|BITCHAR:
-		break;
+		t = mktype(CPRIM);
+		t->Prim.type = PRIMCHAR;
+		t->Prim.issigned = 0;
+		*basety = t;
+		return;
 	case BITSIGNED|BITSHORT|BITINT:
 	case BITSHORT|BITINT:
 	case BITSHORT:
-		break;
+		t = mktype(CPRIM);
+		t->Prim.type = PRIMSHORT;
+		t->Prim.issigned = 1;
+		*basety = t;
+		return;
 	case BITUNSIGNED|BITSHORT|BITINT:
 	case BITUNSIGNED|BITSHORT:
-		break;
+		t = mktype(CPRIM);
+		t->Prim.type = PRIMSHORT;
+		t->Prim.issigned = 0;
+		*basety = t;
+		return;
 	case BITSIGNED|BITINT:
 	case BITSIGNED:
 	case BITINT:
 	case 0:
-		break;
+		t = mktype(CPRIM);
+		t->Prim.type = PRIMINT;
+		t->Prim.issigned = 1;
+		*basety = t;
+		return;
 	case BITUNSIGNED|BITINT:
 	case BITUNSIGNED:
-		break;
+		t = mktype(CPRIM);
+		t->Prim.type = PRIMINT;
+		t->Prim.issigned = 0;
+		*basety = t;
+		return;
 	case BITSIGNED|BITLONG|BITINT:
 	case BITSIGNED|BITLONG:
 	case BITLONG:
-		break;
+		t = mktype(CPRIM);
+		t->Prim.type = PRIMLONG;
+		t->Prim.issigned = 1;
+		*basety = t;
+		return;
 	case BITUNSIGNED|BITLONG|BITINT:
 	case BITUNSIGNED|BITLONG:
-		break;
+		t = mktype(CPRIM);
+		t->Prim.type = PRIMLONG;
+		t->Prim.issigned = 0;
+		*basety = t;
+		return;
 	case BITSIGNED|BITLONGLONG|BITINT:
 	case BITSIGNED|BITLONGLONG:
 	case BITLONGLONG|BITINT:
 	case BITLONGLONG:
-		break;
+		t = mktype(CPRIM);
+		t->Prim.type = PRIMLLONG;
+		t->Prim.issigned = 1;
+		*basety = t;
+		return;
 	case BITUNSIGNED|BITLONGLONG|BITINT:
 	case BITUNSIGNED|BITLONGLONG:
-		break;
+		t = mktype(CPRIM);
+		t->Prim.type = PRIMLLONG;
+		t->Prim.issigned = 0;
+		*basety = t;
+		return;
 	default:
 		goto err;
 	}
 	err:
 	errorpos(pos, "invalid declaration specifiers");
-	return 0;
 }
 
 /* Declarator is what introduces names into the program. */
@@ -657,8 +705,6 @@ isdeclstart(Tok *t)
 static Node *
 declorstmt()
 {
-    Sym *sym;
-    
     if(isdeclstart(tok)) {
 	    decl();
 	    expect(';');
@@ -678,8 +724,6 @@ declorstmt()
 static Node *
 stmt(void)
 {
-    Sym *sym;
-
 	switch(tok->k) {
 	case TOKIF:
 		return pif();
@@ -735,6 +779,7 @@ pswitch(void)
 	expr();
 	expect(')');
 	stmt();
+	return 0;
 }
 
 static Node *
@@ -742,6 +787,7 @@ pcontinue(void)
 {
 	expect(TOKCONTINUE);
 	expect(';');
+	return 0;
 }
 
 static Node *
@@ -749,6 +795,7 @@ pbreak(void)
 {
 	expect(TOKBREAK);
 	expect(';');
+	return 0;
 }
 
 static Node *
@@ -757,6 +804,7 @@ pdefault(void)
 	expect(TOKDEFAULT);
 	expect(':');
 	stmt();
+	return 0;
 }
 
 static Node *
@@ -766,6 +814,7 @@ pcase(void)
 	constexpr();
 	expect(':');
 	stmt();
+	return 0;
 }
 
 static Node *
@@ -974,8 +1023,6 @@ typename(void)
 static Node *
 unaryexpr(void)
 {
-    Sym *sym;
-
 	switch (tok->k) {
 	case TOKINC:
 	case TOKDEC:
