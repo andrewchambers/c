@@ -236,119 +236,189 @@ issclasstok(Tok *t) {
 static void
 declspecs(int *sclass, CTy **basety)
 {
-	int done;
-	int voidcnt;
-	int signedcnt;
-	int unsignedcnt;
-	int charcnt;
-	int intcnt;
-	int shortcnt;
-	int longcnt;
-	int floatcnt;
-	int doublecnt;
+	SrcPos *pos;
 	Sym *sym;
-	
-	*sclass = SCNONE;
-	done = 0;
-	
-	voidcnt = 0;
-	signedcnt = 0;
-	unsignedcnt = 0;
-	charcnt = 0;
-	intcnt = 0;
-	shortcnt = 0;
-	longcnt = 0;
-	floatcnt = 0;
-	doublecnt = 0;
-	
-	while(!done) {
-		if(issclasstok(tok))
+	int bits;
+
+	enum {
+		BITCHAR = 1<<0,
+		BITSHORT = 1<<1,
+		BITINT = 1<<2,
+		BITLONG = 1<<3,
+		BITLONGLONG = 1<<4,
+		BITSIGNED = 1<<5,
+		BITUNSIGNED = 1<<6,
+		BITFLOAT = 1<<7,
+		BITDOUBLE = 1<<8,
+		BITENUM = 1<<9,
+		BITSTRUCT = 1<<10,
+		BITVOID = 1<<11,
+		BITIDENT = 1<<12,
+	};
+
+	bits = 0;
+	pos = &tok->pos;
+
+	for(;;) {
+		if(issclasstok(tok)) {
 	        if(*sclass != SCNONE)
-	            errorpos(&tok->pos, "multiple storage classes in declaration specifiers.");
+	            errorpos(pos, "multiple storage classes in declaration specifiers.");
+			switch(tok->k) {
+			case TOKEXTERN:
+				*sclass = SCEXTERN;
+				break;    
+			case TOKSTATIC:
+		    	*sclass = SCSTATIC;
+				break;
+			case TOKREGISTER:
+		    	*sclass = SCREGISTER;
+				break;
+			case TOKAUTO:
+		    	*sclass = SCAUTO;
+				break;
+			case TOKTYPEDEF:
+				*sclass = SCTYPEDEF;
+				break;
+			}	
+		}
 		switch(tok->k) {
-		case TOKEXTERN:
-			*sclass = SCEXTERN;
-			next();
-			break;    
-		case TOKSTATIC:
-		    *sclass = SCSTATIC;
-			next();
-			break;
-		case TOKREGISTER:
-		    *sclass = SCREGISTER;
-			next();
-			break;
-		case TOKAUTO:
-		    *sclass = SCAUTO;
-			next();
-			break;
-		case TOKTYPEDEF:
-			*sclass = SCTYPEDEF;
-			next();
-			break;
 		case TOKCONST:
 		case TOKVOLATILE:
 		    next();
 		    break;
 		case TOKSTRUCT:
 		case TOKUNION:
+			if(bits&BITSTRUCT)
+				goto err;
+			bits |= BITSTRUCT;
 			pstruct();
-			done = 1;
-			break;
+			goto done;
 		case TOKENUM:
+			if(bits&BITENUM)
+				goto err;
+			bits |= BITENUM;
 			penum();
-			done = 1;
-			break;
+			goto done;
 		case TOKVOID:
-		    voidcnt += 1;
+			if(bits&BITVOID)
+				goto err;
+			bits |= BITVOID;
 		    next();
-		    break;
+		    goto done;
 		case TOKCHAR:
-		    charcnt += 1;
+			if(bits&BITCHAR)
+				goto err;
+			bits |= BITCHAR;
 		    next();
 		    break;
 		case TOKSHORT:
-		    shortcnt += 1;
+			if(bits&BITSHORT)
+				goto err;
+			bits |= BITSHORT;
 		    next();
 		    break;
 		case TOKINT:
-		    intcnt += 1;
+			if(bits&BITINT)
+				goto err;
+			bits |= BITINT;
 		    next();
 		    break;
 		case TOKLONG:
-		    longcnt += 1;
+			if(bits&BITLONGLONG)
+				goto err;
+			if(bits&BITLONG) {
+				bits &= ~BITLONG;
+				bits |= BITLONGLONG;
+			} else {
+				bits |= BITLONG;
+			}
 		    next();
 		    break;
 		case TOKFLOAT:
-		    floatcnt += 1;
+		    if(bits&BITFLOAT)
+		    	goto err;
+		    bits |= BITFLOAT;
 		    next();
 		    break;
 		case TOKDOUBLE:
-		    doublecnt += 1;
+		    if(bits&BITDOUBLE)
+		    	goto err;
+		    bits |= BITDOUBLE;
 		    next();
 		    break;
 		case TOKSIGNED:
-		    signedcnt += 1;
+			if(bits&BITSIGNED)
+		    	goto err;
+		    bits |= BITSIGNED;
 		    next();
 		    break;
 		case TOKUNSIGNED:
-		    unsignedcnt += 1;
+			if(bits&BITUNSIGNED)
+		    	goto err;
+		    bits |= BITUNSIGNED;
 			next();
 			break;
 		case TOKIDENT:
 			sym = lookupsym(types, tok->v);
 			if(sym) {
+				if(bits&BITIDENT)
+					goto err;
+				bits |= BITIDENT;
 				next();
-				done = 1;
-				break;
+				goto done;
 			}
 			/* fallthrough */
 		default:
-			done = 1;
-			break;
+			goto done;
 		}
 	}
-	*basety = mktype(CINT);
+	done:
+	switch(bits){
+	case BITFLOAT:
+		break;
+	case BITDOUBLE:
+		break;
+	case BITCHAR:
+	case BITSIGNED|BITCHAR:
+		break;
+	case BITUNSIGNED|BITCHAR:
+		break;
+	case BITSIGNED|BITSHORT|BITINT:
+	case BITSHORT|BITINT:
+	case BITSHORT:
+		break;
+	case BITUNSIGNED|BITSHORT|BITINT:
+	case BITUNSIGNED|BITSHORT:
+		break;
+	case BITSIGNED|BITINT:
+	case BITSIGNED:
+	case BITINT:
+	case 0:
+		break;
+	case BITUNSIGNED|BITINT:
+	case BITUNSIGNED:
+		break;
+	case BITSIGNED|BITLONG|BITINT:
+	case BITSIGNED|BITLONG:
+	case BITLONG:
+		break;
+	case BITUNSIGNED|BITLONG|BITINT:
+	case BITUNSIGNED|BITLONG:
+		break;
+	case BITSIGNED|BITLONGLONG|BITINT:
+	case BITSIGNED|BITLONGLONG:
+	case BITLONGLONG|BITINT:
+	case BITLONGLONG:
+		break;
+	case BITUNSIGNED|BITLONGLONG|BITINT:
+	case BITUNSIGNED|BITLONGLONG:
+		break;
+	default:
+		goto err;
+	}
+	err:
+	errorpos(pos, "invalid declaration specifiers");
+	return 0;
 }
 
 /* Declarator is what introduces names into the program. */

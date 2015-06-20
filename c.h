@@ -1,4 +1,18 @@
 
+/* 	Singly linked list.
+	A null pointer is the empty list. */
+
+typedef struct List List;
+struct List {
+	List *rest;
+	void *v;
+};
+
+typedef struct Map Map;
+struct Map {
+    List *l;
+};
+
 /* AST Node types */
 enum {
 	NDOWHILE,
@@ -134,35 +148,51 @@ typedef struct {
 
 enum {
     CVOID,
-    CENUM,
-    CCHAR,
-    CSHORT,
-    CINT,
-    CLONG,
-    CLLONG,
-    CFLOAT,
-    CDOUBLE,
+    CPRIM,
     CSTRUCT,
     CPTR,
     CFUNC,
+};
+
+enum {
+    PRIMENUM,
+    PRIMCHAR,
+    PRIMSHORT,
+    PRIMINT,
+    PRIMLONG,
+    PRIMLLONG,
+    PRIMFLOAT,
+    PRIMDOUBLE,
 };
 
 typedef struct CTy CTy;
 struct CTy {
 	/* type tag */
 	int t;
-	int flags;
-	int sclass;
 	union {
 		struct {
-
+			CTy  *rtype;
+			List *paramnames;
+			List *paramtypes;
 		} Func;
 		struct {
-
+			int isunion;
+			List *names;
+			List *types;
 		} Struct;
 		struct {
             CTy *subty;
 		} Ptr;
+		struct {
+            CTy *subty;
+		} Ptr;
+		struct {
+            CTy *subty;
+		} Arr;
+		struct {
+            int issigned;
+            CTy *subty;
+		} Prim;
 	};
 };
 
@@ -173,20 +203,6 @@ struct Tok {
 	/* Set if the tok was preceeded by an unescaped newline */
 	int newline;
 	SrcPos pos;
-};
-
-/* 	Singly linked list.
-	A null pointer is the empty list. */
-
-typedef struct List List;
-struct List {
-	List *rest;
-	void *v;
-};
-
-typedef struct Map Map;
-struct Map {
-    List *l;
 };
 
 /* helper functions */
