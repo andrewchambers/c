@@ -87,7 +87,7 @@ isglobal()
 }
 
 static int
-definesym(Map *scope[], char *k, void *v)
+define(Map *scope[], char *k, void *v)
 {
     Map *m;
     
@@ -99,7 +99,7 @@ definesym(Map *scope[], char *k, void *v)
 }
 
 static void *
-lookupsym(Map *scope[], char *k)
+lookup(Map *scope[], char *k)
 {
     int i;
     void *v;
@@ -165,24 +165,46 @@ parse()
 }
 
 static void
-params(void)
+params(CTy *fty)
 {
 	int sclass;
-	CTy *basety;
+	CTy *t;
 	char *name;
+	SrcPos *pos;
 
+	fty->Func.isvararg = 0;
 	if(tok->k == ')')
 		return;
-	declspecs(&sclass, &basety);
-	declarator(basety, &name);
-	while(tok->k == ',') {
-		next();
-		if(tok->k == TOKELLIPSIS) {
-			next();
+	for(;;) {
+		pos = &tok->pos;
+		declspecs(&sclass, &t);
+		declarator(t, &name);
+		if(sclass != SCNONE)
+			errorpos(pos, "storage class not allowed in parameter decl");
+		fty->Func.paramnames = listadd(fty->Func.paramnames, name);
+		fty->Func.paramtypes = listadd(fty->Func.paramnames, t);
+		if(tok->k != ',')
 			break;
-		}
-		declspecs(&sclass, &basety);
-		declarator(basety, &name);
+		next();
+	}
+	if(tok->k == TOKELLIPSIS) {
+		fty->Func.isvararg = 1;
+		next();
+	}
+}
+
+static void
+definetype(SrcPos *pos, char *name, CTy *ty)
+{
+	if(!name)
+		return;
+	/* Handle valid redefines */
+	if(!define(types, name, ty)) {
+		/* TODO: 
+		 Check if types are compatible.
+	     errorpos(pos, "redefinition of type %s", name);
+		
+		*/
 	}
 }
 
@@ -193,18 +215,12 @@ decl()
     char *name;
     CTy  *basety;
     SrcPos *pos;
-    Map **symtab;
 
     pos = &tok->pos;
     declspecs(&sclass, &basety);
     declarator(basety, &name);
     if(sclass == SCTYPEDEF)
-    	symtab = types;
-    else
-    	symtab = vars;
-    if(name)
-    	if(!definesym(symtab, name, "TODO"))
-        	errorpos(pos, "redefinition of symbol %s", name);
+    	definetype(pos, name, basety);
     if(isglobal() && tok->k == '{') {
 		block();
 		return 0;
@@ -213,9 +229,8 @@ decl()
 	    next();
 	    pos = &tok->pos;
 	    declarator(basety, &name);
-        if(name)
-        	if(!definesym(symtab, name, "TODO"))
-            	errorpos(pos, "redefinition of symbol %s", name);
+		if(sclass == SCTYPEDEF)
+    		definetype(pos, name, basety);
 	}
 	return 0;
 }
@@ -227,6 +242,7 @@ issclasstok(Tok *t) {
 	case TOKSTATIC:
 	case TOKREGISTER:
 	case TOKCONST:
+	case TOKTYPEDEF:
 	case TOKAUTO:
 	    return 1;
 	}
@@ -238,7 +254,6 @@ declspecs(int *sclass, CTy **basety)
 {
 	CTy *t;
 	SrcPos *pos;
-	Sym *sym;
 	int bits;
 
 	enum {
@@ -259,6 +274,7 @@ declspecs(int *sclass, CTy **basety)
 
 	bits = 0;
 	pos = &tok->pos;
+	*sclass = SCNONE;
 
 	for(;;) {
 		if(issclasstok(tok)) {
@@ -280,7 +296,9 @@ declspecs(int *sclass, CTy **basety)
 			case TOKTYPEDEF:
 				*sclass = SCTYPEDEF;
 				break;
-			}	
+			}
+			next();
+			continue;
 		}
 		switch(tok->k) {
 		case TOKCONST:
@@ -360,11 +378,10 @@ declspecs(int *sclass, CTy **basety)
 			next();
 			break;
 		case TOKIDENT:
-			sym = lookupsym(types, tok->v);
-			if(sym) {
-				if(bits&BITIDENT)
-					goto err;
+			t = lookup(types, tok->v);
+			if(t && !bits) {
 				bits |= BITIDENT;
+				*basety = t;
 				next();
 				goto done;
 			}
@@ -433,6 +450,7 @@ declspecs(int *sclass, CTy **basety)
 		return;
 	case BITSIGNED|BITLONG|BITINT:
 	case BITSIGNED|BITLONG:
+	case BITLONG|BITINT:
 	case BITLONG:
 		t = mktype(CPRIM);
 		t->Prim.type = PRIMLONG;
@@ -461,6 +479,13 @@ declspecs(int *sclass, CTy **basety)
 		t->Prim.type = PRIMLLONG;
 		t->Prim.issigned = 0;
 		*basety = t;
+		return;
+	case BITVOID:
+		*basety = mktype(CVOID);
+		return;
+	case BITENUM:
+	case BITSTRUCT:
+	case BITIDENT:
 		return;
 	default:
 		goto err;
@@ -517,6 +542,8 @@ directdeclarator(CTy *basety, char **name)
 static CTy *
 declaratortail(CTy *basety)
 {
+	CTy *t;
+
 	for(;;) {
 		switch (tok->k) {
 		case '[':
@@ -526,10 +553,14 @@ declaratortail(CTy *basety)
 			expect(']');
 			break;
 		case '(':
+			t = mktype(CFUNC);
+		    t->Func.rtype = basety;
 		    next();
-			params();
-			expect(')');
-			break;
+			params(t);
+			if (tok->k != ')')
+				errorpos(&tok->pos, "expected valid parameter or )");
+			next();
+			return t;
 		default:
 			return basety;
 		}
@@ -574,7 +605,7 @@ pstruct()
 	    expect('}');
 	}
 	if(tagname && shoulddefine)
-		if(!definesym(tags, tagname, "TODO"))
+		if(!define(tags, tagname, "TODO"))
 		    errorpos(&tok->pos, "redefinition of tag %s", tagname);
 }
 
@@ -583,7 +614,7 @@ penum()
 {
 	expect(TOKENUM);
 	if(tok->k == TOKIDENT) {
-		if(!definesym(tags, tok->v, "TODO"))
+		if(!define(tags, tok->v, "TODO"))
 		    errorpos(&tok->pos, "redefinition of tag %s", tok->v);
 		next();
 	}
@@ -591,7 +622,7 @@ penum()
 	while(1) {
 		if(tok->k == '}')
 			break;
-		if(!definesym(vars, tok->v, "TODO"))
+		if(!define(vars, tok->v, "TODO"))
 		    errorpos(&tok->pos, "redefinition of symbol %s", tok->v);
 		expect(TOKIDENT);
 		if(tok->k == '=') {
@@ -677,7 +708,7 @@ istypestart(Tok *t)
     case TOKUNSIGNED:
         return 1;
     case TOKIDENT:    
-        if(lookupsym(types, nexttok->v))
+        if(lookup(types, nexttok->v))
             return 1;
     }
     return 0;
@@ -696,7 +727,7 @@ isdeclstart(Tok *t)
 	case TOKVOLATILE:
 	    return 1;
 	case TOKIDENT:
-	    if(lookupsym(types, t->v))
+	    if(lookup(types, t->v))
 	        return 1;
 	}
 	return 0;
@@ -1108,7 +1139,7 @@ primaryexpr(void)
     
 	switch (tok->k) {
 	case TOKIDENT:
-		sym = lookupsym(vars, tok->v);
+		sym = lookup(vars, tok->v);
 		if(!sym)
 			errorpos(&tok->pos, "undefined symbol %s", tok->v);
 		next();

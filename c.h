@@ -143,7 +143,14 @@ struct Node {
 };
 
 typedef struct {
+	union {
+		struct {
 
+		} LSym;
+		struct {
+			char *name;
+		} GSym;
+	};
 } Sym;
 
 enum {
@@ -174,6 +181,7 @@ struct CTy {
 			CTy  *rtype;
 			List *paramnames;
 			List *paramtypes;
+			int isvararg;
 		} Func;
 		struct {
 			int isunion;
