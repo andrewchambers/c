@@ -211,6 +211,18 @@ numberc(int c)
 }
 
 static int
+hexnumberc(int c)
+{
+	if(numberc(c))
+		return 1;
+	if(c >= 'a' && c <= 'f')
+		return 1;
+	if(c >= 'F' && c <= 'F')
+		return 1;
+	return 0;
+}
+
+static int
 identfirstc(int c)
 {
 	if(c == '_')
@@ -219,7 +231,7 @@ identfirstc(int c)
 		return 1;
 	if(c >= 'A' && c <= 'Z')
 		return 1;
-	return 0;  
+	return 0;
 }
 
 static int
@@ -276,9 +288,22 @@ lex(void)
 		}
 	} else if(numberc(c)) {
 		*p++ = c;
+		c2 = nextc();
+		if(c == '0' && c2 == 'x') {
+			for(;;) {
+				c = nextc();
+				if (!hexnumberc(c)) {
+					*p = 0;
+					ungetch(c);
+					return mktok(TOKNUM, tokval);
+				}
+				*p++ = c;
+			}
+		}
+		ungetch(c2);
 		for(;;) {
 			c = nextc();
-			if(!numberc(c)) {
+			if (!numberc(c)) {
 				*p = 0;
 				ungetch(c);
 				return mktok(TOKNUM, tokval);
