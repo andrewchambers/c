@@ -38,7 +38,7 @@ static Node *postexpr(void);
 static Node *primaryexpr(void);
 static Node *declorstmt(void);
 static Node *decl(void);
-static void  declspecs(int *specs, CTy **ty);
+static CTy  *declspecs(int *specs);
 static void  pstruct(void);
 static void  penum(void);
 static CTy  *typename(void);
@@ -177,8 +177,8 @@ params(CTy *fty)
 		return;
 	for(;;) {
 		pos = &tok->pos;
-		declspecs(&sclass, &t);
-		declarator(t, &name);
+		t = declspecs(&sclass);
+		t = declarator(t, &name);
 		if(sclass != SCNONE)
 			errorpos(pos, "storage class not allowed in parameter decl");
 		fty->Func.paramnames = listadd(fty->Func.paramnames, name);
@@ -196,10 +196,21 @@ params(CTy *fty)
 static void
 definetype(SrcPos *pos, char *name, CTy *ty)
 {
-	if(!name)
-		return;
 	/* Handle valid redefines */
 	if(!define(types, name, ty)) {
+		/* TODO: 
+		 Check if types are compatible.
+	     errorpos(pos, "redefinition of type %s", name);
+		
+		*/
+	}
+}
+
+static void
+definesym(SrcPos *pos, char *name, void *sym)
+{
+   	/* Handle valid redefines */
+	if(!define(vars, name, sym)) {
 		/* TODO: 
 		 Check if types are compatible.
 	     errorpos(pos, "redefinition of type %s", name);
@@ -214,23 +225,33 @@ decl()
     int sclass;
     char *name;
     CTy  *basety;
+    CTy  *ty;
     SrcPos *pos;
 
     pos = &tok->pos;
-    declspecs(&sclass, &basety);
-    declarator(basety, &name);
-    if(sclass == SCTYPEDEF)
-    	definetype(pos, name, basety);
+    basety = declspecs(&sclass);
+    ty = declarator(basety, &name);
+    if(sclass == SCTYPEDEF && name)
+    	definetype(pos, name, ty);
+    else if(name)
+        definesym(pos, name, "TODO");
     if(isglobal() && tok->k == '{') {
+		if(ty->t != CFUNC)
+		    errorpos(pos, "expected a function");
+		for(;;) {
+		
+		}
 		block();
 		return 0;
 	}
 	while(tok->k == ',') {
 	    next();
 	    pos = &tok->pos;
-	    declarator(basety, &name);
-		if(sclass == SCTYPEDEF)
-    		definetype(pos, name, basety);
+	    ty = declarator(basety, &name);
+		if(sclass == SCTYPEDEF && name)
+    		definetype(pos, name, ty);
+	    else if(name)
+            definesym(pos, name, "TODO");
 	}
 	return 0;
 }
@@ -241,7 +262,6 @@ issclasstok(Tok *t) {
 	case TOKEXTERN:
 	case TOKSTATIC:
 	case TOKREGISTER:
-	case TOKCONST:
 	case TOKTYPEDEF:
 	case TOKAUTO:
 	    return 1;
@@ -249,8 +269,8 @@ issclasstok(Tok *t) {
 	return 0;
 }
 
-static void
-declspecs(int *sclass, CTy **basety)
+static CTy *
+declspecs(int *sclass)
 {
 	CTy *t;
 	SrcPos *pos;
@@ -307,13 +327,13 @@ declspecs(int *sclass, CTy **basety)
 		    break;
 		case TOKSTRUCT:
 		case TOKUNION:
-			if(bits&BITSTRUCT)
+			if(bits)
 				goto err;
 			bits |= BITSTRUCT;
 			pstruct();
 			goto done;
 		case TOKENUM:
-			if(bits&BITENUM)
+			if(bits)
 				goto err;
 			bits |= BITENUM;
 			penum();
@@ -381,7 +401,6 @@ declspecs(int *sclass, CTy **basety)
 			t = lookup(types, tok->v);
 			if(t && !bits) {
 				bits |= BITIDENT;
-				*basety = t;
 				next();
 				goto done;
 			}
@@ -396,42 +415,37 @@ declspecs(int *sclass, CTy **basety)
 		t = mktype(CPRIM);
 		t->Prim.type = PRIMFLOAT;
 		t->Prim.issigned = 0;
-		*basety = t;
-		return;
+		return t;
+	case BITLONG|BITDOUBLE:
 	case BITDOUBLE:
 		t = mktype(CPRIM);
 		t->Prim.type = PRIMDOUBLE;
 		t->Prim.issigned = 0;
-		*basety = t;
-		return;
+		return t;
 	case BITSIGNED|BITCHAR:
 	case BITCHAR:
 		t = mktype(CPRIM);
 		t->Prim.type = PRIMCHAR;
 		t->Prim.issigned = 1;
-		*basety = t;
-		return;
+		return t;
 	case BITUNSIGNED|BITCHAR:
 		t = mktype(CPRIM);
 		t->Prim.type = PRIMCHAR;
 		t->Prim.issigned = 0;
-		*basety = t;
-		return;
+		return t;
 	case BITSIGNED|BITSHORT|BITINT:
 	case BITSHORT|BITINT:
 	case BITSHORT:
 		t = mktype(CPRIM);
 		t->Prim.type = PRIMSHORT;
 		t->Prim.issigned = 1;
-		*basety = t;
-		return;
+		return t;
 	case BITUNSIGNED|BITSHORT|BITINT:
 	case BITUNSIGNED|BITSHORT:
 		t = mktype(CPRIM);
 		t->Prim.type = PRIMSHORT;
 		t->Prim.issigned = 0;
-		*basety = t;
-		return;
+		return t;
 	case BITSIGNED|BITINT:
 	case BITSIGNED:
 	case BITINT:
@@ -439,15 +453,13 @@ declspecs(int *sclass, CTy **basety)
 		t = mktype(CPRIM);
 		t->Prim.type = PRIMINT;
 		t->Prim.issigned = 1;
-		*basety = t;
-		return;
+		return t;
 	case BITUNSIGNED|BITINT:
 	case BITUNSIGNED:
 		t = mktype(CPRIM);
 		t->Prim.type = PRIMINT;
 		t->Prim.issigned = 0;
-		*basety = t;
-		return;
+		return t;
 	case BITSIGNED|BITLONG|BITINT:
 	case BITSIGNED|BITLONG:
 	case BITLONG|BITINT:
@@ -455,15 +467,13 @@ declspecs(int *sclass, CTy **basety)
 		t = mktype(CPRIM);
 		t->Prim.type = PRIMLONG;
 		t->Prim.issigned = 1;
-		*basety = t;
-		return;
+		return t;
 	case BITUNSIGNED|BITLONG|BITINT:
 	case BITUNSIGNED|BITLONG:
 		t = mktype(CPRIM);
 		t->Prim.type = PRIMLONG;
 		t->Prim.issigned = 0;
-		*basety = t;
-		return;
+		return t;
 	case BITSIGNED|BITLONGLONG|BITINT:
 	case BITSIGNED|BITLONGLONG:
 	case BITLONGLONG|BITINT:
@@ -471,27 +481,26 @@ declspecs(int *sclass, CTy **basety)
 		t = mktype(CPRIM);
 		t->Prim.type = PRIMLLONG;
 		t->Prim.issigned = 1;
-		*basety = t;
-		return;
+		return t;
 	case BITUNSIGNED|BITLONGLONG|BITINT:
 	case BITUNSIGNED|BITLONGLONG:
 		t = mktype(CPRIM);
 		t->Prim.type = PRIMLLONG;
 		t->Prim.issigned = 0;
-		*basety = t;
-		return;
+		return t;
 	case BITVOID:
-		*basety = mktype(CVOID);
-		return;
+		t = mktype(CVOID);
+		return t;
 	case BITENUM:
 	case BITSTRUCT:
 	case BITIDENT:
-		return;
+		return 0;
 	default:
 		goto err;
 	}
 	err:
 	errorpos(pos, "invalid declaration specifiers");
+	return 0;
 }
 
 /* Declarator is what introduces names into the program. */
@@ -576,6 +585,7 @@ pstruct()
     int sclass;
     char *name;
     CTy *basety;
+    CTy *t;
 
     tagname = 0;
     shoulddefine = 0;
@@ -590,12 +600,12 @@ pstruct()
 	    shoulddefine = 1;
 	    expect('{');
 	    while(tok->k != '}') {
-	        declspecs(&sclass, &basety);
-            declarator(basety, &name);
-	        while(tok->k == ',') {
-	            next();
-	            declarator(basety, &name);
-	        }
+	        basety = declspecs(&sclass);
+            do {
+                if (tok->k == ',')
+                    next();
+                t = declarator(basety, &name);
+            } while (tok->k == ',');
 		    if(tok->k == ':') {
 		        next();
 		        constexpr();
@@ -1043,11 +1053,11 @@ static CTy *
 typename(void)
 {
 	int sclass;
-	CTy *basety;
+	CTy *t;
 	char *name;
 
-	declspecs(&sclass, &basety);
-	declarator(basety, &name);
+	t = declspecs(&sclass);
+	t = declarator(t, &name);
 	return 0;
 }
 
