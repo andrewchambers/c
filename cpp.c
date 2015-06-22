@@ -68,7 +68,6 @@ static char *tok2strab[TOKEOF+1] = {
     [TOKMODASS]   = "%=",
     [TOKGTEQL]    = ">=",
     [TOKLTEQL]    = "<=",
-    [TOKNEQL]     = "!=",
     [TOKEQL]      = "==",
     [TOKLOR]      = "||",
     [TOKLAND]     = "&&",
@@ -362,7 +361,7 @@ lex(void)
 		  else if(c == '%' && c2 == '=') return mktok(TOKMODASS, 0);
 		  else if(c == '>' && c2 == '=') return mktok(TOKGTEQL, 0);
 		  else if(c == '<' && c2 == '=') return mktok(TOKLTEQL, 0);
-		  else if(c == '!' && c2 == '=') return mktok(TOKNEQL, 0);
+		  else if(c == '!' && c2 == '=') return mktok(TOKNEQ, 0);
 		  else if(c == '=' && c2 == '=') return mktok(TOKEQL, 0);
 		  else if(c == '+' && c2 == '+') return mktok(TOKINC, 0);
 		  else if(c == '-' && c2 == '-') return mktok(TOKDEC, 0);

@@ -39,8 +39,8 @@ static Node *primaryexpr(void);
 static Node *declorstmt(void);
 static Node *decl(void);
 static CTy  *declspecs(int *specs);
-static void  pstruct(void);
-static void  penum(void);
+static CTy  *pstruct(void);
+static CTy  *penum(void);
 static CTy  *typename(void);
 static CTy  *declarator(CTy *, char **name);
 static CTy  *directdeclarator(CTy *, char **name); 
@@ -341,13 +341,13 @@ declspecs(int *sclass)
 			if(bits)
 				goto err;
 			bits |= BITSTRUCT;
-			pstruct();
+			t = pstruct();
 			goto done;
 		case TOKENUM:
 			if(bits)
 				goto err;
 			bits |= BITENUM;
-			penum();
+			t = penum();
 			goto done;
 		case TOKVOID:
 			if(bits&BITVOID)
@@ -505,7 +505,7 @@ declspecs(int *sclass)
 	case BITENUM:
 	case BITSTRUCT:
 	case BITIDENT:
-		return 0;
+		return t;
 	default:
 		goto err;
 	}
@@ -587,7 +587,7 @@ declaratortail(CTy *basety)
 	}
 }
 
-static void
+static CTy *
 pstruct() 
 {
     char *tagname;
@@ -628,11 +628,14 @@ pstruct()
 	if(tagname && shoulddefine)
 		if(!define(tags, tagname, "TODO"))
 		    errorpos(&tok->pos, "redefinition of tag %s", tagname);
+    return mktype(CSTRUCT);
 }
 
-static void
+static CTy *
 penum()
 {
+    CTy *t;
+
 	expect(TOKENUM);
 	if(tok->k == TOKIDENT) {
 		if(!define(tags, tok->v, "TODO"))
@@ -654,6 +657,9 @@ penum()
 			next();
 	}
 	expect('}');
+	t = mktype(CPRIM);
+	t->Prim.type = PRIMENUM;
+	return t;
 }
 
 static Node *
