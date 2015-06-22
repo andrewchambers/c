@@ -2,24 +2,31 @@
 #include <stdio.h>
 #include <string.h>
 
-static FILE * f;
-static char *fname;
-static int line;
-static int col;
-static int prevline;
-static int prevcol;
-/* Marked start of token */
-static int mline;
-static int mcol;
+#define MAXTOKSZ 4096
+
+typedef struct Lexer Lexer;
+struct Lexer {
+    FILE *f;
+    SrcPos pos;
+    SrcPos prevpos;
+    SrcPos markpos;
+    int  nchars;
+    char tokval[MAXTOKSZ+1];
+};
+
+Lexer *l;
 
 void
 cppinit(char *p)
 {
-	line = 1;
-	col = 1;
-	fname = p;
-	f = fopen(p, "r");
-	if (!f)
+    l = ccmalloc(sizeof(Lexer));
+    l->pos.file = p;
+    l->prevpos.file = p;
+    l->markpos.file = p;
+    l->pos.line = 1;
+    l->pos.col = 1;
+	l->f = fopen(p, "r");
+	if (!l->f)
 		error("error opening file %s.\n", p);
 }
 
@@ -105,55 +112,6 @@ tokktostr(int t)
 	return tok2strab[t];
 }
 
-static void 
-markstart()
-{
-	mline = line;
-	mcol = col;
-}
-
-/* makes a token, copies v */
-static Tok *
-mktok(int kind, char *v) {
-	Tok* r;
-
-	r = ccmalloc(sizeof(Tok));
-	r->pos.line = mline;
-	r->pos.col = mcol;
-	r->pos.file = fname;
-	r->k = kind;
-	if (v)
-		r->v = ccstrdup(v);
-	else
-		r->v = tokktostr(kind);
-	return r;
-}
-
-static int 
-nextc(void)
-{
-	int c;
-    prevcol = col;
-    prevline = line;
-	c = fgetc(f);
-	if(c == '\n') {
-		line += 1;
-		col = 1;
-	} else if(c == '\t')
-		col += 4;
-	else 
-		col += 1;
-	return c;
-}
-
-static void
-ungetch(int c) /* avoid name conflict */
-{
-    col = prevcol;
-    line = prevline;
-	ungetc(c, f);
-}
-
 static struct {char *kw; int t;} keywordlut[] = {
 	{"void", TOKVOID},
 	{"signed", TOKSIGNED},
@@ -203,6 +161,32 @@ identkind(char *s) {
 	return TOKIDENT;
 }
 
+/* makes a token, copies v */
+static Tok *
+mktok(Lexer *l, int kind) {
+	Tok* r;
+    
+    l->tokval[l->nchars] = 0;
+	r = ccmalloc(sizeof(Tok));
+	r->pos.line = l->markpos.line;
+	r->pos.col = l->markpos.col;
+	r->pos.file = l->markpos.file;
+	r->k = kind;
+	if(kind == TOKIDENT)
+	    kind = identkind(l->tokval);
+	switch(kind){
+	case TOKSTR:
+    case TOKNUM:
+    case TOKIDENT:
+        r->v = ccstrdup(l->tokval);
+        break;
+	default:
+	    r->v = tokktostr(kind);
+	    break;
+	}
+	return r;
+}
+
 static int
 numberc(int c)
 {
@@ -247,106 +231,136 @@ wsc(int c)
 	return (c == '\r' || c == '\n' || c == ' ' || c == '\t');
 }
 
-Tok *
-lex(void) 
+static void 
+mark(Lexer *l)
 {
-	/* TODO: find max length of ident in standard. */
-	char tokval[4096];
-	char *p;
+    l->nchars = 0;
+	l->markpos.line = l->pos.line;
+	l->markpos.col = l->pos.col;
+}
+
+static void 
+accept(Lexer *l, int c)
+{
+    l->nchars += 1;
+    if(l->nchars > MAXTOKSZ)
+        errorpos(&l->markpos, "token too large");
+    l->tokval[l->nchars] = c;
+}
+
+static int 
+nextc(Lexer *l)
+{
+	int c;
+    l->prevpos.col = l->pos.col;
+    l->prevpos.line = l->pos.line;
+	c = fgetc(l->f);
+	if(c == '\n') {
+		l->pos.line += 1;
+		l->pos.col = 1;
+	} else if(c == '\t')
+		l->pos.col += 4;
+	else 
+		l->pos.col += 1;
+	return c;
+}
+
+static void
+ungetch(Lexer *l, int c) /* avoid name conflict */
+{
+    l->pos.col = l->prevpos.col;
+    l->pos.line = l->prevpos.line;
+	ungetc(c, l->f);
+}
+
+Tok *
+lex() 
+{
 	int c,c2;
 	int k;
 
   again:
-	p = tokval;
-	markstart();
-	c = nextc();
+	mark(l);
+	c = nextc(l);
 	if(c == EOF) {
-		return mktok(TOKEOF, 0);
+		return mktok(l, TOKEOF);
 	} else if(wsc(c)) {
 		do {
-			c = nextc();
+			c = nextc(l);
 			if(c == EOF) {
-				return mktok(TOKEOF, 0);
+				return mktok(l, TOKEOF);
 			}
 		} while(wsc(c));
-		ungetch(c);
+		ungetch(l, c);
 		goto again;
 	} else if (c == '"') {
-	    *p++ = c;
+	     accept(l, c);;
 	    for(;;) {
-			c = nextc();
+			c = nextc(l);
 			if(c == EOF)
 			    error("unclosed string\n"); /* TODO error pos */
-			*p++ = c;
+			accept(l, c);
 			if (c == '"') { /* TODO: escape chars */ 
-				*p = 0;
-				return mktok(TOKSTR, tokval);
+				return mktok(l, TOKSTR);
 			}
 		}
 	} else if (c == '\'') {
-	    *p++ = c;
+	    accept(l, c);
 	    for(;;) {
-			c = nextc();
+			c = nextc(l);
 			if(c == EOF)
 			    error("unclosed string\n"); /* TODO error pos */
-			*p++ = c;
+			accept(l, c);
 			if (c == '\'') { /* TODO: escape chars */ 
-				*p = 0;
-				return mktok(TOKNUM, tokval);
+				return mktok(l, TOKNUM);
 			}
 		}
 	} else if(identfirstc(c)) {
-		*p++ = c;
+		accept(l, c);
 		for(;;) {
-			c = nextc();
+			c = nextc(l);
 			if (!identtailc(c)) {
-				*p = 0;
-				ungetch(c);
-				k = identkind(tokval);
-				if(k == TOKIDENT)
-				    return mktok(k, tokval);
-				return mktok(k, 0);
+				ungetch(l, c);
+				return mktok(l, TOKIDENT);
 			}
-			*p++ = c;
+			accept(l, c);
 		}
 	} else if(numberc(c)) {
-		*p++ = c;
-		c2 = nextc();
+		 accept(l, c);
+		c2 = nextc(l);
 		if(c == '0' && c2 == 'x') {
-			*p++ = c;
+			accept(l, c);
 			for(;;) {
-				c = nextc();
+				c = nextc(l);
 				if (!hexnumberc(c)) {
-					*p = 0;
-					ungetch(c);
-					return mktok(TOKNUM, tokval);
+					ungetch(l, c);
+					return mktok(l, TOKNUM);
 				}
-				*p++ = c;
+				accept(l, c);
 			}
 		}
-		ungetch(c2);
+		ungetch(l, c2);
 		for(;;) {
-			c = nextc();
+			c = nextc(l);
 			if (!numberc(c)) {
-				*p = 0;
-				ungetch(c);
-				return mktok(TOKNUM, tokval);
+				ungetch(l, c);
+				return mktok(l, TOKNUM);
 			}
-			*p++ = c;
+			accept(l, c);
 		}
 	} else {
-		c2 = nextc();
+		c2 = nextc(l);
 		if(c == '/' && c2 == '*') {
 			for(;;) {
 				do {
-					c = nextc();
+					c = nextc(l);
 					if(c == EOF) {
-						return mktok(TOKEOF, 0);
+						return mktok(l, TOKEOF);
 					}
 				} while(c != '*');
-				c = nextc();
+				c = nextc(l);
 				if(c == EOF) {
-					return mktok(TOKEOF, 0);
+					return mktok(l, TOKEOF);
 				}
 				if(c == '/') {
 					goto again;
@@ -354,34 +368,35 @@ lex(void)
 			}
 		} else if(c == '/' && c2 == '/') {
 			do {
-				c = nextc();
+				c = nextc(l);
 				if (c == EOF) {
-					return mktok(TOKEOF, 0);
+					return mktok(l, TOKEOF);
 				}
 			} while(c != '\n');
 			goto again;
 		} else if(c == '.' && c2 == '.') {
 			/* TODO, errorpos? */
-			c = nextc();
+			c = nextc(l);
 			if(c != '.')
 				error("expected ...\n");
-			return mktok(TOKELLIPSIS, 0);
-		} else if(c == '+' && c2 == '=') return mktok(TOKADDASS, 0);
-		  else if(c == '-' && c2 == '=') return mktok(TOKSUBASS, 0);
-		  else if(c == '*' && c2 == '=') return mktok(TOKMULASS, 0);
-		  else if(c == '/' && c2 == '=') return mktok(TOKDIVASS, 0);
-		  else if(c == '%' && c2 == '=') return mktok(TOKMODASS, 0);
-		  else if(c == '>' && c2 == '=') return mktok(TOKGTEQL, 0);
-		  else if(c == '<' && c2 == '=') return mktok(TOKLTEQL, 0);
-		  else if(c == '!' && c2 == '=') return mktok(TOKNEQ, 0);
-		  else if(c == '=' && c2 == '=') return mktok(TOKEQL, 0);
-		  else if(c == '+' && c2 == '+') return mktok(TOKINC, 0);
-		  else if(c == '-' && c2 == '-') return mktok(TOKDEC, 0);
-		  else if(c == '<' && c2 == '<') return mktok(TOKSHL, 0);
-		  else if(c == '>' && c2 == '>') return mktok(TOKSHR, 0);
+			return mktok(l, TOKELLIPSIS);
+		} else if(c == '+' && c2 == '=') return mktok(l, TOKADDASS);
+		  else if(c == '-' && c2 == '=') return mktok(l, TOKSUBASS);
+		  else if(c == '*' && c2 == '=') return mktok(l, TOKMULASS);
+		  else if(c == '/' && c2 == '=') return mktok(l, TOKDIVASS);
+		  else if(c == '%' && c2 == '=') return mktok(l, TOKMODASS);
+		  else if(c == '>' && c2 == '=') return mktok(l, TOKGTEQL);
+		  else if(c == '<' && c2 == '=') return mktok(l, TOKLTEQL);
+		  else if(c == '!' && c2 == '=') return mktok(l, TOKNEQ);
+		  else if(c == '=' && c2 == '=') return mktok(l, TOKEQL);
+		  else if(c == '+' && c2 == '+') return mktok(l, TOKINC);
+		  else if(c == '-' && c2 == '-') return mktok(l, TOKDEC);
+		  else if(c == '<' && c2 == '<') return mktok(l, TOKSHL);
+		  else if(c == '>' && c2 == '>') return mktok(l, TOKSHR);
 		else {
-			ungetch(c2);
-			return mktok(c, 0);
+		    /* TODO, detect invalid operators */
+			ungetch(l, c2);
+			return mktok(l, c);
 		}
 		error("internal error\n");
 	}

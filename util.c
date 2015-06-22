@@ -29,7 +29,10 @@ printpos(SrcPos *p)
 		c = fgetc(f);
 		if(c == EOF || c == '\n')
 			break;
-		fputc(c, stderr);
+		if(c == '\t')
+		    fputs("    ", stderr);
+		else
+		    fputc(c, stderr);
 	}
 	fputc('\n', stderr);
 	for(i = 0; i < p->col-1; i++)
