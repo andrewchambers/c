@@ -38,11 +38,12 @@ static Node *postexpr(void);
 static Node *primaryexpr(void);
 static Node *declorstmt(void);
 static Node *decl(void);
+static Node *declinit(void);
 static CTy  *declspecs(int *specs);
 static CTy  *pstruct(void);
 static CTy  *penum(void);
 static CTy  *typename(void);
-static CTy  *declarator(CTy *, char **name);
+static CTy  *declarator(CTy *, char **name, Node **init);
 static CTy  *directdeclarator(CTy *, char **name); 
 static CTy  *declaratortail(CTy *);
 
@@ -179,7 +180,7 @@ params(CTy *fty)
 	for(;;) {
 		pos = &tok->pos;
 		t = declspecs(&sclass);
-		t = declarator(t, &name);
+		t = declarator(t, &name, 0);
 		if(sclass != SCNONE)
 			errorpos(pos, "storage class not allowed in parameter decl");
 		fty->Func.paramnames = listadd(fty->Func.paramnames, name);
@@ -230,17 +231,20 @@ decl()
     SrcPos *pos;
     List *l1;
     List *l2;
+    Node *init;
 
     pos = &tok->pos;
     basety = declspecs(&sclass);
-    ty = declarator(basety, &name);
+    ty = declarator(basety, &name, &init);
     if(sclass == SCTYPEDEF && name)
     	definetype(pos, name, ty);
     else if(name)
         definesym(pos, name, "TODO");
     if(isglobal() && tok->k == '{') {
-		if(ty->t != CFUNC)
+		if(ty->t != CFUNC) 
 		    errorpos(pos, "expected a function");
+		if (init)
+		    errorpos(pos, "function declaration has an initializer");
 		pushscope();
 		l1 = ty->Func.paramnames;
 		l2 = ty->Func.paramtypes;
@@ -258,7 +262,7 @@ decl()
 	while(tok->k == ',') {
 	    next();
 	    pos = &tok->pos;
-	    ty = declarator(basety, &name);
+	    ty = declarator(basety, &name, &init);
 		if(sclass == SCTYPEDEF && name)
     		definetype(pos, name, ty);
 	    else if(name)
@@ -516,7 +520,7 @@ declspecs(int *sclass)
 
 /* Declarator is what introduces names into the program. */
 static CTy *
-declarator(CTy *basety, char **name) 
+declarator(CTy *basety, char **name, Node **init) 
 {
     CTy *t, *subt;
 
@@ -525,12 +529,22 @@ declarator(CTy *basety, char **name)
 	switch(tok->k) {
 	case '*':
 		next();
-		subt = declarator(basety, name);
+		subt = declarator(basety, name, init);
 		t = mktype(CPTR);
 		t->Ptr.subty = subt;
-		return t;
+		return subt;
 	default:
-	    return directdeclarator(basety, name);
+	    t = directdeclarator(basety, name);
+	    if(tok->k == '=') {
+	        if(!init)
+	            errorpos(&tok->pos, "unexpected initializer");
+	        next();
+	        *init = declinit();
+	    } else {
+	        if(init)
+	            *init = 0;
+	    }
+	    return t; 
 	}
 
 }
@@ -542,7 +556,7 @@ directdeclarator(CTy *basety, char **name)
     switch(tok->k) {
 	case '(':
 		expect('(');
-	    basety = declarator(basety, name);
+	    basety = declarator(basety, name, 0);
 		expect(')');
 		return declaratortail(basety);
 	case TOKIDENT:
@@ -615,7 +629,7 @@ pstruct()
             do {
                 if (tok->k == ',')
                     next();
-                /* t = */ declarator(basety, &name);
+                /* t = */ declarator(basety, &name, 0);
             } while (tok->k == ',');
 		    if(tok->k == ':') {
 		        next();
@@ -808,6 +822,22 @@ stmt(void)
 	default:
 		return exprstmt();
 	}
+}
+
+static Node *
+declinit(void)
+{
+    if(tok->k != '{')
+        return assignexpr();
+    expect('{');
+    while(1) {
+        declinit();
+        if (tok->k != ',')
+            break;
+        next();
+    }
+    expect('}');
+    return 0;
 }
 
 static Node *
@@ -1074,7 +1104,7 @@ typename(void)
 	char *name;
 
 	t = declspecs(&sclass);
-	t = declarator(t, &name);
+	t = declarator(t, &name, 0);
 	return 0;
 }
 
