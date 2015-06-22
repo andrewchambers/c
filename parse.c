@@ -144,7 +144,8 @@ static void
 expect(int kind) 
 {
 	if(tok->k != kind)
-		errorpos(&tok->pos,"expected %s", tokktostr(kind));
+		errorpos(&tok->pos,"expected %s, got %s", 
+			tokktostr(kind), tokktostr(tok->k));
     next();
 }
 
@@ -227,6 +228,8 @@ decl()
     CTy  *basety;
     CTy  *ty;
     SrcPos *pos;
+    List *l1;
+    List *l2;
 
     pos = &tok->pos;
     basety = declspecs(&sclass);
@@ -238,10 +241,18 @@ decl()
     if(isglobal() && tok->k == '{') {
 		if(ty->t != CFUNC)
 		    errorpos(pos, "expected a function");
-		for(;;) {
-		
+		pushscope();
+		l1 = ty->Func.paramnames;
+		l2 = ty->Func.paramtypes;
+		while(l1) {
+			if(l1->v) {
+				definesym(pos, l1->v, "TODO");
+			}
+			l1 = l1->rest;
+			l2 = l2->rest;
 		}
 		block();
+		popscope();
 		return 0;
 	}
 	while(tok->k == ',') {
@@ -585,7 +596,7 @@ pstruct()
     int sclass;
     char *name;
     CTy *basety;
-    CTy *t;
+    /* CTy *t; */
 
     tagname = 0;
     shoulddefine = 0;
@@ -604,7 +615,7 @@ pstruct()
             do {
                 if (tok->k == ',')
                     next();
-                t = declarator(basety, &name);
+                /* t = */ declarator(basety, &name);
             } while (tok->k == ',');
 		    if(tok->k == ':') {
 		        next();

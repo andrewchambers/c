@@ -302,6 +302,7 @@ lex(void)
 		*p++ = c;
 		c2 = nextc();
 		if(c == '0' && c2 == 'x') {
+			*p++ = c;
 			for(;;) {
 				c = nextc();
 				if (!hexnumberc(c)) {
@@ -365,6 +366,8 @@ lex(void)
 		  else if(c == '=' && c2 == '=') return mktok(TOKEQL, 0);
 		  else if(c == '+' && c2 == '+') return mktok(TOKINC, 0);
 		  else if(c == '-' && c2 == '-') return mktok(TOKDEC, 0);
+		  else if(c == '<' && c2 == '<') return mktok(TOKSHL, 0);
+		  else if(c == '>' && c2 == '>') return mktok(TOKSHR, 0);
 		else {
 			ungetch(c2);
 			return mktok(c, 0);
