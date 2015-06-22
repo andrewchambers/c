@@ -831,7 +831,24 @@ declinit(void)
         return assignexpr();
     expect('{');
     while(1) {
-        declinit();
+        switch(tok->k){
+        case '[':
+            next();
+            constexpr();
+            expect(']');
+            expect('=');
+            declinit();
+            break;
+        case '.':
+            next();
+            expect(TOKIDENT);
+            expect('=');
+            declinit();
+            break;
+        default:
+            declinit();
+            break;
+        }
         if (tok->k != ',')
             break;
         next();
