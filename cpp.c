@@ -283,6 +283,18 @@ lex(void)
 				return mktok(TOKSTR, tokval);
 			}
 		}
+	} else if (c == '\'') {
+	    *p++ = c;
+	    for(;;) {
+			c = nextc();
+			if(c == EOF)
+			    error("unclosed string\n"); /* TODO error pos */
+			*p++ = c;
+			if (c == '\'') { /* TODO: escape chars */ 
+				*p = 0;
+				return mktok(TOKNUM, tokval);
+			}
+		}
 	} else if(identfirstc(c)) {
 		*p++ = c;
 		for(;;) {

@@ -831,6 +831,8 @@ declinit(void)
         return assignexpr();
     expect('{');
     while(1) {
+        if(tok->k == '}')
+            break;
         switch(tok->k){
         case '[':
             next();
