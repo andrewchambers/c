@@ -1207,7 +1207,6 @@ postexpr(void)
 	return 0;
 }
 
-
 static Node *
 primaryexpr(void) 
 {
