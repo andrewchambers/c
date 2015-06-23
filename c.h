@@ -210,8 +210,8 @@ struct Tok {
 };
 
 /* helper functions */
-void  error(char *, ...);
-void  errorpos(SrcPos *, char *, ...);
+void  errorf(char *, ...);
+void  errorposf(SrcPos *, char *, ...);
 void *ccmalloc(int);
 char *ccstrdup(char *);
 List *listadd(List *, void *);

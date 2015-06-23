@@ -27,7 +27,7 @@ cppinit(char *p)
     l->pos.col = 1;
 	l->f = fopen(p, "r");
 	if (!l->f)
-		error("error opening file %s.\n", p);
+		errorf("error opening file %s.\n", p);
 }
 
 static char *tok2strab[TOKEOF+1] = {
@@ -250,7 +250,7 @@ accept(Lexer *l, int c)
     l->tokval[l->nchars] = c;
     l->nchars += 1;
     if(l->nchars > MAXTOKSZ)
-        errorpos(&l->markpos, "token too large");
+        errorposf(&l->markpos, "token too large");
 }
 
 static int 
@@ -301,12 +301,12 @@ lex()
 	    for(;;) {
 			c = nextc(l);
 			if(c == EOF)
-			    error("unclosed string\n"); /* TODO error pos */
+			    errorf("unclosed string\n"); /* TODO error pos */
 			accept(l, c);
 			if(c == '\\') {
 			    c = nextc(l);
 			    if(c == EOF || c == '\n')
-			        error("EOF or newline in string literal");
+			        errorf("EOF or newline in string literal");
 			    accept(l, c);
 			    continue;
 			}
@@ -319,12 +319,12 @@ lex()
 	    for(;;) {
 			c = nextc(l);
 			if(c == EOF)
-			    error("unclosed char\n"); /* TODO error pos */
+			    errorf("unclosed char\n"); /* TODO error pos */
 			accept(l, c);
 			if(c == '\\') {
 			    c = nextc(l);
 			    if(c == EOF || c == '\n')
-			        error("EOF or newline in char literal");
+			        errorf("EOF or newline in char literal");
 			    accept(l, c);
 			    continue;
 			}
@@ -403,7 +403,7 @@ lex()
 			/* TODO, errorpos? */
 			c = nextc(l);
 			if(c != '.')
-				error("expected ...\n");
+				errorf("expected ...\n");
 			return mktok(l, TOKELLIPSIS);
 		} else if(c == '+' && c2 == '=') return mktok(l, TOKADDASS);
 		  else if(c == '-' && c2 == '=') return mktok(l, TOKSUBASS);
@@ -429,6 +429,6 @@ lex()
 			ungetch(l, c2);
 			return mktok(l, c);
 		}
-		error("internal error\n");
+		errorf("internal error\n");
 	}
 }

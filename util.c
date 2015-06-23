@@ -43,7 +43,7 @@ printpos(SrcPos *p)
 }
 
 void
-error(char *fmt, ...)
+errorf(char *fmt, ...)
 {
 	va_list va;
 
@@ -54,7 +54,7 @@ error(char *fmt, ...)
 }
 
 void
-errorpos(SrcPos *p, char *fmt, ...)
+errorposf(SrcPos *p, char *fmt, ...)
 {
 	va_list va;
 
@@ -74,7 +74,7 @@ ccmalloc(int n)
 
 	v = malloc(n);
 	if(!v)
-		error("out of memory\n");
+		errorf("out of memory\n");
 	memset(v, 0, n);
 	return v;
 }

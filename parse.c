@@ -64,7 +64,7 @@ popscope()
 {
     nscopes -= 1;
     if (nscopes < 0)
-        error("bug: scope underflow\n");
+        errorf("bug: scope underflow\n");
     vars[nscopes] = 0;
     tags[nscopes] = 0;
     types[nscopes] = 0;
@@ -78,7 +78,7 @@ pushscope()
     types[nscopes] = map();
     nscopes += 1;
     if (nscopes > MAXSCOPES)
-        error("scope depth exceeded maximum\n");
+        errorf("scope depth exceeded maximum\n");
 }
 
 static int
@@ -145,7 +145,7 @@ static void
 expect(int kind) 
 {
 	if(tok->k != kind)
-		errorpos(&tok->pos,"expected %s, got %s", 
+		errorposf(&tok->pos,"expected %s, got %s", 
 			tokktostr(kind), tokktostr(tok->k));
     next();
 }
@@ -182,7 +182,7 @@ params(CTy *fty)
 		t = declspecs(&sclass);
 		t = declarator(t, &name, 0);
 		if(sclass != SCNONE)
-			errorpos(pos, "storage class not allowed in parameter decl");
+			errorposf(pos, "storage class not allowed in parameter decl");
 		fty->Func.paramnames = listadd(fty->Func.paramnames, name);
 		fty->Func.paramtypes = listadd(fty->Func.paramnames, t);
 		if(tok->k != ',')
@@ -246,9 +246,9 @@ decl()
         definesym(pos, name, "TODO");
     if(isglobal() && tok->k == '{') {
 		if(ty->t != CFUNC) 
-		    errorpos(pos, "expected a function");
+		    errorposf(pos, "expected a function");
 		if (init)
-		    errorpos(pos, "function declaration has an initializer");
+		    errorposf(pos, "function declaration has an initializer");
 		pushscope();
 		l1 = ty->Func.paramnames;
 		l2 = ty->Func.paramtypes;
@@ -319,7 +319,7 @@ declspecs(int *sclass)
 	for(;;) {
 		if(issclasstok(tok)) {
 	        if(*sclass != SCNONE)
-	            errorpos(pos, "multiple storage classes in declaration specifiers.");
+	            errorposf(pos, "multiple storage classes in declaration specifiers.");
 			switch(tok->k) {
 			case TOKEXTERN:
 				*sclass = SCEXTERN;
@@ -519,7 +519,7 @@ declspecs(int *sclass)
 		goto err;
 	}
 	err:
-	errorpos(pos, "invalid declaration specifiers");
+	errorposf(pos, "invalid declaration specifiers");
 	return 0;
 }
 
@@ -542,7 +542,7 @@ declarator(CTy *basety, char **name, Node **init)
 	    t = directdeclarator(basety, name);
 	    if(tok->k == '=') {
 	        if(!init)
-	            errorpos(&tok->pos, "unexpected initializer");
+	            errorposf(&tok->pos, "unexpected initializer");
 	        next();
 	        *init = declinit();
 	    } else {
@@ -571,10 +571,10 @@ directdeclarator(CTy *basety, char **name)
 		return declaratortail(basety);
 	default:
 		if(!name)
-		    errorpos(&tok->pos, "expected ident or ( but got %s", tokktostr(tok->k));
+		    errorposf(&tok->pos, "expected ident or ( but got %s", tokktostr(tok->k));
 		return declaratortail(basety);
 	}
-	error("unreachable");
+	errorf("unreachable");
 	return 0;
 }
 
@@ -597,7 +597,7 @@ declaratortail(CTy *basety)
 		    next();
 			params(t);
 			if (tok->k != ')')
-				errorpos(&tok->pos, "expected valid parameter or )");
+				errorposf(&tok->pos, "expected valid parameter or )");
 			next();
 			return t;
 		default:
@@ -620,7 +620,7 @@ pstruct()
     tagname = 0;
     shoulddefine = 0;
     if(tok->k != TOKUNION && tok->k != TOKSTRUCT)
-	    errorpos(&tok->pos, "expected union or struct");
+	    errorposf(&tok->pos, "expected union or struct");
 	next();
 	if(tok->k == TOKIDENT) {
         tagname = tok->v;
@@ -646,7 +646,7 @@ pstruct()
 	}
 	if(tagname && shoulddefine)
 		if(!define(tags, tagname, "TODO"))
-		    errorpos(&tok->pos, "redefinition of tag %s", tagname);
+		    errorposf(&tok->pos, "redefinition of tag %s", tagname);
     return mktype(CSTRUCT);
 }
 
@@ -658,7 +658,7 @@ penum()
 	expect(TOKENUM);
 	if(tok->k == TOKIDENT) {
 		if(!define(tags, tok->v, "TODO"))
-		    errorpos(&tok->pos, "redefinition of tag %s", tok->v);
+		    errorposf(&tok->pos, "redefinition of tag %s", tok->v);
 		next();
 	}
 	expect('{');
@@ -666,7 +666,7 @@ penum()
 		if(tok->k == '}')
 			break;
 		if(!define(vars, tok->v, "TODO"))
-		    errorpos(&tok->pos, "redefinition of symbol %s", tok->v);
+		    errorposf(&tok->pos, "redefinition of symbol %s", tok->v);
 		expect(TOKIDENT);
 		if(tok->k == '=') {
 			next();
@@ -1239,7 +1239,7 @@ primaryexpr(void)
 	case TOKIDENT:
 		sym = lookup(vars, tok->v);
 		if(!sym)
-			errorpos(&tok->pos, "undefined symbol %s", tok->v);
+			errorposf(&tok->pos, "undefined symbol %s", tok->v);
 		next();
 		return 0;
 	case TOKNUM:
@@ -1254,9 +1254,9 @@ primaryexpr(void)
 		expect(')');
 		return 0;
 	default:
-		errorpos(&tok->pos, "expected an ident, constant, string or (");
+		errorposf(&tok->pos, "expected an ident, constant, string or (");
 	}
-	error("unreachable.");
+	errorf("unreachable.");
 	return 0;
 }
 
