@@ -73,8 +73,10 @@ static char *tok2strab[TOKEOF+1] = {
     [TOKMULASS]   = "*=",
     [TOKDIVASS]   = "/=",
     [TOKMODASS]   = "%=",
-    [TOKGTEQL]    = ">=",
-    [TOKLTEQL]    = "<=",
+    [TOKGEQ]      = ">=",
+    [TOKLEQ]      = "<=",
+    [TOKORASS]     = "|=",
+    [TOKANDASS]    = "&=",
     [TOKEQL]      = "==",
     [TOKLOR]      = "||",
     [TOKLAND]     = "&&",
@@ -129,12 +131,14 @@ static struct {char *kw; int t;} keywordlut[] = {
 	{"union", TOKUNION},
 	{"enum", TOKENUM},
 	{"goto", TOKGOTO},
+	{"case", TOKCASE},
 	{"continue", TOKCONTINUE},
 	{"break", TOKBREAK},
 	{"default", TOKDEFAULT},
 	{"sizeof", TOKSIZEOF},
 	{"switch", TOKSWITCH},
 	{"for", TOKFOR},
+	{"do", TOKDO},
 	{"while", TOKWHILE},
 	{"if", TOKIF},
 	{"else", TOKELSE},
@@ -293,12 +297,19 @@ lex()
 		ungetch(l, c);
 		return lex();
 	} else if (c == '"') {
-	     accept(l, c);;
+	    accept(l, c);
 	    for(;;) {
 			c = nextc(l);
 			if(c == EOF)
 			    error("unclosed string\n"); /* TODO error pos */
 			accept(l, c);
+			if(c == '\\') {
+			    c = nextc(l);
+			    if(c == EOF || c == '\n')
+			        error("EOF or newline in string literal");
+			    accept(l, c);
+			    continue;
+			}
 			if (c == '"') { /* TODO: escape chars */ 
 				return mktok(l, TOKSTR);
 			}
@@ -308,8 +319,15 @@ lex()
 	    for(;;) {
 			c = nextc(l);
 			if(c == EOF)
-			    error("unclosed string\n"); /* TODO error pos */
+			    error("unclosed char\n"); /* TODO error pos */
 			accept(l, c);
+			if(c == '\\') {
+			    c = nextc(l);
+			    if(c == EOF || c == '\n')
+			        error("EOF or newline in char literal");
+			    accept(l, c);
+			    continue;
+			}
 			if (c == '\'') { /* TODO: escape chars */ 
 				return mktok(l, TOKNUM);
 			}
@@ -389,17 +407,23 @@ lex()
 			return mktok(l, TOKELLIPSIS);
 		} else if(c == '+' && c2 == '=') return mktok(l, TOKADDASS);
 		  else if(c == '-' && c2 == '=') return mktok(l, TOKSUBASS);
+		  else if(c == '-' && c2 == '>') return mktok(l, TOKARROW);
 		  else if(c == '*' && c2 == '=') return mktok(l, TOKMULASS);
 		  else if(c == '/' && c2 == '=') return mktok(l, TOKDIVASS);
 		  else if(c == '%' && c2 == '=') return mktok(l, TOKMODASS);
-		  else if(c == '>' && c2 == '=') return mktok(l, TOKGTEQL);
-		  else if(c == '<' && c2 == '=') return mktok(l, TOKLTEQL);
+		  else if(c == '&' && c2 == '=') return mktok(l, TOKANDASS);
+		  else if(c == '|' && c2 == '=') return mktok(l, TOKORASS);
+		  else if(c == '>' && c2 == '=') return mktok(l, TOKGEQ);
+		  else if(c == '<' && c2 == '=') return mktok(l, TOKLEQ);
 		  else if(c == '!' && c2 == '=') return mktok(l, TOKNEQ);
 		  else if(c == '=' && c2 == '=') return mktok(l, TOKEQL);
 		  else if(c == '+' && c2 == '+') return mktok(l, TOKINC);
 		  else if(c == '-' && c2 == '-') return mktok(l, TOKDEC);
 		  else if(c == '<' && c2 == '<') return mktok(l, TOKSHL);
 		  else if(c == '>' && c2 == '>') return mktok(l, TOKSHR);
+		  else if(c == '|' && c2 == '|') return mktok(l, TOKLOR);
+		  else if(c == '|' && c2 == '|') return mktok(l, TOKLOR);
+		  else if(c == '&' && c2 == '&') return mktok(l, TOKLAND);
 		else {
 		    /* TODO, detect invalid operators */
 			ungetch(l, c2);

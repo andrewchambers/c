@@ -701,10 +701,18 @@ pfor(void)
 {
 	expect(TOKFOR);
 	expect('(');
-	if(tok->k != ';')
-		expr();
-	if(tok->k != ';')
-		expr();
+	if(tok->k == ';') {
+	    next();
+	} else {
+	    expr();
+	    expect(';');
+	}
+	if(tok->k == ';') {
+	    next();
+	} else {
+	    expr();
+	    expect(';');
+	}
 	if(tok->k != ')')
 		expr();
 	expect(')');
@@ -743,6 +751,7 @@ static int
 istypestart(Tok *t)
 {
     switch(t->k) {
+    case TOKENUM:
     case TOKSTRUCT:
     case TOKUNION:
     case TOKVOID:
@@ -821,8 +830,15 @@ stmt(void)
 	    return pbreak();
 	case TOKCONTINUE:
 	    return pcontinue();
+	case TOKGOTO:
+	    next();
+	    expect(TOKIDENT);
+	    expect(';');
+	    return 0;
 	case '{':
 		return block();
+	case ';':
+	    return 0;
 	default:
 		return exprstmt();
 	}
@@ -877,7 +893,8 @@ static Node *
 preturn(void)
 {
 	expect(TOKRETURN);
-	expr();
+	if(tok->k != ';')
+	    expr();
 	expect(';');
 	return 0;
 }
@@ -965,6 +982,8 @@ isassignop(int k)
 	case TOKMULASS:
 	case TOKDIVASS:
 	case TOKMODASS:
+	case TOKORASS:
+	case TOKANDASS:
 	    return 1;
 	}
 	return 0;
