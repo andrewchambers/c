@@ -156,8 +156,8 @@ parse()
 	nscopes = 0;
 	pushscope();
 	next();
+	next();
 	for(;;) {
-		next();
 		if(tok->k == TOKEOF)
 			break;
 		decl();

@@ -104,6 +104,7 @@ static char *tok2strab[TOKEOF+1] = {
 	['}']         = "}",
 	[',']         = ",",
 	[';']         = ";",
+	[':']         = ":",
 };
 
 char *
@@ -242,10 +243,10 @@ mark(Lexer *l)
 static void 
 accept(Lexer *l, int c)
 {
+    l->tokval[l->nchars] = c;
     l->nchars += 1;
     if(l->nchars > MAXTOKSZ)
         errorpos(&l->markpos, "token too large");
-    l->tokval[l->nchars] = c;
 }
 
 static int 
@@ -277,9 +278,7 @@ Tok *
 lex() 
 {
 	int c,c2;
-	int k;
-
-  again:
+    
 	mark(l);
 	c = nextc(l);
 	if(c == EOF) {
@@ -292,7 +291,7 @@ lex()
 			}
 		} while(wsc(c));
 		ungetch(l, c);
-		goto again;
+		return lex();
 	} else if (c == '"') {
 	     accept(l, c);;
 	    for(;;) {
@@ -363,7 +362,7 @@ lex()
 					return mktok(l, TOKEOF);
 				}
 				if(c == '/') {
-					goto again;
+					return lex();
 				}
 			}
 		} else if(c == '/' && c2 == '/') {
@@ -373,7 +372,7 @@ lex()
 					return mktok(l, TOKEOF);
 				}
 			} while(c != '\n');
-			goto again;
+			return lex();
 		} else if(c == '.' && c2 == '.') {
 			/* TODO, errorpos? */
 			c = nextc(l);
