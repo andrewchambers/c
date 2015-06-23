@@ -92,14 +92,41 @@ ccstrdup(char *s)
 }
 
 List *
-listadd(List *l, void *v)
+listnew()
 {
-	List *nl;
+	List *l;
 
-	nl = ccmalloc(sizeof(List));
-	nl->rest = l;
-	nl->v = v;
-	return nl;
+	l = ccmalloc(sizeof(List));
+	return l;
+}
+
+void
+listappend(List *l, void *v)
+{
+    ListEnt *e;
+    ListEnt *ne;
+    
+    ne = ccmalloc(sizeof(ListEnt));
+    ne->v = v;
+    if(l->head == 0) {
+        l->head = ne;
+        return;
+    }
+	e = l->head;
+	while(e->next)
+	    e = e->next;
+	e->next = ne;
+}
+
+void
+listprepend(List *l, void *v)
+{
+    ListEnt *e;
+    
+	e = ccmalloc(sizeof(ListEnt));
+	e->v = v;
+	e->next = l->head;
+	l->head = e;
 }
 
 typedef struct MapEnt MapEnt;
@@ -113,6 +140,7 @@ Map *map()
     Map *m;
     
     m = ccmalloc(sizeof(Map));
+    m->l = listnew();
     return m;
 }
 
@@ -124,21 +152,19 @@ mapset(Map *m, char *k, void *v)
     me = ccmalloc(sizeof(MapEnt));
     me->k = k;
     me->v = v;
-    m->l = listadd(m->l, me);
+    listprepend(m->l, me);
 }
 
 void *
 mapget(Map *m, char *k)
 {
-    List *l;
+    ListEnt *e;
     MapEnt *me;
     
-    l = m->l;
-    while(l) {
-        me = l->v;
+    for(e = m->l->head; e != 0; e = e->next) {
+        me = e->v;
         if(strcmp(me->k, k) == 0)
             return me->v;
-        l = l->rest;
     }
     return 0;
 }

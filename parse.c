@@ -182,8 +182,8 @@ params(CTy *fty)
 		t = declarator(t, &name, 0);
 		if(sclass != SCNONE)
 			errorposf(pos, "storage class not allowed in parameter decl");
-		fty->Func.paramnames = listadd(fty->Func.paramnames, name);
-		fty->Func.paramtypes = listadd(fty->Func.paramnames, t);
+		listappend(fty->Func.paramnames, name);
+		listappend(fty->Func.paramtypes, t);
 		if(tok->k != ',')
 			break;
 		next();
@@ -228,8 +228,8 @@ decl()
     CTy  *basety;
     CTy  *ty;
     SrcPos *pos;
-    List *l1;
-    List *l2;
+    ListEnt *e1;
+    ListEnt *e2;
     Node *init;
 
     if(tok->k == ';') {
@@ -249,14 +249,12 @@ decl()
 		if (init)
 		    errorposf(pos, "function declaration has an initializer");
 		pushscope();
-		l1 = ty->Func.paramnames;
-		l2 = ty->Func.paramtypes;
-		while(l1) {
-			if(l1->v) {
-				definesym(pos, l1->v, "TODO");
+		e1 = ty->Func.paramnames->head;
+		e2 = ty->Func.paramtypes->head;
+		for(; e1 != 0; e1 = e1->next, e2 = e2->next) {
+			if(e1->v) {
+				definesym(pos, e1->v, "TODO");
 			}
-			l1 = l1->rest;
-			l2 = l2->rest;
 		}
 		block();
 		popscope();
@@ -593,6 +591,8 @@ declaratortail(CTy *basety)
 		case '(':
 			t = mktype(CFUNC);
 		    t->Func.rtype = basety;
+		    t->Func.paramnames = listnew();
+		    t->Func.paramtypes = listnew();
 		    next();
 			params(t);
 			if (tok->k != ')')
@@ -961,7 +961,6 @@ expr(void)
 {
 	Node *n;
 	
-	/* TODO: comma node. */
 	for(;;) {
 		n = assignexpr();
 		if (tok->k != ',')

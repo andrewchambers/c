@@ -1,11 +1,13 @@
 
-/* 	Singly linked list.
-	A null pointer is the empty list. */
+typedef struct ListEnt ListEnt;
+struct ListEnt {
+	ListEnt *next;
+	void *v;
+};
 
 typedef struct List List;
 struct List {
-	List *rest;
-	void *v;
+	ListEnt *head;
 };
 
 typedef struct Map Map;
@@ -171,7 +173,14 @@ enum {
     PRIMDOUBLE,
 };
 
+typedef struct StructMember StructMember;
 typedef struct CTy CTy;
+
+struct StructMember {
+    char *name;
+    CTy  *ty;		    
+};
+
 struct CTy {
 	/* type tag */
 	int t;
@@ -184,8 +193,7 @@ struct CTy {
 		} Func;
 		struct {
 			int isunion;
-			List *names;
-			List *types;
+			List *members;
 		} Struct;
 		struct {
             CTy *subty;
@@ -214,7 +222,9 @@ void  errorf(char *, ...);
 void  errorposf(SrcPos *, char *, ...);
 void *ccmalloc(int);
 char *ccstrdup(char *);
-List *listadd(List *, void *);
+List *listnew();
+void listappend(List *, void *);
+void listprepend(List *, void *);
 Map  *map();
 void *mapget(Map *, char *);
 void  mapset(Map *, char *, void *);
