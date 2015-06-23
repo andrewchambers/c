@@ -92,60 +92,6 @@ struct SrcPos {
 	int   col;
 };
 
-enum {
-	NDOWHILE,
-	NFOR,
-	NNUMBER,
-	NBINOP,
-};
-
-typedef struct Node Node;
-struct Node {
-	/* type tag, one of the N* types */
-	int t;
-	SrcPos pos;
-	union {
-		struct {
-
-		} If;
-		struct {
-			Node *stmt;
-			Node *expr;
-		} DoWhile;
-		struct {
-
-		} For;
-		struct {
-
-		} While;
-		struct {
-
-		} Return;
-		struct {
-
-		} Block;
-		struct {
-
-		} Decl;
-		struct {
-
-		} Func;
-		struct {
-		    int op;
-            Node *l;
-            Node *r;
-		} Binop;
-		struct {
-		    int op;
-            Node *operand;
-		} Unop;
-		struct {
-			/* TODO: parse to int */
-			char *v;
-		} Number;
-	};
-};
-
 typedef struct {
 	union {
 		struct {
@@ -213,6 +159,65 @@ struct CTy {
             int issigned;
             int type;
 		} Prim;
+	};
+};
+
+enum {
+	NDOWHILE,
+	NFOR,
+	NNUMBER,
+	NBINOP,
+	NCAST,
+};
+
+typedef struct Node Node;
+struct Node {
+	/* type tag, one of the N* types */
+	int t;
+	SrcPos pos;
+	union {
+		struct {
+
+		} If;
+		struct {
+			Node *stmt;
+			Node *expr;
+		} DoWhile;
+		struct {
+
+		} For;
+		struct {
+
+		} While;
+		struct {
+
+		} Return;
+		struct {
+
+		} Block;
+		struct {
+
+		} Decl;
+		struct {
+
+		} Func;
+		struct {
+		    int op;
+            Node *l;
+            Node *r;
+		} Binop;
+		struct {
+		    int   op;
+            Node *operand;
+		} Unop;
+		struct {
+            Node *operand;
+            CTy  *type;
+		} Cast;
+		struct {
+			/* TODO: parse to int */
+			char *v;
+		} Number;
 	};
 };
 

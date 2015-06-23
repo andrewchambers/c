@@ -146,6 +146,18 @@ mkbinop(SrcPos *p, int op, Node *l, Node *r)
 	return n;
 }
 
+
+static Node *
+mkcast(SrcPos *p, Node *o, CTy *to)
+{
+    Node *n;
+    
+    n = mknode(NCAST, p);
+    n->Cast.type = to;
+    n->Cast.operand = o;
+    return n;
+}
+
 static NameTy *
 mknamety(char *n, CTy *t)
 {
@@ -1213,12 +1225,17 @@ mulexpr(void)
 static Node *
 castexpr(void)
 {
+    Tok *t;
+    Node *o;
+    CTy *ty;
+    
 	if(tok->k == '(' && istypestart(nexttok)) {
+		t = tok;
 		expect('(');
-		typename();
+		ty = typename();
 		expect(')');
-		unaryexpr();
-		return 0;
+		o = unaryexpr();
+		return mkcast(&t->pos, o, ty);
 	}
 	return unaryexpr();
 }
