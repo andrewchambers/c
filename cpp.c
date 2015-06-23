@@ -168,13 +168,13 @@ mktok(Lexer *l, int kind) {
 	Tok* r;
     
     l->tokval[l->nchars] = 0;
+	if(kind == TOKIDENT)
+	    kind = identkind(l->tokval);
 	r = ccmalloc(sizeof(Tok));
 	r->pos.line = l->markpos.line;
 	r->pos.col = l->markpos.col;
 	r->pos.file = l->markpos.file;
 	r->k = kind;
-	if(kind == TOKIDENT)
-	    kind = identkind(l->tokval);
 	switch(kind){
 	case TOKSTR:
     case TOKNUM:

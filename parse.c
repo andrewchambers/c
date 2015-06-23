@@ -233,6 +233,10 @@ decl()
     List *l2;
     Node *init;
 
+    if(tok->k == ';') {
+    	next();
+    	return 0;
+    }
     pos = &tok->pos;
     basety = declspecs(&sclass);
     ty = declarator(basety, &name, &init);
@@ -268,6 +272,7 @@ decl()
 	    else if(name)
             definesym(pos, name, "TODO");
 	}
+	expect(';');
 	return 0;
 }
 
