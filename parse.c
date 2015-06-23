@@ -124,12 +124,25 @@ mktype(int type)
 }
 
 static Node *
-mknode(int type)
+mknode(int type, SrcPos *p)
 {
 	Node *n;
 
 	n = ccmalloc(sizeof(Node));
+	n->pos = *p;
 	n->t = type;
+	return n;
+}
+
+static Node *
+mkbinop(SrcPos *p, int op, Node *l, Node *r)
+{
+	Node *n;
+
+	n = mknode(NBINOP, p);
+	n->Binop.op = op;
+	n->Binop.l = l;
+	n->Binop.r = r;
 	return n;
 }
 
@@ -743,7 +756,7 @@ dowhile(void)
 {
 	Node *n;
 
-	n = mknode(NDOWHILE);
+	n = mknode(NDOWHILE, &tok->pos);
 	expect(TOKDO);
 	n->DoWhile.stmt = stmt();
 	expect(TOKWHILE);
@@ -998,12 +1011,18 @@ isassignop(int k)
 static Node *
 assignexpr(void)
 {
-	condexpr();
+    Tok  *t;
+    Node *l;
+    Node *r;
+
+	l = condexpr();
 	if(isassignop(tok->k)) {
+		t = tok;
 		next();
-		assignexpr();
+		r = assignexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
 	}
-    return 0;
+    return l;
 }
 
 static Node *
@@ -1023,10 +1042,16 @@ condexpr(void)
 static Node *
 logorexpr(void)
 {
-    logandexpr();
+    Tok  *t;
+    Node *l;
+    Node *r;
+
+    l = logandexpr();
 	while(tok->k == TOKLOR) {
+		t = tok;
 		next();
-		logandexpr();
+		r = logandexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
 	}
 	return 0;
 }
@@ -1034,101 +1059,155 @@ logorexpr(void)
 static Node *
 logandexpr(void)
 {
-	orexpr();
+    Tok  *t;
+    Node *l;
+    Node *r;
+
+	l = orexpr();
 	while(tok->k == TOKLAND) {
+		t = tok;
 		next();
-		orexpr();
+		r = orexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
 	}
-	return 0;
+	return l;
 }
 
 static Node *
 orexpr(void)
 {
-	xorexpr();
+    Tok  *t;
+    Node *l;
+    Node *r;
+
+	l = xorexpr();
 	while(tok->k == '|') {
+		t = tok;
 		next();
-		xorexpr();
+		r = xorexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
 	}
-	return 0;
+	return l;
 }
 
 static Node *
 xorexpr(void)
 {
-	andexpr();
+    Tok  *t;
+    Node *l;
+    Node *r;
+
+	l = andexpr();
 	while(tok->k == '^') {
+		t = tok;
 		next();
-		andexpr();
+		r = andexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
 	}
-	return 0;
+	return l;
 }
 
 static Node *
 andexpr(void) 
 {
-	eqlexpr();
+    Tok  *t;
+    Node *l;
+    Node *r;
+
+	l = eqlexpr();
 	while(tok->k == '&') {
+		t = tok;
 		next();
-		eqlexpr();
+		r = eqlexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
 	}
-	return 0;
+	return l;
 }
 
 static Node *
 eqlexpr(void)
 {
-	relexpr();
+    Tok  *t;
+    Node *l;
+    Node *r;
+
+	l = relexpr();
 	while(tok->k == TOKEQL || tok->k == TOKNEQ) {
+		t = tok;
 		next();
-		relexpr();
+		r = relexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
 	}
-	return 0;
+	return l;
 }
 
 static Node *
 relexpr(void)
 {
-	shiftexpr();
+    Tok  *t;
+    Node *l;
+    Node *r;
+
+	l = shiftexpr();
 	while(tok->k == '>' || tok->k == '<' 
 	      || tok->k == TOKLEQ || tok->k == TOKGEQ) {
+		t = tok;
 		next();
-		shiftexpr();
+		r = shiftexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
 	}
-	return 0;
+	return l;
 }
 
 static Node *
 shiftexpr(void)
 {
-	addexpr();
+    Tok  *t;
+    Node *l;
+    Node *r;
+
+	l = addexpr();
 	while(tok->k == TOKSHL || tok->k == TOKSHR) {
+		t = tok;
 		next();
-		addexpr();
+		r = addexpr();
+	    l = mkbinop(&t->pos, t->k, l, r);
 	}
-	return 0;
+	return l;
 }
 
 static Node *
 addexpr(void)
 {
-	mulexpr();
+    Tok  *t;
+    Node *l;
+    Node *r;
+
+	l = mulexpr();
 	while(tok->k == '+' || tok->k == '-') {
+		t = tok;
 		next();
-		mulexpr();
+		r = mulexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
 	}
-	return 0;
+	return l;
 }
 
 static Node *
 mulexpr(void)
 {
-	castexpr();
+    Tok  *t;
+    Node *l;
+    Node *r;
+    
+	l = castexpr();
 	while(tok->k == '*' || tok->k == '/' || tok->k == '%') {
+		t = tok;
 		next();
-		castexpr();
+		r = castexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
 	}
-	return 0;
+	return l;
 }
 
 static Node *

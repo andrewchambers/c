@@ -15,13 +15,6 @@ struct Map {
     List *l;
 };
 
-/* AST Node types */
-enum {
-	NDOWHILE,
-	NFOR,
-	NNUMBER
-};
-
 /* Token types */
 enum {
 	TOKNUM = 256,
@@ -99,9 +92,16 @@ struct SrcPos {
 	int   col;
 };
 
+enum {
+	NDOWHILE,
+	NFOR,
+	NNUMBER,
+	NBINOP,
+};
+
 typedef struct Node Node;
 struct Node {
-	/* type tag */
+	/* type tag, one of the N* types */
 	int t;
 	SrcPos pos;
 	union {
@@ -131,10 +131,13 @@ struct Node {
 
 		} Func;
 		struct {
-
+		    int op;
+            Node *l;
+            Node *r;
 		} Binop;
 		struct {
-
+		    int op;
+            Node *operand;
 		} Unop;
 		struct {
 			/* TODO: parse to int */
@@ -188,7 +191,7 @@ struct NameTy {
 };
 
 struct CTy {
-	/* type tag */
+	/* type tag, one of the C* types */
 	int t;
 	union {
 		struct {
