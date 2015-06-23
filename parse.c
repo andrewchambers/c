@@ -133,6 +133,17 @@ mknode(int type)
 	return n;
 }
 
+static NameTy *
+mknamety(char *n, CTy *t)
+{
+    NameTy *nt;
+    
+    nt = ccmalloc(sizeof(NameTy));
+    nt->name = n;
+    nt->type = t;
+    return nt;
+}
+
 static void
 next(void)
 {
@@ -182,8 +193,7 @@ params(CTy *fty)
 		t = declarator(t, &name, 0);
 		if(sclass != SCNONE)
 			errorposf(pos, "storage class not allowed in parameter decl");
-		listappend(fty->Func.paramnames, name);
-		listappend(fty->Func.paramtypes, t);
+		listappend(fty->Func.params, mknamety(name, t));
 		if(tok->k != ',')
 			break;
 		next();
@@ -228,9 +238,9 @@ decl()
     CTy  *basety;
     CTy  *ty;
     SrcPos *pos;
-    ListEnt *e1;
-    ListEnt *e2;
+    ListEnt *e;
     Node *init;
+    NameTy *nt;
 
     if(tok->k == ';') {
     	next();
@@ -249,11 +259,10 @@ decl()
 		if (init)
 		    errorposf(pos, "function declaration has an initializer");
 		pushscope();
-		e1 = ty->Func.paramnames->head;
-		e2 = ty->Func.paramtypes->head;
-		for(; e1 != 0; e1 = e1->next, e2 = e2->next) {
-			if(e1->v) {
-				definesym(pos, e1->v, "TODO");
+		for(e = ty->Func.params->head; e != 0; e = e->next) {
+			nt = e->v;
+			if(nt->name) {
+				definesym(pos, nt->name, "TODO");
 			}
 		}
 		block();
@@ -591,8 +600,7 @@ declaratortail(CTy *basety)
 		case '(':
 			t = mktype(CFUNC);
 		    t->Func.rtype = basety;
-		    t->Func.paramnames = listnew();
-		    t->Func.paramtypes = listnew();
+		    t->Func.params = listnew();
 		    next();
 			params(t);
 			if (tok->k != ')')

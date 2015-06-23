@@ -174,11 +174,17 @@ enum {
 };
 
 typedef struct StructMember StructMember;
+typedef struct NameTy NameTy;
 typedef struct CTy CTy;
 
 struct StructMember {
     char *name;
-    CTy  *ty;		    
+    CTy  *type;		    
+};
+
+struct NameTy {
+    char *name;
+    CTy  *type;		    
 };
 
 struct CTy {
@@ -187,8 +193,7 @@ struct CTy {
 	union {
 		struct {
 			CTy  *rtype;
-			List *paramnames;
-			List *paramtypes;
+			List *params;
 			int isvararg;
 		} Func;
 		struct {
