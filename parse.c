@@ -784,7 +784,6 @@ declorstmt()
 {
     if(isdeclstart(tok)) {
 	    decl();
-	    expect(';');
 	    return 0;
     }
 	if(tok->k == TOKIDENT) {

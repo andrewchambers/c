@@ -325,13 +325,17 @@ lex()
 			accept(l, c);
 		}
 	} else if(numberc(c)) {
-		 accept(l, c);
+		accept(l, c);
 		c2 = nextc(l);
 		if(c == '0' && c2 == 'x') {
 			accept(l, c);
 			for(;;) {
 				c = nextc(l);
 				if (!hexnumberc(c)) {
+					while(c == 'u' || c == 'l' || c == 'U' || c == 'L') {
+						accept(l, c);
+						c = nextc(l);
+					}
 					ungetch(l, c);
 					return mktok(l, TOKNUM);
 				}
@@ -342,6 +346,10 @@ lex()
 		for(;;) {
 			c = nextc(l);
 			if (!numberc(c)) {
+				while(c == 'u' || c == 'l' || c == 'U' || c == 'L') {
+					accept(l, c);
+					c = nextc(l);
+				}
 				ungetch(l, c);
 				return mktok(l, TOKNUM);
 			}
