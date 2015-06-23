@@ -3,7 +3,6 @@
 #include "c.h"
 
 Node  *parse(void);
-
 static Node *stmt(void);
 static Node *pif(void);
 static Node *pfor(void);

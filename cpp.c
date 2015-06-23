@@ -30,124 +30,126 @@ cppinit(char *p)
 		errorf("error opening file %s.\n", p);
 }
 
-static char *tok2strab[TOKEOF+1] = {
-    [TOKNUM]      = "number",
-    [TOKIDENT]    = "ident",
-    [TOKIF]       = "if",
-    [TOKDO]       = "do",
-    [TOKFOR]      = "for",
-    [TOKWHILE]    = "while",
-    [TOKRETURN]   = "return",
-    [TOKELSE]     = "else",
-    [TOKVOLATILE] = "volatile",
-    [TOKCONST]    = "const",
-    [TOKSTRUCT]   = "struct",
-    [TOKCASE]     = "case",
-    [TOKDEFAULT]  = "default",
-    [TOKUNION]    = "union",
-    [TOKGOTO]     = "goto",
-    [TOKSWITCH]   = "switch",
-    [TOKREGISTER] = "register",
-    [TOKEXTERN]   = "extern",
-    [TOKSTATIC]   = "static",
-    [TOKAUTO]     = "auto",
-    [TOKENUM]     = "enum",
-    [TOKSTR]      = "string",
-    [TOKTYPEDEF]  = "typedef",
-    [TOKSIGNED]   = "signed",
-    [TOKUNSIGNED] = "unsigned",
-    [TOKDEFAULT]  = "default",
-    [TOKSIZEOF]   = "sizeof",
-    [TOKVOID]     = "void",
-    [TOKCHAR]     = "char",
-    [TOKINT]      = "int",
-    [TOKSHORT]    = "short",
-    [TOKLONG]     = "long",
-    [TOKFLOAT]    = "float",
-    [TOKDOUBLE]   = "double",
-    [TOKEOF]      = "end of file",
-    [TOKINC]      = "++",
-    [TOKDEC]      = "--",
-    [TOKADDASS]   = "+=",
-    [TOKSUBASS]   = "-=",
-    [TOKMULASS]   = "*=",
-    [TOKDIVASS]   = "/=",
-    [TOKMODASS]   = "%=",
-    [TOKGEQ]      = ">=",
-    [TOKLEQ]      = "<=",
-    [TOKORASS]     = "|=",
-    [TOKANDASS]    = "&=",
-    [TOKEQL]      = "==",
-    [TOKLOR]      = "||",
-    [TOKLAND]     = "&&",
-    [TOKNEQ]      = "!=",
-    [TOKLEQ]      = "<=",
-    [TOKGEQ]      = ">=",
-    [TOKSHL]      = "<<",
-    [TOKSHR]      = ">>",
-    [TOKARROW]    = "->",
-    [TOKELLIPSIS] = "...",
-    ['=']         = "=",
-    ['!']         = "!",
-    ['~']         = "~",
-    ['+']         = "+",
-    ['-']         = "-",
-    ['/']         = "/",
-    ['*']         = "*",
-    ['%']         = "%",
-    ['&']         = "&",
-    ['|']         = "|",
-    ['^']         = "^",
-	['(']         = "(",
-	[')']         = ")",
-	['[']         = "[",
-	[']']         = "]",
-	['{']         = "{",
-	['}']         = "}",
-	[',']         = ",",
-	[';']         = ";",
-	[':']         = ":",
-};
-
 char *
 tokktostr(int t) 
 {
-	return tok2strab[t];
+    switch(t) {
+    case TOKWHILE:    return "while";
+    case TOKVOLATILE: return "volatile";
+    case TOKVOID:     return "void";
+    case TOKUNSIGNED: return "unsigned";
+    case TOKUNION:    return "union";
+    case TOKTYPEDEF:  return "typedef";
+    case TOKSWITCH:   return "switch";
+    case TOKSUBASS:   return "-=";
+    case TOKSTRUCT:   return "struct";
+    case TOKSTR:      return "string";
+    case TOKSTATIC:   return "static";
+    case TOKSIZEOF:   return "sizeof";
+    case TOKSIGNED:   return "signed";
+    case TOKSHR:      return ">>";
+    case TOKSHORT:    return "short";
+    case TOKSHL:      return "<<";
+    case TOKRETURN:   return "return";
+    case TOKREGISTER: return "register";
+    case TOKORASS:    return "|=";
+    case TOKNUM:      return "number";
+    case TOKNEQ:      return "!=";
+    case TOKMULASS:   return "*=";
+    case TOKMODASS:   return "%=";
+    case TOKLOR:      return "||";
+    case TOKLONG:     return "long";
+    case TOKLEQ:      return "<=";
+    case TOKLAND:     return "&&";
+    case TOKINT:      return "int";
+    case TOKINC:      return "++";
+    case TOKIF:       return "if";
+    case TOKIDENT:    return "ident";
+    case TOKGOTO:     return "goto";
+    case TOKGEQ:      return ">=";
+    case TOKFOR:      return "for";
+    case TOKFLOAT:    return "float";
+    case TOKEXTERN:   return "extern";
+    case TOKEQL:      return "==";
+    case TOKEOF:      return "end of file";
+    case TOKENUM:     return "enum";
+    case TOKELSE:     return "else";
+    case TOKELLIPSIS: return "...";
+    case TOKDOUBLE:   return "double";
+    case TOKDO:       return "do";
+    case TOKDIVASS:   return "/=";
+    case TOKDEFAULT:  return "default";
+    case TOKDEC:      return "--";
+    case TOKCONTINUE: return "continue";
+    case TOKCONST:    return "const";
+    case TOKCHAR:     return "char";
+    case TOKCASE:     return "case";
+    case TOKBREAK:     return "break";
+    case TOKAUTO:     return "auto";
+    case TOKARROW:    return "->";
+    case TOKANDASS:   return "&=";
+    case TOKADDASS:   return "+=";
+    case '[':         return "[";
+    case '+':         return "+";
+    case '%':         return "%";
+    case '&':         return "&";
+    case '*':         return "*";
+    case '}':         return "}";
+    case '{':         return "{";
+    case ']':         return "]";
+    case ')':         return ")";
+    case '(':         return "(";
+    case '.':         return ".";
+    case '/':         return "/";
+    case '!':         return "!";
+    case ':':         return ":";
+    case ';':         return ";";
+    case '<':         return "<";
+    case '>':         return ">";
+    case ',':         return ",";
+    case '-':         return "-";
+    case '|':         return "|";
+    case '=':         return "=";
+    case '~':         return "~";
+    case '^':         return "^";
+    }
+    errorf("unknown token %d\n", t);
+	return 0;
 }
 
 static struct {char *kw; int t;} keywordlut[] = {
-	{"void", TOKVOID},
-	{"signed", TOKSIGNED},
-	{"unsigned", TOKUNSIGNED},
+	{"auto", TOKAUTO},
+	{"break", TOKBREAK},
+	{"case", TOKCASE},
 	{"char", TOKCHAR},
-	{"short", TOKSHORT},
+	{"const", TOKCONST},
+	{"continue", TOKCONTINUE},
+	{"default", TOKDEFAULT},
+	{"do", TOKDO},
+	{"double", TOKDOUBLE},
+	{"else", TOKELSE},
+	{"enum", TOKENUM},
+	{"extern", TOKEXTERN},
+	{"float", TOKFLOAT},
+	{"for", TOKFOR},
+	{"goto", TOKGOTO},
+	{"if", TOKIF},
 	{"int", TOKINT},
 	{"long", TOKLONG},
-	{"float", TOKFLOAT},
-	{"double", TOKDOUBLE},
-	{"return", TOKRETURN},
-	{"typedef", TOKTYPEDEF},
-	{"struct", TOKSTRUCT},
-	{"union", TOKUNION},
-	{"enum", TOKENUM},
-	{"goto", TOKGOTO},
-	{"case", TOKCASE},
-	{"continue", TOKCONTINUE},
-	{"break", TOKBREAK},
-	{"default", TOKDEFAULT},
-	{"sizeof", TOKSIZEOF},
-	{"switch", TOKSWITCH},
-	{"for", TOKFOR},
-	{"do", TOKDO},
-	{"while", TOKWHILE},
-	{"if", TOKIF},
-	{"else", TOKELSE},
-	{"const", TOKCONST},
-	{"volatile", TOKVOLATILE},
 	{"register", TOKREGISTER},
+	{"return", TOKRETURN},
+	{"short", TOKSHORT},
+	{"signed", TOKSIGNED},
+	{"sizeof", TOKSIZEOF},
 	{"static", TOKSTATIC},
-	{"extern", TOKEXTERN},
-	{"auto", TOKAUTO},
+	{"struct", TOKSTRUCT},
+	{"switch", TOKSWITCH},
+	{"typedef", TOKTYPEDEF},
+	{"union", TOKUNION},
+	{"unsigned", TOKUNSIGNED},
+	{"void", TOKVOID},
+	{"volatile", TOKVOLATILE},
+	{"while", TOKWHILE},
 	{0, 0}
 };
 
