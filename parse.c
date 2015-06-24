@@ -731,35 +731,41 @@ pif(void)
 static Node *
 pfor(void)
 {
+    Node *n;
+    
+    n = mknode(NFOR, &tok->pos);
 	expect(TOKFOR);
 	expect('(');
 	if(tok->k == ';') {
 	    next();
 	} else {
-	    expr();
+	    n->For.init = expr();
 	    expect(';');
 	}
 	if(tok->k == ';') {
 	    next();
 	} else {
-	    expr();
+	    n->For.cond = expr();
 	    expect(';');
 	}
 	if(tok->k != ')')
-		expr();
+		n->For.step = expr();
 	expect(')');
-	stmt();
-	return 0;
+	n->For.stmt = stmt();
+	return n;
 }
 
 static Node *
 pwhile(void)
 {
+    Node *n;
+    
+    n = mknode(NWHILE, &tok->pos);
 	expect(TOKWHILE);
 	expect('(');
-	expr();
+	n->While.expr = expr();
 	expect(')');
-	stmt();
+	n->While.stmt = stmt();
 	return 0;
 }
 
@@ -823,17 +829,19 @@ isdeclstart(Tok *t)
 static Node *
 declorstmt()
 {
-    if(isdeclstart(tok)) {
-	    decl();
-	    return 0;
-    }
-	if(tok->k == TOKIDENT) {
-	    if(nexttok->k == ':') {
-	        next();
-	        next();
-	        stmt();
-	        return 0;
-	    }
+    Node *n;
+    Tok *t;
+
+    if(isdeclstart(tok))
+	    return decl();
+	if(tok->k == TOKIDENT && nexttok->k == ':') {
+        t = tok;
+        next();
+        next();
+        n = mknode(NLABELED, &t->pos);
+        /* TODO make label. */
+        n->Labeled.stmt = stmt();
+        return n;
 	}
 	return stmt();
 }
@@ -879,9 +887,13 @@ stmt(void)
 static Node *
 declinit(void)
 {
+    Node *n;
+
     if(tok->k != '{')
         return assignexpr();
     expect('{');
+    n = mknode(NINIT, &tok->pos);
+    n->Init.inits = listnew();
     while(1) {
         if(tok->k == '}')
             break;
@@ -891,16 +903,18 @@ declinit(void)
             constexpr();
             expect(']');
             expect('=');
-            declinit();
+            /* TODO */
+            listappend(n->Init.inits, declinit());
             break;
         case '.':
             next();
             expect(TOKIDENT);
             expect('=');
-            declinit();
+            /* TODO */
+            listappend(n->Init.inits, declinit());
             break;
         default:
-            declinit();
+            listappend(n->Init.inits, declinit());
             break;
         }
         if (tok->k != ',')
@@ -908,7 +922,7 @@ declinit(void)
         next();
     }
     expect('}');
-    return 0;
+    return n;
 }
 
 static Node *

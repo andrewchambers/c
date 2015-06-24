@@ -163,11 +163,14 @@ struct CTy {
 };
 
 enum {
+    NLABELED,
+    NWHILE,
 	NDOWHILE,
 	NFOR,
 	NNUMBER,
 	NBINOP,
 	NCAST,
+	NINIT,
 };
 
 typedef struct Node Node;
@@ -184,11 +187,19 @@ struct Node {
 			Node *expr;
 		} DoWhile;
 		struct {
-
+            Node *init;
+            Node *cond;
+            Node *step;
+            Node *stmt;
 		} For;
 		struct {
-
+			Node *stmt;
+			Node *expr;
 		} While;
+		struct {
+            char *l;
+            Node *stmt;
+		} Labeled;
 		struct {
 
 		} Return;
@@ -214,6 +225,9 @@ struct Node {
             Node *operand;
             CTy  *type;
 		} Cast;
+		struct {
+            List *inits;
+		} Init;
 		struct {
 			/* TODO: parse to int */
 			char *v;
