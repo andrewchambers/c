@@ -937,39 +937,51 @@ exprstmt(void)
 
 static Node *
 preturn(void)
-{
+{   
+    Node *n;
+
+    n = mknode(NRETURN, &tok->pos);
 	expect(TOKRETURN);
 	if(tok->k != ';')
-	    expr();
+	    n->Return.expr = expr();
 	expect(';');
-	return 0;
+	return n;
 }
 
 static Node *
 pswitch(void)
 {
+    Node *n;
+    
+    n = mknode(NSWITCH, &tok->pos);
 	expect(TOKSWITCH);
 	expect('(');
-	expr();
+	n->Switch.expr = expr();
 	expect(')');
-	stmt();
-	return 0;
+	n->Switch.stmt = stmt();
+	return n;
 }
 
 static Node *
 pcontinue(void)
 {
+    Node *n;
+    
+    n = mknode(NGOTO, &tok->pos);
 	expect(TOKCONTINUE);
 	expect(';');
-	return 0;
+	return n;
 }
 
 static Node *
 pbreak(void)
 {
+    Node *n;
+    
+    n = mknode(NGOTO, &tok->pos);
 	expect(TOKBREAK);
 	expect(';');
-	return 0;
+	return n;
 }
 
 static Node *

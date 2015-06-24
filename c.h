@@ -171,6 +171,9 @@ enum {
 	NBINOP,
 	NCAST,
 	NINIT,
+	NRETURN,
+	NSWITCH,
+	NGOTO,
 };
 
 typedef struct Node Node;
@@ -193,15 +196,19 @@ struct Node {
             Node *stmt;
 		} For;
 		struct {
-			Node *stmt;
 			Node *expr;
+			Node *stmt;
 		} While;
+		struct {
+		    Node *expr;
+			Node *stmt;
+		} Switch;
 		struct {
             char *l;
             Node *stmt;
 		} Labeled;
 		struct {
-
+            Node *expr;
 		} Return;
 		struct {
 
@@ -232,6 +239,9 @@ struct Node {
 			/* TODO: parse to int */
 			char *v;
 		} Number;
+		struct {
+		    char *l;
+		} Goto;
 	};
 };
 
