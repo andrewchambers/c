@@ -146,6 +146,16 @@ mkbinop(SrcPos *p, int op, Node *l, Node *r)
 	return n;
 }
 
+static Node *
+mkunop(SrcPos *p, int op, Node *o)
+{
+	Node *n;
+
+	n = mknode(NUNOP, p);
+	n->Unop.op = op;
+	n->Unop.operand = 0;
+	return n;
+}
 
 static Node *
 mkcast(SrcPos *p, Node *o, CTy *to)
@@ -1281,6 +1291,8 @@ typename(void)
 static Node *
 unaryexpr(void)
 {
+    Tok *t;
+
 	switch (tok->k) {
 	case TOKINC:
 	case TOKDEC:
@@ -1293,9 +1305,9 @@ unaryexpr(void)
 	case '!':
 	case '~':
 	case '&':
+	    t = tok;
 		next();
-		castexpr();
-		return 0;
+		return mkunop(&t->pos, t->k, castexpr());
 	case TOKSIZEOF:
         next();
         if (tok->k == '(' && istypestart(nexttok)) {
@@ -1362,25 +1374,35 @@ static Node *
 primaryexpr(void) 
 {
     Sym *sym;
+    Node *n;
+    Tok *t;
     
 	switch (tok->k) {
 	case TOKIDENT:
 		sym = lookup(vars, tok->v);
 		if(!sym)
 			errorposf(&tok->pos, "undefined symbol %s", tok->v);
+		t = tok;
 		next();
-		return 0;
+		n = mknode(NSYM, &tok->pos);
+		n->Sym.s = sym;
+		n->Sym.n = t->v;
+		return n;
 	case TOKNUM:
+		n = mknode(NNUM, &tok->pos);
+		n->Num.v = tok->v;
 		next();
-		return 0;
+		return n;
 	case TOKSTR:
+		n = mknode(NSTR, &tok->pos);
+		n->Str.v = tok->v;
 		next();
-		return 0;
+		return n;
 	case '(':
 		next();
-		expr();
+		n = expr();
 		expect(')');
-		return 0;
+		return n;
 	default:
 		errorposf(&tok->pos, "expected an ident, constant, string or (");
 	}

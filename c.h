@@ -169,11 +169,15 @@ enum {
 	NFOR,
 	NNUMBER,
 	NBINOP,
+	NUNOP,
 	NCAST,
 	NINIT,
 	NRETURN,
 	NSWITCH,
 	NGOTO,
+	NSYM,
+	NNUM,
+	NSTR,
 };
 
 typedef struct Node Node;
@@ -238,10 +242,18 @@ struct Node {
 		struct {
 			/* TODO: parse to int */
 			char *v;
-		} Number;
+		} Num;
+		struct {
+			/* TODO: parse to int */
+			char *v;
+		} Str;
 		struct {
 		    char *l;
 		} Goto;
+		struct {
+		    char *n;
+		    Sym  *s;
+		} Sym;
 	};
 };
 
