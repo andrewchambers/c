@@ -181,6 +181,7 @@ struct Node {
 	/* type tag, one of the N* types */
 	int t;
 	SrcPos pos;
+	CTy *type;
 	union {
 		struct {
 
@@ -230,7 +231,6 @@ struct Node {
 		} Unop;
 		struct {
             Node *operand;
-            CTy  *type;
 		} Cast;
 		struct {
             List *inits;

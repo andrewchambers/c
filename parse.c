@@ -153,7 +153,7 @@ mkcast(SrcPos *p, Node *o, CTy *to)
     Node *n;
     
     n = mknode(NCAST, p);
-    n->Cast.type = to;
+    n->type = to;
     n->Cast.operand = o;
     return n;
 }
