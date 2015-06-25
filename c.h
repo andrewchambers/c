@@ -178,6 +178,9 @@ enum {
 	NSYM,
 	NNUM,
 	NSTR,
+	NIDX,
+	NSEL,
+	NCALL,
 };
 
 typedef struct Node Node;
@@ -254,6 +257,19 @@ struct Node {
 		    char *n;
 		    Sym  *s;
 		} Sym;
+		struct {
+		    Node *idx;
+		    Node *operand;
+		} Idx;
+		struct {
+		    int arrow;
+		    char *sel;
+		    Node *operand;
+		} Sel;
+		struct {
+		    Node *funclike;
+		    List *args;
+		} Call;
 	};
 };
 

@@ -1326,29 +1326,50 @@ static Node *
 postexpr(void)
 {
     int done;
+    Tok *t;
+    Node *n1;
+    Node *n2;
+    Node *n3;
 
-	primaryexpr();
+	n1 = primaryexpr();
 	done = 0;
 	while(!done) {
 		switch(tok->k) {
 		case '[':
+		    t = tok;
 			next();
-			expr();
+			n2 = expr();
 			expect(']');
+			n3 = mknode(NIDX, &t->pos);
+			n3->Idx.idx = n2;
+			n3->Idx.operand = n1;
+			n1 = n3;
 			break;
 		case '.':
+			n2 = mknode(NSEL, &tok->pos);
 			next();
+			n2->Sel.sel = tok->v;
+			n2->Sel.operand = n1;
 			expect(TOKIDENT);
+			n1 = n2;
 			break;
 		case TOKARROW:
+			n2 = mknode(NSEL, &tok->pos);
 			next();
+			n2->Sel.sel = tok->v;
+			n2->Sel.operand = n1;
+			n2->Sel.arrow = 1;
 			expect(TOKIDENT);
+			n1 = n2;
 			break;
 		case '(':
+		    n2 = mknode(NCALL, &tok->pos);
+		    n2->Call.funclike = n1;
+		    n2->Call.args = listnew();
 			next();
 			if(tok->k != ')') {
 				for(;;) {
-					assignexpr();
+					listappend(n2->Call.args, assignexpr());
 					if(tok->k != ',') {
 						break;
 					}
@@ -1356,7 +1377,8 @@ postexpr(void)
 				}
 			}
 			expect(')');
-			return 0;
+			n1 = n2;
+			break;
 		case TOKINC:
 			next();
 			break;
@@ -1367,7 +1389,7 @@ postexpr(void)
 			done = 1;
 		}
 	}
-	return 0;
+	return n1;
 }
 
 static Node *
