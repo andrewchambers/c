@@ -1,23 +1,19 @@
-# A better C compiler
+# The smaller, faster C compiler
 
-## Project Philosophy
+Legend says this compiler was written while clang and gcc were bootstrapping themselves. The preprocessor came later, during a linux kernel build.
 
-- Less is more.
-- Gotta go fast.
+## Quotes
 
-### Quotes
-
-"There are two ways of constructing a software design: 
-One way is to make it so simple that there are obviously no deficiencies
-and the other way is to make it so complicated that there are no obvious deficiencies." - C.A.R. Hoare, The 1980 ACM Turing Award Lecture
-
+"Gotta go fast" - Sonic
 
 "One of my most productive days was throwing away 1000 lines of code." - Ken Thompson
 
 
 ## Design choices
 
-- Choose fast algorithms, keep compilation speed and code complexity in mind.
+- Be very small, very fast and build real software.
+- Be very good at cross compiling.
+- Use fast algorithms, keep compilation speed and code complexity in mind.
 - Die on error. Usually only the first error means anything anyway.
 - Few/No warnings. Finding bugs is orthogonal to compiling, use a static checker.
 
