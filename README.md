@@ -11,12 +11,12 @@ Legend says this compiler was written while clang and gcc were bootstrapping the
 
 ## Design choices
 
-- Be very small, very fast.
+- Be very small, very fast, very sane.
 - Build real software.
-- Be very good at cross compiling.
+- Cross compiling.
 - Use fast algorithms, keep compilation speed and code complexity in mind.
-- Die on error. Usually only the first error means anything anyway.
-- Few/No warnings. Finding bugs is orthogonal to compiling, use a static checker.
+- Die on error. Only the first error means anything anyway.
+- Few/No warnings. Use a static checker for warnings.
 
 ## Style Guidelines
 
