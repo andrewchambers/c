@@ -181,6 +181,8 @@ enum {
 	NIDX,
 	NSEL,
 	NCALL,
+	NSIZEOF,
+	NIF,
 };
 
 typedef struct Node Node;
@@ -191,7 +193,9 @@ struct Node {
 	CTy *type;
 	union {
 		struct {
-
+			Node *expr;
+			Node *iftrue;
+			Node *iffalse;
 		} If;
 		struct {
 			Node *stmt;
@@ -270,6 +274,9 @@ struct Node {
 		    Node *funclike;
 		    List *args;
 		} Call;
+		struct {
+		    CTy *t;
+		} Sizeof;
 	};
 };
 

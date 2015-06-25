@@ -114,7 +114,7 @@ lookup(Map *scope[], char *k)
 }
 
 static CTy *
-mktype(int type)
+newtype(int type)
 {
 	CTy *t;
 
@@ -123,8 +123,19 @@ mktype(int type)
 	return t;
 }
 
+static NameTy *
+newnamety(char *n, CTy *t)
+{
+    NameTy *nt;
+    
+    nt = ccmalloc(sizeof(NameTy));
+    nt->name = n;
+    nt->type = t;
+    return nt;
+}
+
 static Node *
-mknode(int type, SrcPos *p)
+newnode(int type, SrcPos *p)
 {
 	Node *n;
 
@@ -139,7 +150,7 @@ mkbinop(SrcPos *p, int op, Node *l, Node *r)
 {
 	Node *n;
 
-	n = mknode(NBINOP, p);
+	n = newnode(NBINOP, p);
 	n->Binop.op = op;
 	n->Binop.l = l;
 	n->Binop.r = r;
@@ -151,7 +162,7 @@ mkunop(SrcPos *p, int op, Node *o)
 {
 	Node *n;
 
-	n = mknode(NUNOP, p);
+	n = newnode(NUNOP, p);
 	n->Unop.op = op;
 	n->Unop.operand = 0;
 	return n;
@@ -162,21 +173,68 @@ mkcast(SrcPos *p, Node *o, CTy *to)
 {
     Node *n;
     
-    n = mknode(NCAST, p);
+    n = newnode(NCAST, p);
     n->type = to;
     n->Cast.operand = o;
     return n;
 }
 
-static NameTy *
-mknamety(char *n, CTy *t)
+static Node *
+mkfor(SrcPos *p, Node *init, Node *cond, Node *step, Node *stmt)
 {
-    NameTy *nt;
+    Node *n;
     
-    nt = ccmalloc(sizeof(NameTy));
-    nt->name = n;
-    nt->type = t;
-    return nt;
+    n = newnode(NFOR, p);
+    n->For.init = init;
+    n->For.cond = cond;
+    n->For.step = step;
+    n->For.stmt = stmt;
+    return n;
+}
+
+static Node *
+mkwhile(SrcPos *p, Node *expr, Node *stmt)
+{
+    Node *n;
+    
+    n = newnode(NWHILE, p);
+    n->While.expr = expr;
+    n->While.stmt = stmt;
+    return n;
+}
+
+static Node *
+mkdowhile(SrcPos *p, Node *expr, Node *stmt)
+{
+    Node *n;
+    
+    n = newnode(NDOWHILE, p);
+    n->DoWhile.expr = expr;
+    n->DoWhile.stmt = stmt;
+    return n;
+}
+
+static Node *
+mkswitch(SrcPos *p, Node *expr, Node *stmt)
+{
+    Node *n;
+    
+    n = newnode(NSWITCH, p);
+    n->DoWhile.expr = expr;
+    n->DoWhile.stmt = stmt;
+    return n;
+}
+
+static Node *
+mkif(SrcPos *p, Node *expr, Node *iftrue, Node *iffalse)
+{
+    Node *n;
+    
+    n = newnode(NIF, p);
+    n->If.expr = expr;
+    n->If.iftrue = iftrue;
+    n->If.iffalse = iffalse;
+    return n;
 }
 
 static void
@@ -228,7 +286,7 @@ params(CTy *fty)
 		t = declarator(t, &name, 0);
 		if(sclass != SCNONE)
 			errorposf(pos, "storage class not allowed in parameter decl");
-		listappend(fty->Func.params, mknamety(name, t));
+		listappend(fty->Func.params, newnamety(name, t));
 		if(tok->k != ',')
 			break;
 		next();
@@ -473,37 +531,37 @@ declspecs(int *sclass)
 	done:
 	switch(bits){
 	case BITFLOAT:
-		t = mktype(CPRIM);
+		t = newtype(CPRIM);
 		t->Prim.type = PRIMFLOAT;
 		t->Prim.issigned = 0;
 		return t;
 	case BITLONG|BITDOUBLE:
 	case BITDOUBLE:
-		t = mktype(CPRIM);
+		t = newtype(CPRIM);
 		t->Prim.type = PRIMDOUBLE;
 		t->Prim.issigned = 0;
 		return t;
 	case BITSIGNED|BITCHAR:
 	case BITCHAR:
-		t = mktype(CPRIM);
+		t = newtype(CPRIM);
 		t->Prim.type = PRIMCHAR;
 		t->Prim.issigned = 1;
 		return t;
 	case BITUNSIGNED|BITCHAR:
-		t = mktype(CPRIM);
+		t = newtype(CPRIM);
 		t->Prim.type = PRIMCHAR;
 		t->Prim.issigned = 0;
 		return t;
 	case BITSIGNED|BITSHORT|BITINT:
 	case BITSHORT|BITINT:
 	case BITSHORT:
-		t = mktype(CPRIM);
+		t = newtype(CPRIM);
 		t->Prim.type = PRIMSHORT;
 		t->Prim.issigned = 1;
 		return t;
 	case BITUNSIGNED|BITSHORT|BITINT:
 	case BITUNSIGNED|BITSHORT:
-		t = mktype(CPRIM);
+		t = newtype(CPRIM);
 		t->Prim.type = PRIMSHORT;
 		t->Prim.issigned = 0;
 		return t;
@@ -511,13 +569,13 @@ declspecs(int *sclass)
 	case BITSIGNED:
 	case BITINT:
 	case 0:
-		t = mktype(CPRIM);
+		t = newtype(CPRIM);
 		t->Prim.type = PRIMINT;
 		t->Prim.issigned = 1;
 		return t;
 	case BITUNSIGNED|BITINT:
 	case BITUNSIGNED:
-		t = mktype(CPRIM);
+		t = newtype(CPRIM);
 		t->Prim.type = PRIMINT;
 		t->Prim.issigned = 0;
 		return t;
@@ -525,13 +583,13 @@ declspecs(int *sclass)
 	case BITSIGNED|BITLONG:
 	case BITLONG|BITINT:
 	case BITLONG:
-		t = mktype(CPRIM);
+		t = newtype(CPRIM);
 		t->Prim.type = PRIMLONG;
 		t->Prim.issigned = 1;
 		return t;
 	case BITUNSIGNED|BITLONG|BITINT:
 	case BITUNSIGNED|BITLONG:
-		t = mktype(CPRIM);
+		t = newtype(CPRIM);
 		t->Prim.type = PRIMLONG;
 		t->Prim.issigned = 0;
 		return t;
@@ -539,18 +597,18 @@ declspecs(int *sclass)
 	case BITSIGNED|BITLONGLONG:
 	case BITLONGLONG|BITINT:
 	case BITLONGLONG:
-		t = mktype(CPRIM);
+		t = newtype(CPRIM);
 		t->Prim.type = PRIMLLONG;
 		t->Prim.issigned = 1;
 		return t;
 	case BITUNSIGNED|BITLONGLONG|BITINT:
 	case BITUNSIGNED|BITLONGLONG:
-		t = mktype(CPRIM);
+		t = newtype(CPRIM);
 		t->Prim.type = PRIMLLONG;
 		t->Prim.issigned = 0;
 		return t;
 	case BITVOID:
-		t = mktype(CVOID);
+		t = newtype(CVOID);
 		return t;
 	case BITENUM:
 	case BITSTRUCT:
@@ -576,7 +634,7 @@ declarator(CTy *basety, char **name, Node **init)
 	case '*':
 		next();
 		subt = declarator(basety, name, init);
-		t = mktype(CPTR);
+		t = newtype(CPTR);
 		t->Ptr.subty = subt;
 		return subt;
 	default:
@@ -633,7 +691,7 @@ declaratortail(CTy *basety)
 			expect(']');
 			break;
 		case '(':
-			t = mktype(CFUNC);
+			t = newtype(CFUNC);
 		    t->Func.rtype = basety;
 		    t->Func.params = listnew();
 		    next();
@@ -689,7 +747,7 @@ pstruct()
 	if(tagname && shoulddefine)
 		if(!define(tags, tagname, "TODO"))
 		    errorposf(&tok->pos, "redefinition of tag %s", tagname);
-    return mktype(CSTRUCT);
+    return newtype(CSTRUCT);
 }
 
 static CTy *
@@ -718,7 +776,7 @@ penum()
 			next();
 	}
 	expect('}');
-	t = mktype(CPRIM);
+	t = newtype(CPRIM);
 	t->Prim.type = PRIMENUM;
 	return t;
 }
@@ -726,73 +784,88 @@ penum()
 static Node *
 pif(void)
 {
+    SrcPos *p;
+    Node *e;
+    Node *t;
+    Node *f;
+    
+    p = &tok->pos;
 	expect(TOKIF);
 	expect('(');
-	expr();
+	e = expr();
 	expect(')');
-	stmt();
-	if(tok->k != TOKELSE)
-		return 0;
-	expect(TOKELSE);
-	stmt();
-	return 0;
+	t = stmt();
+	if(tok->k != TOKELSE) {
+		f = 0;
+	} else {
+	    expect(TOKELSE);
+	    f = stmt();
+	}
+	return mkif(p, e, t, f);
 }
 
 static Node *
 pfor(void)
 {
-    Node *n;
+    SrcPos *p;
+    Node *i;
+    Node *c;
+    Node *s;
+    Node *st;
     
-    n = mknode(NFOR, &tok->pos);
+    p = &tok->pos;
 	expect(TOKFOR);
 	expect('(');
 	if(tok->k == ';') {
 	    next();
 	} else {
-	    n->For.init = expr();
+	    i = expr();
 	    expect(';');
 	}
 	if(tok->k == ';') {
 	    next();
 	} else {
-	    n->For.cond = expr();
+	    c = expr();
 	    expect(';');
 	}
 	if(tok->k != ')')
-		n->For.step = expr();
+		s = expr();
 	expect(')');
-	n->For.stmt = stmt();
-	return n;
+	st = stmt();
+	return mkfor(p, i, c, s, st);
 }
 
 static Node *
 pwhile(void)
 {
-    Node *n;
+    SrcPos *p;
+    Node *e;
+    Node *s;
     
-    n = mknode(NWHILE, &tok->pos);
+    p = &tok->pos;    
 	expect(TOKWHILE);
 	expect('(');
-	n->While.expr = expr();
+	e = expr();
 	expect(')');
-	n->While.stmt = stmt();
-	return 0;
+	s = stmt();
+	return mkwhile(p, e, s);
 }
 
 static Node *
 dowhile(void)
 {
-	Node *n;
+    SrcPos *p;
+    Node *e;
+    Node *s;
 
-	n = mknode(NDOWHILE, &tok->pos);
 	expect(TOKDO);
-	n->DoWhile.stmt = stmt();
+	s = stmt();
 	expect(TOKWHILE);
 	expect('(');
-	n->DoWhile.expr = expr();
+	e = expr();
 	expect(')');
 	expect(';');
-	return 0;
+	return mkdowhile(p, e, s);
 }
 
 static int
@@ -848,7 +921,7 @@ declorstmt()
         t = tok;
         next();
         next();
-        n = mknode(NLABELED, &t->pos);
+        n = newnode(NLABELED, &t->pos);
         /* TODO make label. */
         n->Labeled.stmt = stmt();
         return n;
@@ -902,7 +975,7 @@ declinit(void)
     if(tok->k != '{')
         return assignexpr();
     expect('{');
-    n = mknode(NINIT, &tok->pos);
+    n = newnode(NINIT, &tok->pos);
     n->Init.inits = listnew();
     while(1) {
         if(tok->k == '}')
@@ -950,7 +1023,7 @@ preturn(void)
 {   
     Node *n;
 
-    n = mknode(NRETURN, &tok->pos);
+    n = newnode(NRETURN, &tok->pos);
 	expect(TOKRETURN);
 	if(tok->k != ';')
 	    n->Return.expr = expr();
@@ -961,15 +1034,17 @@ preturn(void)
 static Node *
 pswitch(void)
 {
-    Node *n;
+    SrcPos *p;
+    Node *e;
+    Node *s;
     
-    n = mknode(NSWITCH, &tok->pos);
+    p = &tok->pos;
 	expect(TOKSWITCH);
 	expect('(');
-	n->Switch.expr = expr();
+	e = expr();
 	expect(')');
-	n->Switch.stmt = stmt();
-	return n;
+	s = stmt();
+	return mkswitch(p, e, s);
 }
 
 static Node *
@@ -977,7 +1052,7 @@ pcontinue(void)
 {
     Node *n;
     
-    n = mknode(NGOTO, &tok->pos);
+    n = newnode(NGOTO, &tok->pos);
 	expect(TOKCONTINUE);
 	expect(';');
 	return n;
@@ -988,7 +1063,7 @@ pbreak(void)
 {
     Node *n;
     
-    n = mknode(NGOTO, &tok->pos);
+    n = newnode(NGOTO, &tok->pos);
 	expect(TOKBREAK);
 	expect(';');
 	return n;
@@ -1282,23 +1357,25 @@ typename(void)
 	int sclass;
 	CTy *t;
 	char *name;
-
+    
 	t = declspecs(&sclass);
 	t = declarator(t, &name, 0);
-	return 0;
+	return t;
 }
 
 static Node *
 unaryexpr(void)
 {
     Tok *t;
+    CTy *ty;
+    Node *n;
 
 	switch (tok->k) {
 	case TOKINC:
 	case TOKDEC:
+	    t = tok;
 		next();
-		unaryexpr();
-		return 0;
+		return mkunop(&tok->pos, t->k, unaryexpr());
 	case '*':
 	case '+':
 	case '-':
@@ -1309,14 +1386,16 @@ unaryexpr(void)
 		next();
 		return mkunop(&t->pos, t->k, castexpr());
 	case TOKSIZEOF:
+        n = newnode(NSIZEOF, &tok->pos);
         next();
         if (tok->k == '(' && istypestart(nexttok)) {
             expect('(');
-            typename();
+            ty = typename();
             expect(')');
             return 0;
 	    }
-        unaryexpr();
+        n = unaryexpr();
+        ty = n->type;
         return 0;
 	}
 	return postexpr();
@@ -1340,13 +1419,13 @@ postexpr(void)
 			next();
 			n2 = expr();
 			expect(']');
-			n3 = mknode(NIDX, &t->pos);
+			n3 = newnode(NIDX, &t->pos);
 			n3->Idx.idx = n2;
 			n3->Idx.operand = n1;
 			n1 = n3;
 			break;
 		case '.':
-			n2 = mknode(NSEL, &tok->pos);
+			n2 = newnode(NSEL, &tok->pos);
 			next();
 			n2->Sel.sel = tok->v;
 			n2->Sel.operand = n1;
@@ -1354,7 +1433,7 @@ postexpr(void)
 			n1 = n2;
 			break;
 		case TOKARROW:
-			n2 = mknode(NSEL, &tok->pos);
+			n2 = newnode(NSEL, &tok->pos);
 			next();
 			n2->Sel.sel = tok->v;
 			n2->Sel.operand = n1;
@@ -1363,7 +1442,7 @@ postexpr(void)
 			n1 = n2;
 			break;
 		case '(':
-		    n2 = mknode(NCALL, &tok->pos);
+		    n2 = newnode(NCALL, &tok->pos);
 		    n2->Call.funclike = n1;
 		    n2->Call.args = listnew();
 			next();
@@ -1380,9 +1459,11 @@ postexpr(void)
 			n1 = n2;
 			break;
 		case TOKINC:
+			n1 = mkunop(&tok->pos, TOKINC, n1);
 			next();
 			break;
 		case TOKDEC:
+		    n1 = mkunop(&tok->pos, TOKINC, n1);
 			next();
 			break;
 		default:
@@ -1406,17 +1487,17 @@ primaryexpr(void)
 			errorposf(&tok->pos, "undefined symbol %s", tok->v);
 		t = tok;
 		next();
-		n = mknode(NSYM, &tok->pos);
+		n = newnode(NSYM, &tok->pos);
 		n->Sym.s = sym;
 		n->Sym.n = t->v;
 		return n;
 	case TOKNUM:
-		n = mknode(NNUM, &tok->pos);
+		n = newnode(NNUM, &tok->pos);
 		n->Num.v = tok->v;
 		next();
 		return n;
 	case TOKSTR:
-		n = mknode(NSTR, &tok->pos);
+		n = newnode(NSTR, &tok->pos);
 		n->Str.v = tok->v;
 		next();
 		return n;
