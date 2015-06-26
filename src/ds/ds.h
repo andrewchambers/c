@@ -11,16 +11,26 @@ struct List {
 	ListEnt *head;
 };
 
+List *listnew();
+void listappend(List *, void *);
+void listprepend(List *, void *);
+
 typedef struct Map Map;
 struct Map {
     List *l;
 };
 
-List *listnew();
-void listappend(List *, void *);
-void listprepend(List *, void *);
-
 Map  *map();
 void *mapget(Map *, char *);
 void  mapset(Map *, char *, void *);
 
+/*  StrSet is an immutable set of strings.
+    The null pointer is the empty set. */
+typedef struct StrSet StrSet;
+struct StrSet {
+    StrSet *next;
+    char *v;
+};
+
+StrSet *strsetadd(StrSet *ss, char *v);
+int strsethas(StrSet *ss, char *v);
