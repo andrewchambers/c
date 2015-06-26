@@ -23,6 +23,8 @@ bufffree(Buff *b)
 Buff *
 buffprintf(Buff *b, char *fmt, ...)
 {
+    exit(1);
+    /*
 	va_list va
 	va_list vb;
 	int w;
@@ -37,5 +39,6 @@ buffprintf(Buff *b, char *fmt, ...)
 	}
 	va_end(va);
 	va_end(vb);
+	*/
 }
 
