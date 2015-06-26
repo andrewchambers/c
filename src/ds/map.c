@@ -1,3 +1,4 @@
+#include "mem/mem.h"
 #include "ds.h"
 
 typedef struct MapEnt MapEnt;
@@ -10,7 +11,7 @@ Map *map()
 {
     Map *m;
     
-    m = ccmalloc(sizeof(Map));
+    m = zmalloc(sizeof(Map));
     m->l = listnew();
     return m;
 }
@@ -20,7 +21,7 @@ mapset(Map *m, char *k, void *v)
 {
     MapEnt *me;
 
-    me = ccmalloc(sizeof(MapEnt));
+    me = zmalloc(sizeof(MapEnt));
     me->k = k;
     me->v = v;
     listprepend(m->l, me);

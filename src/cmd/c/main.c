@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "ds/ds.h"
-#include "c.h"
+#include "cc/c.h"
 
 void
 usage(void)

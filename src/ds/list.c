@@ -1,11 +1,12 @@
 #include "ds.h"
+#include "mem/mem.h"
 
 List *
 listnew()
 {
 	List *l;
 
-	l = ccmalloc(sizeof(List));
+	l = zmalloc(sizeof(List));
 	return l;
 }
 
@@ -15,7 +16,7 @@ listappend(List *l, void *v)
     ListEnt *e;
     ListEnt *ne;
     
-    ne = ccmalloc(sizeof(ListEnt));
+    ne = zmalloc(sizeof(ListEnt));
     ne->v = v;
     if(l->head == 0) {
         l->head = ne;
@@ -32,7 +33,7 @@ listprepend(List *l, void *v)
 {
     ListEnt *e;
     
-	e = ccmalloc(sizeof(ListEnt));
+	e = zmalloc(sizeof(ListEnt));
 	e->v = v;
 	e->next = l->head;
 	l->head = e;

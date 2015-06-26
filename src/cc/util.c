@@ -68,27 +68,3 @@ errorposf(SrcPos *p, char *fmt, ...)
 }
 
 
-void *
-ccmalloc(int n) 
-{
-	void *v;
-
-	v = malloc(n);
-	if(!v)
-		errorf("out of memory\n");
-	memset(v, 0, n);
-	return v;
-}
-
-char *
-ccstrdup(char *s)
-{
-	int l;
-	char *r;
-
-	l = strlen(s) + 1;
-	r = ccmalloc(l);
-	strcpy(r, s);
-	return r;
-}
-

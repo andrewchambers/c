@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <string.h>
+#include "mem/mem.h"
 #include "ds/ds.h"
 #include "c.h"
-
 
 Node  *parse(void);
 static Node *stmt(void);
@@ -120,7 +120,7 @@ newtype(int type)
 {
 	CTy *t;
 
-	t = ccmalloc(sizeof(CTy));
+	t = zmalloc(sizeof(CTy));
 	t->t = type;
 	return t;
 }
@@ -141,7 +141,7 @@ newnamety(char *n, CTy *t)
 {
     NameTy *nt;
     
-    nt = ccmalloc(sizeof(NameTy));
+    nt = zmalloc(sizeof(NameTy));
     nt->name = n;
     nt->type = t;
     return nt;
@@ -152,7 +152,7 @@ newnode(int type, SrcPos *p)
 {
 	Node *n;
 
-	n = ccmalloc(sizeof(Node));
+	n = zmalloc(sizeof(Node));
 	n->pos = *p;
 	n->t = type;
 	return n;

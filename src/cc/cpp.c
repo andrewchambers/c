@@ -1,3 +1,4 @@
+#include "mem/mem.h"
 #include "ds/ds.h"
 #include "c.h"
 #include <stdio.h>
@@ -20,7 +21,7 @@ Lexer *l;
 void
 cppinit(char *p)
 {
-    l = ccmalloc(sizeof(Lexer));
+    l = zmalloc(sizeof(Lexer));
     l->pos.file = p;
     l->prevpos.file = p;
     l->markpos.file = p;
@@ -177,7 +178,7 @@ mktok(Lexer *l, int kind) {
     l->tokval[l->nchars] = 0;
 	if(kind == TOKIDENT)
 	    kind = identkind(l->tokval);
-	r = ccmalloc(sizeof(Tok));
+	r = zmalloc(sizeof(Tok));
 	r->pos.line = l->markpos.line;
 	r->pos.col = l->markpos.col;
 	r->pos.file = l->markpos.file;
@@ -186,7 +187,7 @@ mktok(Lexer *l, int kind) {
 	case TOKSTR:
     case TOKNUM:
     case TOKIDENT:
-        r->v = ccstrdup(l->tokval);
+        r->v = zstrdup(l->tokval);
         break;
 	default:
 	    r->v = tokktostr(kind);
