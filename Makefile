@@ -17,15 +17,15 @@ LMEMO=$(patsubst %.c, %.o, $(LMEMC))
 src/mem/mem.a: $(LMEMO) $(LMEMH)
 	ar rvs $@ $(LMEMO)
 
-LCC=$(wildcard src/cc/*.c)
+LCCC=$(wildcard src/cc/*.c)
 LCCH=$(wildcard src/cc/*.h)
-LCCO=$(patsubst %.c, %.o, $(LMEMC))
-src/cc/cc.a: $(LMEMO) $(LMEMH)
-	ar rvs $@ $(LMEMO)
+LCCO=$(patsubst %.c, %.o, $(LCCC))
+src/cc/cc.a: $(LCCO) $(LCCH)
+	ar rvs $@ $(LCCO)
 
 BCC=$(wildcard src/cmd/c/*.c)
 BCH=$(wildcard src/cmd/c/*.h)
 BCO=$(patsubst %.c, %.o, $(BCC))
-bin/c: $(BCO) $(BCH) src/ds/ds.a src/mem/mem.a src/cc/cc.a
+bin/c: $(BCO) $(BCH) src/cc/cc.a src/ds/ds.a src/mem/mem.a
 	mkdir -p bin
-	tcc $(BCO) src/ds/ds.a src/mem/mem.a src/cc/cc.a -o $@
+	tcc $(BCO) src/cc/cc.a src/ds/ds.a src/mem/mem.a -o $@
