@@ -307,8 +307,6 @@ Tok  *lex(void);
 void  cppinit(char *);
 /* parser functions */
 Node *parse(void);
-/* parser functions */
-Node *check(Node *);
 /* backend functions */
 void  emit(Node *);
 

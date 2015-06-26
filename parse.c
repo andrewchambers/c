@@ -237,6 +237,165 @@ mkif(SrcPos *p, Node *expr, Node *iftrue, Node *iffalse)
     return n;
 }
 
+int
+isftype(CTy *t)
+{
+    if(t->t != CPRIM)
+        return 0;
+    switch(t->Prim.type){
+    case PRIMFLOAT:
+    case PRIMDOUBLE:
+    case PRIMLDOUBLE:
+        return 1;
+    }
+    return 0;
+}
+
+int
+isitype(CTy *t)
+{
+    if(t->t != CPRIM)
+        return 0;
+    switch(t->Prim.type){
+    case PRIMCHAR:
+    case PRIMSHORT:
+    case PRIMINT:
+    case PRIMLONG:
+    case PRIMLLONG:
+        return 1;
+    }
+    return 0;
+}
+
+static int
+isarithtype(CTy *t)
+{
+    return isftype(t) || isitype(t);
+}
+
+static int
+isassignable(CTy *l, CTy *r)
+{
+    if ((isarithtype(to) || isptr(to)) &&
+        (isarithtype(from) || isptr(from)))
+        return 1;
+    if (compatiblestruct(to, from))
+        return 1;
+    return 0;
+}
+
+static unsigned long long int
+getmaxval(CTy *l)
+{
+    switch(l->Prim.type) {
+    case PRIMCHAR:
+        if(l->Prim.issigned)
+            return 0x7f;
+        else
+            return 0xff;
+    case PRIMSHORT:
+        if(l->Prim.issigned)
+            return 0x7fff;
+        else
+            return  0xffff;
+    case PRIMINT:
+    case PRIMLONG:
+        if(l->Prim.issigned)
+            return 0x7fffffff;
+        else
+            return 0xffffffff;
+    case PRIMLLONG:
+        if(l->Prim.issigned)
+            return 0x7fffffffffffffff;
+        else
+            return 0xffffffffffffffff;
+    }
+    errorf("internal error\n")
+    return 0;
+}
+
+static signed long long int
+getminval(CTy *l)
+{
+    if (!l->Prim.issigned)
+        return 0;
+    switch(l->Prim.type) {
+    case PRIMCHAR:
+        return 0xff;
+    case PRIMSHORT:
+        return 0xffff;
+    case PRIMINT:
+    case PRIMLONG:
+        return 0xffffffffl;
+    case PRIMLLONG:
+        return 0xffffffffffffffff;
+    }
+}
+
+static int
+canrepresent(CTy *l, CTy *r)
+{
+    if(!isitype(l->type) || !isitype(r->type))
+        errorf("internal error");
+    return getmaxval(l) <= getmaxval(r) && getminval(l) >= getminval(r);
+}
+
+static Node *
+ipromote(Node *n)
+{
+    if(!isitype(n->type))
+        return 0;
+    t = inttype();
+    switch(n->type->Prim.type) {
+    case PRIMCHAR:
+    case PRIMSHORT:
+        if(n->type->Prim.issigned)
+            return mkconv(n->pos, n, inttype())
+        else
+            errorf("unimplemented, promotion to unsigned int\n");
+    }
+    return n;
+}
+
+CTy *
+usualarithconv(Node **large, Node **small)
+{   
+    Node **tmp;
+    CTy *t;
+
+    if(!isarithtype(*large->type) || !isarithtype(*small->type))
+        errorf("internal error\n");
+    if(convrank(*large) < convrank(*small)) {
+        tmp = large;
+        large = small;
+        small = tmp;
+    }
+    if(isftype(*large->type)) {
+        *small = mkconv(*small->pos, *small, *large->type);
+        return *large->type;
+    }
+    *large = ipromote(*large);
+    *small = ipromote(*small);
+    if(sametype(*large->type, *small->type))
+        return *large->type;
+    if(*large->type->Prim.issigned == *small->type->Prim.issigned ) {
+        *small = mkcast(*small->pos, *small, *large->type);
+        return *large->type;
+    }
+    if(!large->Prim.issigned) {
+        *small = mkcast(*small->pos, *small, *large->type);
+        return *large->type;
+    }
+    if(*large->Prim.issigned && canrepresent(*large->type, *small->type)) {
+        *small = mkcast(*small->pos, *small, *large->type);
+        return *large->type;
+    }
+    t = copytype(*large->type);
+    t->Prim.issigned = 0;
+    *large = mkcast(*large->pos, *large, t);
+    *small = mkcast(*small->pos, *small, t);
+}
+
 static void
 next(void)
 {
