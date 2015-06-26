@@ -19,7 +19,6 @@ main(int argc, char *argv[])
         usage();
     cppinit(argv[1]);
     n = parse();
-    n = check(n);
     emit(n);
     return 0;
 }

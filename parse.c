@@ -123,6 +123,17 @@ newtype(int type)
 	return t;
 }
 
+static CTy *
+mkprimtype(int type, int sig)
+{
+    CTy *t;
+    
+    t = newtype(CPRIM);
+    t->Prim.type = type;
+    t->Prim.issigned = sig;
+    return t;
+}
+
 static NameTy *
 newnamety(char *n, CTy *t)
 {
@@ -237,7 +248,62 @@ mkif(SrcPos *p, Node *expr, Node *iftrue, Node *iffalse)
     return n;
 }
 
-int
+static int
+convrank(CTy *t)
+{
+    if(t->t != CPRIM)
+        errorf("internal error\n");
+    switch(t->Prim.type){
+    case PRIMCHAR:
+        return 0;
+    case PRIMSHORT:
+        return 1;
+    case PRIMINT:
+        return 2;
+    case PRIMLONG:
+        return 3;
+    case PRIMLLONG:
+        return 4;
+    case PRIMFLOAT:
+        return 5;
+    case PRIMDOUBLE:
+        return 6;
+    case PRIMLDOUBLE:
+        return 7;
+    }
+    errorf("internal error\n");
+    return -1;
+}
+
+static int 
+compatiblestruct(CTy *l, CTy *r)
+{
+    /* TODO */
+    return 0;
+}
+
+static int 
+sametype(CTy *l, CTy *r)
+{
+    /* TODO */
+    switch(l->t) {
+    case CVOID:
+        if(r->t != CVOID)
+            return 0;
+        return 1;
+    case CPRIM:
+        if(r->t != CPRIM)
+            return 0;
+        if(l->Prim.issigned != r->Prim.issigned)
+            return 0;
+        if(l->Prim.type != r->Prim.type)
+            return 0;
+        return 1;
+    }
+    return 0;
+}
+
+static int
 isftype(CTy *t)
 {
     if(t->t != CPRIM)
@@ -251,7 +317,7 @@ isftype(CTy *t)
     return 0;
 }
 
-int
+static int
 isitype(CTy *t)
 {
     if(t->t != CPRIM)
@@ -274,7 +340,13 @@ isarithtype(CTy *t)
 }
 
 static int
-isassignable(CTy *l, CTy *r)
+isptr(CTy *t)
+{
+    return t->t == CPTR;
+}
+
+static int
+isassignable(CTy *to, CTy *from)
 {
     if ((isarithtype(to) || isptr(to)) &&
         (isarithtype(from) || isptr(from)))
@@ -310,7 +382,7 @@ getmaxval(CTy *l)
         else
             return 0xffffffffffffffff;
     }
-    errorf("internal error\n")
+    errorf("internal error\n");
     return 0;
 }
 
@@ -335,7 +407,7 @@ getminval(CTy *l)
 static int
 canrepresent(CTy *l, CTy *r)
 {
-    if(!isitype(l->type) || !isitype(r->type))
+    if(!isitype(l) || !isitype(r))
         errorf("internal error");
     return getmaxval(l) <= getmaxval(r) && getminval(l) >= getminval(r);
 }
@@ -345,14 +417,13 @@ ipromote(Node *n)
 {
     if(!isitype(n->type))
         return 0;
-    t = inttype();
     switch(n->type->Prim.type) {
     case PRIMCHAR:
     case PRIMSHORT:
         if(n->type->Prim.issigned)
-            return mkconv(n->pos, n, inttype())
+            return mkcast(&n->pos, n, mkprimtype(PRIMINT, 1));
         else
-            errorf("unimplemented, promotion to unsigned int\n");
+            return mkcast(&n->pos, n, mkprimtype(PRIMINT, 0));
     }
     return n;
 }
@@ -363,37 +434,37 @@ usualarithconv(Node **large, Node **small)
     Node **tmp;
     CTy *t;
 
-    if(!isarithtype(*large->type) || !isarithtype(*small->type))
+    if(!isarithtype((*large)->type) || !isarithtype((*small)->type))
         errorf("internal error\n");
-    if(convrank(*large) < convrank(*small)) {
+    if(convrank((*large)->type) < convrank((*small)->type)) {
         tmp = large;
         large = small;
         small = tmp;
     }
-    if(isftype(*large->type)) {
-        *small = mkconv(*small->pos, *small, *large->type);
-        return *large->type;
+    if(isftype((*large)->type)) {
+        *small = mkcast(&(*small)->pos, *small, (*large)->type);
+        return (*large)->type;
     }
     *large = ipromote(*large);
     *small = ipromote(*small);
-    if(sametype(*large->type, *small->type))
-        return *large->type;
-    if(*large->type->Prim.issigned == *small->type->Prim.issigned ) {
-        *small = mkcast(*small->pos, *small, *large->type);
-        return *large->type;
+    if(sametype((*large)->type, (*small)->type))
+        return (*large)->type;
+    if((*large)->type->Prim.issigned == (*small)->type->Prim.issigned ) {
+        *small = mkcast(&(*small)->pos, *small, (*large)->type);
+        return (*large)->type;
     }
-    if(!large->Prim.issigned) {
-        *small = mkcast(*small->pos, *small, *large->type);
-        return *large->type;
+    if(!(*large)->type->Prim.issigned) {
+        *small = mkcast(&(*small)->pos, *small, (*large)->type);
+        return (*large)->type;
     }
-    if(*large->Prim.issigned && canrepresent(*large->type, *small->type)) {
-        *small = mkcast(*small->pos, *small, *large->type);
-        return *large->type;
+    if((*large)->type->Prim.issigned && canrepresent((*large)->type, (*small)->type)) {
+        *small = mkcast(&(*small)->pos, *small, (*large)->type);
+        return (*large)->type;
     }
-    t = copytype(*large->type);
-    t->Prim.issigned = 0;
-    *large = mkcast(*large->pos, *large, t);
-    *small = mkcast(*small->pos, *small, t);
+    t = mkprimtype((*large)->type->Prim.type, 0);
+    *large = mkcast(&(*large)->pos, *large, t);
+    *small = mkcast(&(*small)->pos, *small, t);
+    return t;
 }
 
 static void
@@ -690,86 +761,52 @@ declspecs(int *sclass)
 	done:
 	switch(bits){
 	case BITFLOAT:
-		t = newtype(CPRIM);
-		t->Prim.type = PRIMFLOAT;
-		t->Prim.issigned = 0;
-		return t;
-	case BITLONG|BITDOUBLE:
+		return mkprimtype(PRIMFLOAT, 0);
 	case BITDOUBLE:
-		t = newtype(CPRIM);
-		t->Prim.type = PRIMDOUBLE;
-		t->Prim.issigned = 0;
-		return t;
+		return mkprimtype(PRIMDOUBLE, 0);
+    case BITLONG|BITDOUBLE:
+        return mkprimtype(PRIMLDOUBLE, 0);
 	case BITSIGNED|BITCHAR:
 	case BITCHAR:
-		t = newtype(CPRIM);
-		t->Prim.type = PRIMCHAR;
-		t->Prim.issigned = 1;
-		return t;
+		return mkprimtype(PRIMCHAR, 1);
 	case BITUNSIGNED|BITCHAR:
-		t = newtype(CPRIM);
-		t->Prim.type = PRIMCHAR;
-		t->Prim.issigned = 0;
-		return t;
+		return mkprimtype(PRIMCHAR, 0);
 	case BITSIGNED|BITSHORT|BITINT:
 	case BITSHORT|BITINT:
 	case BITSHORT:
-		t = newtype(CPRIM);
-		t->Prim.type = PRIMSHORT;
-		t->Prim.issigned = 1;
-		return t;
+		return mkprimtype(PRIMSHORT, 1);
 	case BITUNSIGNED|BITSHORT|BITINT:
 	case BITUNSIGNED|BITSHORT:
-		t = newtype(CPRIM);
-		t->Prim.type = PRIMSHORT;
-		t->Prim.issigned = 0;
-		return t;
+		return mkprimtype(PRIMSHORT, 0);
 	case BITSIGNED|BITINT:
 	case BITSIGNED:
 	case BITINT:
 	case 0:
-		t = newtype(CPRIM);
-		t->Prim.type = PRIMINT;
-		t->Prim.issigned = 1;
-		return t;
+		return mkprimtype(PRIMINT, 1);
 	case BITUNSIGNED|BITINT:
 	case BITUNSIGNED:
-		t = newtype(CPRIM);
-		t->Prim.type = PRIMINT;
-		t->Prim.issigned = 0;
-		return t;
+		return mkprimtype(PRIMINT, 0);
 	case BITSIGNED|BITLONG|BITINT:
 	case BITSIGNED|BITLONG:
 	case BITLONG|BITINT:
 	case BITLONG:
-		t = newtype(CPRIM);
-		t->Prim.type = PRIMLONG;
-		t->Prim.issigned = 1;
-		return t;
+		return mkprimtype(PRIMLONG, 1);
 	case BITUNSIGNED|BITLONG|BITINT:
 	case BITUNSIGNED|BITLONG:
-		t = newtype(CPRIM);
-		t->Prim.type = PRIMLONG;
-		t->Prim.issigned = 0;
-		return t;
+		return mkprimtype(PRIMLONG, 0);
 	case BITSIGNED|BITLONGLONG|BITINT:
 	case BITSIGNED|BITLONGLONG:
 	case BITLONGLONG|BITINT:
 	case BITLONGLONG:
-		t = newtype(CPRIM);
-		t->Prim.type = PRIMLLONG;
-		t->Prim.issigned = 1;
-		return t;
+		return mkprimtype(PRIMLLONG, 1);
 	case BITUNSIGNED|BITLONGLONG|BITINT:
 	case BITUNSIGNED|BITLONGLONG:
-		t = newtype(CPRIM);
-		t->Prim.type = PRIMLLONG;
-		t->Prim.issigned = 0;
-		return t;
+		return mkprimtype(PRIMLLONG, 0);
 	case BITVOID:
 		t = newtype(CVOID);
 		return t;
 	case BITENUM:
+	    /* TODO */
 	case BITSTRUCT:
 	case BITIDENT:
 		return t;

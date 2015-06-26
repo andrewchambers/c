@@ -120,6 +120,7 @@ enum {
     PRIMLLONG,
     PRIMFLOAT,
     PRIMDOUBLE,
+    PRIMLDOUBLE,
 };
 
 typedef struct StructMember StructMember;
