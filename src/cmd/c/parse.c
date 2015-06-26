@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
+#include "ds/ds.h"
 #include "c.h"
+
 
 Node  *parse(void);
 static Node *stmt(void);

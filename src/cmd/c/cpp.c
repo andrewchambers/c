@@ -1,3 +1,4 @@
+#include "ds/ds.h"
 #include "c.h"
 #include <stdio.h>
 #include <string.h>

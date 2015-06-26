@@ -1,8 +1,9 @@
-#include "c.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "ds/ds.h"
+#include "c.h"
 
 static void
 printpos(SrcPos *p)
@@ -90,83 +91,4 @@ ccstrdup(char *s)
 	strcpy(r, s);
 	return r;
 }
-
-List *
-listnew()
-{
-	List *l;
-
-	l = ccmalloc(sizeof(List));
-	return l;
-}
-
-void
-listappend(List *l, void *v)
-{
-    ListEnt *e;
-    ListEnt *ne;
-    
-    ne = ccmalloc(sizeof(ListEnt));
-    ne->v = v;
-    if(l->head == 0) {
-        l->head = ne;
-        return;
-    }
-	e = l->head;
-	while(e->next)
-	    e = e->next;
-	e->next = ne;
-}
-
-void
-listprepend(List *l, void *v)
-{
-    ListEnt *e;
-    
-	e = ccmalloc(sizeof(ListEnt));
-	e->v = v;
-	e->next = l->head;
-	l->head = e;
-}
-
-typedef struct MapEnt MapEnt;
-struct MapEnt {
-    char *k;
-    void *v;
-};
-
-Map *map()
-{
-    Map *m;
-    
-    m = ccmalloc(sizeof(Map));
-    m->l = listnew();
-    return m;
-}
-
-void 
-mapset(Map *m, char *k, void *v)
-{
-    MapEnt *me;
-
-    me = ccmalloc(sizeof(MapEnt));
-    me->k = k;
-    me->v = v;
-    listprepend(m->l, me);
-}
-
-void *
-mapget(Map *m, char *k)
-{
-    ListEnt *e;
-    MapEnt *me;
-    
-    for(e = m->l->head; e != 0; e = e->next) {
-        me = e->v;
-        if(strcmp(me->k, k) == 0)
-            return me->v;
-    }
-    return 0;
-}
-
 

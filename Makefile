@@ -1,4 +1,6 @@
 
+override CFLAGS += -Isrc/
+
 all: bin/c
 
 LCC=$(wildcard src/cmd/c/*.c)
