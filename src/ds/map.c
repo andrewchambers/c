@@ -1,5 +1,6 @@
 #include "mem/mem.h"
 #include "ds.h"
+#include <string.h>
 
 typedef struct MapEnt MapEnt;
 struct MapEnt {

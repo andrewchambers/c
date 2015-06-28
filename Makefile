@@ -3,7 +3,7 @@ override CFLAGS += -Isrc/
 all: bin/c
 
 %.o: %.c
-	tcc $(CFLAGS) -o $@ -c $<
+	$(CC) $(CFLAGS) -o $@ -c $<
 
 LDSC=$(wildcard src/ds/*.c)
 LDSH=$(wildcard src/ds/*.h)
@@ -28,4 +28,4 @@ BCH=$(wildcard src/cmd/c/*.h)
 BCO=$(patsubst %.c, %.o, $(BCC))
 bin/c: $(BCO) $(BCH) src/cc/cc.a src/ds/ds.a src/mem/mem.a
 	mkdir -p bin
-	tcc $(BCO) src/cc/cc.a src/ds/ds.a src/mem/mem.a -o $@
+	$(CC) $(BCO) src/cc/cc.a src/ds/ds.a src/mem/mem.a -o $@

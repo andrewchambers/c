@@ -1,6 +1,6 @@
 #include "mem/mem.h"
 #include "ds.h"
-#include <strings.h>
+#include <string.h>
 
 StrSet *
 strsetadd(StrSet *ss, char *v)

@@ -404,6 +404,8 @@ getminval(CTy *l)
     case PRIMLLONG:
         return 0xffffffffffffffff;
     }
+    errorf("internal error\n");
+    return 0;
 }
 
 static int
@@ -1056,6 +1058,7 @@ dowhile(void)
     Node *e;
     Node *s;
 
+    p = &tok->pos;
 	expect(TOKDO);
 	s = stmt();
 	expect(TOKWHILE);
@@ -1565,7 +1568,7 @@ static Node *
 unaryexpr(void)
 {
     Tok *t;
-    CTy *ty;
+    CTy * ty;
     Node *n;
 
 	switch (tok->k) {
