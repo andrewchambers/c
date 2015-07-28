@@ -1,7 +1,5 @@
 # The smaller, faster C compiler
 
-Legend says this compiler was written while clang and gcc were bootstrapping themselves. The preprocessor came later, during a linux kernel build.
-
 ## Quotes
 
 "Gotta go fast" - Sonic
@@ -11,12 +9,11 @@ Legend says this compiler was written while clang and gcc were bootstrapping the
 
 ## Design choices
 
-- Be small, fast, useful.
+- Be small, fast.
 - Build real software.
-- Fun cross compiling.
+- Awesome cross compiling.
 - Use fast algorithms, keep compilation speed and code complexity in mind.
-- Die on error. Only the first error means anything anyway.
-- Few/No warnings. Use a static checker for warnings.
+- You should use a static checker for warnings.
 
 ## Style Guidelines
 

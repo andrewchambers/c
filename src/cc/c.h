@@ -265,6 +265,18 @@ struct Node {
 	};
 };
 
+#define MAXTOKSZ 4096
+
+typedef struct Lexer Lexer;
+struct Lexer {
+    FILE *f;
+    SrcPos pos;
+    SrcPos prevpos;
+    SrcPos markpos;
+    int  nchars;
+    char tokval[MAXTOKSZ+1];
+};
+
 typedef struct Tok Tok;
 struct Tok {
 	int   k;
@@ -279,8 +291,10 @@ void  errorf(char *, ...);
 void  errorposf(SrcPos *, char *, ...);
 /* cpp functions */
 char *tokktostr(int);
-Tok  *lex(void);
+Tok  *lex(Lexer *);
+Tok  *pp();
 void  cppinit(char *);
+
 /* parser functions */
 Node *parse(void);
 /* backend functions */

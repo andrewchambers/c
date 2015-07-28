@@ -475,7 +475,7 @@ static void
 next(void)
 {
 	tok = nexttok;
-	nexttok = lex();
+	nexttok = pp();
 }
 
 static void

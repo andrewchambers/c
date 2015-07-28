@@ -19,7 +19,7 @@ main(int argc, char *argv[])
 		usage();
 	cppinit(argv[1]);
 	while(1) {
-		t = lex();
+		t = pp();
 		if(t->k == TOKEOF)
 			break;
 		puts(tokktostr(t->k));
