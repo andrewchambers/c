@@ -17,7 +17,7 @@ void listprepend(List *, void *);
 
 typedef struct Map Map;
 struct Map {
-	 List *l;
+	List *l;
 };
 
 Map  *map();
@@ -28,9 +28,9 @@ void  mapset(Map *, char *, void *);
 	The null pointer is the empty set. */
 typedef struct StrSet StrSet;
 struct StrSet {
-	 StrSet *next;
-	 char *v;
+	StrSet *next;
+	char *v;
 };
 
 StrSet *strsetadd(StrSet *, char *);
-int strsethas(StrSet *, char *);
+int     strsethas(StrSet *, char *);
