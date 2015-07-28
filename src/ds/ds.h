@@ -24,8 +24,8 @@ Map  *map();
 void *mapget(Map *, char *);
 void  mapset(Map *, char *, void *);
 
-/*  StrSet is an immutable set of strings.
-	 The null pointer is the empty set. */
+/*	StrSet is an immutable set of strings.
+	The null pointer is the empty set. */
 typedef struct StrSet StrSet;
 struct StrSet {
 	 StrSet *next;
