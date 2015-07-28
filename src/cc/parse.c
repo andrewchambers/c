@@ -64,7 +64,7 @@ static void
 popscope()
 {
     nscopes -= 1;
-    if (nscopes < 0)
+    if(nscopes < 0)
         errorf("bug: scope underflow\n");
     vars[nscopes] = 0;
     tags[nscopes] = 0;
@@ -78,7 +78,7 @@ pushscope()
     tags[nscopes] = map();
     types[nscopes] = map();
     nscopes += 1;
-    if (nscopes > MAXSCOPES)
+    if(nscopes > MAXSCOPES)
         errorf("scope depth exceeded maximum\n");
 }
 
@@ -350,10 +350,10 @@ isptr(CTy *t)
 static int
 isassignable(CTy *to, CTy *from)
 {
-    if ((isarithtype(to) || isptr(to)) &&
+    if((isarithtype(to) || isptr(to)) &&
         (isarithtype(from) || isptr(from)))
         return 1;
-    if (compatiblestruct(to, from))
+    if(compatiblestruct(to, from))
         return 1;
     return 0;
 }
@@ -391,7 +391,7 @@ getmaxval(CTy *l)
 static signed long long int
 getminval(CTy *l)
 {
-    if (!l->Prim.issigned)
+    if(!l->Prim.issigned)
         return 0;
     switch(l->Prim.type) {
     case PRIMCHAR:
@@ -583,7 +583,7 @@ decl()
     if(isglobal() && tok->k == '{') {
 		if(ty->t != CFUNC) 
 		    errorposf(pos, "expected a function");
-		if (init)
+		if(init)
 		    errorposf(pos, "function declaration has an initializer");
 		pushscope();
 		for(e = ty->Func.params->head; e != 0; e = e->next) {
@@ -656,7 +656,7 @@ declspecs(int *sclass)
 			switch(tok->k) {
 			case TOKEXTERN:
 				*sclass = SCEXTERN;
-				break;    
+				break;
 			case TOKSTATIC:
 		    	*sclass = SCSTATIC;
 				break;
@@ -886,7 +886,7 @@ declaratortail(CTy *basety)
 		switch (tok->k) {
 		case '[':
 			next();
-			if (tok->k != ']')
+			if(tok->k != ']')
 				constexpr();
 			expect(']');
 			break;
@@ -896,7 +896,7 @@ declaratortail(CTy *basety)
 		    t->Func.params = listnew();
 		    next();
 			params(t);
-			if (tok->k != ')')
+			if(tok->k != ')')
 				errorposf(&tok->pos, "expected valid parameter or )");
 			next();
 			return t;
@@ -926,13 +926,13 @@ pstruct()
         tagname = tok->v;
 		next();
 	}
-	if (tok->k == '{') {
+	if(tok->k == '{') {
 	    shoulddefine = 1;
 	    expect('{');
 	    while(tok->k != '}') {
 	        basety = declspecs(&sclass);
             do {
-                if (tok->k == ',')
+                if(tok->k == ',')
                     next();
                 /* t = */ declarator(basety, &name, 0);
             } while (tok->k == ',');
@@ -1201,7 +1201,7 @@ declinit(void)
             listappend(n->Init.inits, declinit());
             break;
         }
-        if (tok->k != ',')
+        if(tok->k != ',')
             break;
         next();
     }
@@ -1308,7 +1308,7 @@ expr(void)
 	
 	for(;;) {
 		n = assignexpr();
-		if (tok->k != ',')
+		if(tok->k != ',')
 			break;
 		next();
 	}
@@ -1589,7 +1589,7 @@ unaryexpr(void)
 	case TOKSIZEOF:
         n = newnode(NSIZEOF, &tok->pos);
         next();
-        if (tok->k == '(' && istypestart(nexttok)) {
+        if(tok->k == '(' && istypestart(nexttok)) {
             expect('(');
             ty = typename();
             expect(')');
