@@ -1,6 +1,8 @@
 override CFLAGS += -Isrc/
 
-all: bin/c
+.PHONY: all
+
+all: bin/c bin/cpp
 
 %.o: %.c
 	$(CC) $(CFLAGS) -o $@ -c $<
@@ -29,3 +31,10 @@ BCO=$(patsubst %.c, %.o, $(BCC))
 bin/c: $(BCO) $(BCH) src/cc/cc.a src/ds/ds.a src/mem/mem.a
 	mkdir -p bin
 	$(CC) $(BCO) src/cc/cc.a src/ds/ds.a src/mem/mem.a -o $@
+
+BCPPC=$(wildcard src/cmd/cpp/*.c)
+BCPPH=$(wildcard src/cmd/cpp/*.h)
+BCPPO=$(patsubst %.c, %.o, $(BCPPC))
+bin/cpp: $(BCPPO) $(BCPPH) src/cc/cc.a src/ds/ds.a src/mem/mem.a
+	mkdir -p bin
+	$(CC) $(BCPPO) src/cc/cc.a src/ds/ds.a src/mem/mem.a -o $@

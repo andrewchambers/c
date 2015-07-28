@@ -6,19 +6,23 @@
 void
 usage(void)
 {
-	puts("Usage: c file.c");
+	puts("Usage: cpp file.c");
 	exit(1);
 }
 
 int
 main(int argc, char *argv[])
 {
-	Node *n;
+	Tok *t;
 
-	if (argc != 2)
+	if(argc != 2)
 		usage();
 	cppinit(argv[1]);
-	n = parse();
-	emit(n);
+	while(1) {
+		t = lex();
+		if(t->k == TOKEOF)
+			break;
+		puts(tokktostr(t->k));
+	}
 	return 0;
 }
