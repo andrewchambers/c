@@ -32,5 +32,5 @@ struct StrSet {
 	 char *v;
 };
 
-StrSet *strsetadd(StrSet *ss, char *v);
-int strsethas(StrSet *ss, char *v);
+StrSet *strsetadd(StrSet *, char *);
+int strsethas(StrSet *, char *);
