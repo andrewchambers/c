@@ -63,23 +63,23 @@ static Map *vars[MAXSCOPES];
 static void
 popscope()
 {
-    nscopes -= 1;
-    if(nscopes < 0)
-        errorf("bug: scope underflow\n");
-    vars[nscopes] = 0;
-    tags[nscopes] = 0;
-    types[nscopes] = 0;
+	nscopes -= 1;
+	if(nscopes < 0)
+		errorf("bug: scope underflow\n");
+	vars[nscopes] = 0;
+	tags[nscopes] = 0;
+	types[nscopes] = 0;
 }
 
 static void
 pushscope()
 {
-    vars[nscopes] = map();
-    tags[nscopes] = map();
-    types[nscopes] = map();
-    nscopes += 1;
-    if(nscopes > MAXSCOPES)
-        errorf("scope depth exceeded maximum\n");
+	vars[nscopes] = map();
+	tags[nscopes] = map();
+	types[nscopes] = map();
+	nscopes += 1;
+	if(nscopes > MAXSCOPES)
+		errorf("scope depth exceeded maximum\n");
 }
 
 static int
@@ -91,28 +91,28 @@ isglobal()
 static int
 define(Map *scope[], char *k, void *v)
 {
-    Map *m;
-    
-    m = scope[nscopes - 1];
-    if(mapget(m, k))
-        return 0;
-    mapset(m, k, v);
-    return 1; 
+	Map *m;
+	
+	m = scope[nscopes - 1];
+	if(mapget(m, k))
+		return 0;
+	mapset(m, k, v);
+	return 1; 
 }
 
 static void *
 lookup(Map *scope[], char *k)
 {
-    int i;
-    void *v;
-    
-    i = nscopes;
-    while(i--) {
-        v = mapget(scope[i], k);
-        if(v)
-            return v;
-    }
-    return 0;
+	int i;
+	void *v;
+	
+	i = nscopes;
+	while(i--) {
+		v = mapget(scope[i], k);
+		if(v)
+			return v;
+	}
+	return 0;
 }
 
 static CTy *
@@ -128,23 +128,23 @@ newtype(int type)
 static CTy *
 mkprimtype(int type, int sig)
 {
-    CTy *t;
-    
-    t = newtype(CPRIM);
-    t->Prim.type = type;
-    t->Prim.issigned = sig;
-    return t;
+	CTy *t;
+	
+	t = newtype(CPRIM);
+	t->Prim.type = type;
+	t->Prim.issigned = sig;
+	return t;
 }
 
 static NameTy *
 newnamety(char *n, CTy *t)
 {
-    NameTy *nt;
-    
-    nt = zmalloc(sizeof(NameTy));
-    nt->name = n;
-    nt->type = t;
-    return nt;
+	NameTy *nt;
+	
+	nt = zmalloc(sizeof(NameTy));
+	nt->name = n;
+	nt->type = t;
+	return nt;
 }
 
 static Node *
@@ -184,291 +184,291 @@ mkunop(SrcPos *p, int op, Node *o)
 static Node *
 mkcast(SrcPos *p, Node *o, CTy *to)
 {
-    Node *n;
-    
-    n = newnode(NCAST, p);
-    n->type = to;
-    n->Cast.operand = o;
-    return n;
+	Node *n;
+	
+	n = newnode(NCAST, p);
+	n->type = to;
+	n->Cast.operand = o;
+	return n;
 }
 
 static Node *
 mkfor(SrcPos *p, Node *init, Node *cond, Node *step, Node *stmt)
 {
-    Node *n;
-    
-    n = newnode(NFOR, p);
-    n->For.init = init;
-    n->For.cond = cond;
-    n->For.step = step;
-    n->For.stmt = stmt;
-    return n;
+	Node *n;
+	
+	n = newnode(NFOR, p);
+	n->For.init = init;
+	n->For.cond = cond;
+	n->For.step = step;
+	n->For.stmt = stmt;
+	return n;
 }
 
 static Node *
 mkwhile(SrcPos *p, Node *expr, Node *stmt)
 {
-    Node *n;
-    
-    n = newnode(NWHILE, p);
-    n->While.expr = expr;
-    n->While.stmt = stmt;
-    return n;
+	Node *n;
+	
+	n = newnode(NWHILE, p);
+	n->While.expr = expr;
+	n->While.stmt = stmt;
+	return n;
 }
 
 static Node *
 mkdowhile(SrcPos *p, Node *expr, Node *stmt)
 {
-    Node *n;
-    
-    n = newnode(NDOWHILE, p);
-    n->DoWhile.expr = expr;
-    n->DoWhile.stmt = stmt;
-    return n;
+	Node *n;
+	
+	n = newnode(NDOWHILE, p);
+	n->DoWhile.expr = expr;
+	n->DoWhile.stmt = stmt;
+	return n;
 }
 
 static Node *
 mkswitch(SrcPos *p, Node *expr, Node *stmt)
 {
-    Node *n;
-    
-    n = newnode(NSWITCH, p);
-    n->DoWhile.expr = expr;
-    n->DoWhile.stmt = stmt;
-    return n;
+	Node *n;
+	
+	n = newnode(NSWITCH, p);
+	n->DoWhile.expr = expr;
+	n->DoWhile.stmt = stmt;
+	return n;
 }
 
 static Node *
 mkif(SrcPos *p, Node *expr, Node *iftrue, Node *iffalse)
 {
-    Node *n;
-    
-    n = newnode(NIF, p);
-    n->If.expr = expr;
-    n->If.iftrue = iftrue;
-    n->If.iffalse = iffalse;
-    return n;
+	Node *n;
+	
+	n = newnode(NIF, p);
+	n->If.expr = expr;
+	n->If.iftrue = iftrue;
+	n->If.iffalse = iffalse;
+	return n;
 }
 
 static int
 convrank(CTy *t)
 {
-    if(t->t != CPRIM)
-        errorf("internal error\n");
-    switch(t->Prim.type){
-    case PRIMCHAR:
-        return 0;
-    case PRIMSHORT:
-        return 1;
-    case PRIMINT:
-        return 2;
-    case PRIMLONG:
-        return 3;
-    case PRIMLLONG:
-        return 4;
-    case PRIMFLOAT:
-        return 5;
-    case PRIMDOUBLE:
-        return 6;
-    case PRIMLDOUBLE:
-        return 7;
-    }
-    errorf("internal error\n");
-    return -1;
+	if(t->t != CPRIM)
+		errorf("internal error\n");
+	switch(t->Prim.type){
+	case PRIMCHAR:
+		return 0;
+	case PRIMSHORT:
+		return 1;
+	case PRIMINT:
+		return 2;
+	case PRIMLONG:
+		return 3;
+	case PRIMLLONG:
+		return 4;
+	case PRIMFLOAT:
+		return 5;
+	case PRIMDOUBLE:
+		return 6;
+	case PRIMLDOUBLE:
+		return 7;
+	}
+	errorf("internal error\n");
+	return -1;
 }
 
 static int 
 compatiblestruct(CTy *l, CTy *r)
 {
-    /* TODO */
-    return 0;
+	/* TODO */
+	return 0;
 }
 
 static int 
 sametype(CTy *l, CTy *r)
 {
-    /* TODO */
-    switch(l->t) {
-    case CVOID:
-        if(r->t != CVOID)
-            return 0;
-        return 1;
-    case CPRIM:
-        if(r->t != CPRIM)
-            return 0;
-        if(l->Prim.issigned != r->Prim.issigned)
-            return 0;
-        if(l->Prim.type != r->Prim.type)
-            return 0;
-        return 1;
-    }
-    return 0;
+	/* TODO */
+	switch(l->t) {
+	case CVOID:
+		if(r->t != CVOID)
+			return 0;
+		return 1;
+	case CPRIM:
+		if(r->t != CPRIM)
+			return 0;
+		if(l->Prim.issigned != r->Prim.issigned)
+			return 0;
+		if(l->Prim.type != r->Prim.type)
+			return 0;
+		return 1;
+	}
+	return 0;
 }
 
 static int
 isftype(CTy *t)
 {
-    if(t->t != CPRIM)
-        return 0;
-    switch(t->Prim.type){
-    case PRIMFLOAT:
-    case PRIMDOUBLE:
-    case PRIMLDOUBLE:
-        return 1;
-    }
-    return 0;
+	if(t->t != CPRIM)
+		return 0;
+	switch(t->Prim.type){
+	case PRIMFLOAT:
+	case PRIMDOUBLE:
+	case PRIMLDOUBLE:
+		return 1;
+	}
+	return 0;
 }
 
 static int
 isitype(CTy *t)
 {
-    if(t->t != CPRIM)
-        return 0;
-    switch(t->Prim.type){
-    case PRIMCHAR:
-    case PRIMSHORT:
-    case PRIMINT:
-    case PRIMLONG:
-    case PRIMLLONG:
-        return 1;
-    }
-    return 0;
+	if(t->t != CPRIM)
+		return 0;
+	switch(t->Prim.type){
+	case PRIMCHAR:
+	case PRIMSHORT:
+	case PRIMINT:
+	case PRIMLONG:
+	case PRIMLLONG:
+		return 1;
+	}
+	return 0;
 }
 
 static int
 isarithtype(CTy *t)
 {
-    return isftype(t) || isitype(t);
+	return isftype(t) || isitype(t);
 }
 
 static int
 isptr(CTy *t)
 {
-    return t->t == CPTR;
+	return t->t == CPTR;
 }
 
 static int
 isassignable(CTy *to, CTy *from)
 {
-    if((isarithtype(to) || isptr(to)) &&
-        (isarithtype(from) || isptr(from)))
-        return 1;
-    if(compatiblestruct(to, from))
-        return 1;
-    return 0;
+	if((isarithtype(to) || isptr(to)) &&
+		(isarithtype(from) || isptr(from)))
+		return 1;
+	if(compatiblestruct(to, from))
+		return 1;
+	return 0;
 }
 
 static unsigned long long int
 getmaxval(CTy *l)
 {
-    switch(l->Prim.type) {
-    case PRIMCHAR:
-        if(l->Prim.issigned)
-            return 0x7f;
-        else
-            return 0xff;
-    case PRIMSHORT:
-        if(l->Prim.issigned)
-            return 0x7fff;
-        else
-            return  0xffff;
-    case PRIMINT:
-    case PRIMLONG:
-        if(l->Prim.issigned)
-            return 0x7fffffff;
-        else
-            return 0xffffffff;
-    case PRIMLLONG:
-        if(l->Prim.issigned)
-            return 0x7fffffffffffffff;
-        else
-            return 0xffffffffffffffff;
-    }
-    errorf("internal error\n");
-    return 0;
+	switch(l->Prim.type) {
+	case PRIMCHAR:
+		if(l->Prim.issigned)
+			return 0x7f;
+		else
+			return 0xff;
+	case PRIMSHORT:
+		if(l->Prim.issigned)
+			return 0x7fff;
+		else
+			return  0xffff;
+	case PRIMINT:
+	case PRIMLONG:
+		if(l->Prim.issigned)
+			return 0x7fffffff;
+		else
+			return 0xffffffff;
+	case PRIMLLONG:
+		if(l->Prim.issigned)
+			return 0x7fffffffffffffff;
+		else
+			return 0xffffffffffffffff;
+	}
+	errorf("internal error\n");
+	return 0;
 }
 
 static signed long long int
 getminval(CTy *l)
 {
-    if(!l->Prim.issigned)
-        return 0;
-    switch(l->Prim.type) {
-    case PRIMCHAR:
-        return 0xff;
-    case PRIMSHORT:
-        return 0xffff;
-    case PRIMINT:
-    case PRIMLONG:
-        return 0xffffffffl;
-    case PRIMLLONG:
-        return 0xffffffffffffffff;
-    }
-    errorf("internal error\n");
-    return 0;
+	if(!l->Prim.issigned)
+		return 0;
+	switch(l->Prim.type) {
+	case PRIMCHAR:
+		return 0xff;
+	case PRIMSHORT:
+		return 0xffff;
+	case PRIMINT:
+	case PRIMLONG:
+		return 0xffffffffl;
+	case PRIMLLONG:
+		return 0xffffffffffffffff;
+	}
+	errorf("internal error\n");
+	return 0;
 }
 
 static int
 canrepresent(CTy *l, CTy *r)
 {
-    if(!isitype(l) || !isitype(r))
-        errorf("internal error");
-    return getmaxval(l) <= getmaxval(r) && getminval(l) >= getminval(r);
+	if(!isitype(l) || !isitype(r))
+		errorf("internal error");
+	return getmaxval(l) <= getmaxval(r) && getminval(l) >= getminval(r);
 }
 
 static Node *
 ipromote(Node *n)
 {
-    if(!isitype(n->type))
-        return 0;
-    switch(n->type->Prim.type) {
-    case PRIMCHAR:
-    case PRIMSHORT:
-        if(n->type->Prim.issigned)
-            return mkcast(&n->pos, n, mkprimtype(PRIMINT, 1));
-        else
-            return mkcast(&n->pos, n, mkprimtype(PRIMINT, 0));
-    }
-    return n;
+	if(!isitype(n->type))
+		return 0;
+	switch(n->type->Prim.type) {
+	case PRIMCHAR:
+	case PRIMSHORT:
+		if(n->type->Prim.issigned)
+			return mkcast(&n->pos, n, mkprimtype(PRIMINT, 1));
+		else
+			return mkcast(&n->pos, n, mkprimtype(PRIMINT, 0));
+	}
+	return n;
 }
 
 CTy *
 usualarithconv(Node **large, Node **small)
 {   
-    Node **tmp;
-    CTy *t;
+	Node **tmp;
+	CTy *t;
 
-    if(!isarithtype((*large)->type) || !isarithtype((*small)->type))
-        errorf("internal error\n");
-    if(convrank((*large)->type) < convrank((*small)->type)) {
-        tmp = large;
-        large = small;
-        small = tmp;
-    }
-    if(isftype((*large)->type)) {
-        *small = mkcast(&(*small)->pos, *small, (*large)->type);
-        return (*large)->type;
-    }
-    *large = ipromote(*large);
-    *small = ipromote(*small);
-    if(sametype((*large)->type, (*small)->type))
-        return (*large)->type;
-    if((*large)->type->Prim.issigned == (*small)->type->Prim.issigned ) {
-        *small = mkcast(&(*small)->pos, *small, (*large)->type);
-        return (*large)->type;
-    }
-    if(!(*large)->type->Prim.issigned) {
-        *small = mkcast(&(*small)->pos, *small, (*large)->type);
-        return (*large)->type;
-    }
-    if((*large)->type->Prim.issigned && canrepresent((*large)->type, (*small)->type)) {
-        *small = mkcast(&(*small)->pos, *small, (*large)->type);
-        return (*large)->type;
-    }
-    t = mkprimtype((*large)->type->Prim.type, 0);
-    *large = mkcast(&(*large)->pos, *large, t);
-    *small = mkcast(&(*small)->pos, *small, t);
-    return t;
+	if(!isarithtype((*large)->type) || !isarithtype((*small)->type))
+		errorf("internal error\n");
+	if(convrank((*large)->type) < convrank((*small)->type)) {
+		tmp = large;
+		large = small;
+		small = tmp;
+	}
+	if(isftype((*large)->type)) {
+		*small = mkcast(&(*small)->pos, *small, (*large)->type);
+		return (*large)->type;
+	}
+	*large = ipromote(*large);
+	*small = ipromote(*small);
+	if(sametype((*large)->type, (*small)->type))
+		return (*large)->type;
+	if((*large)->type->Prim.issigned == (*small)->type->Prim.issigned ) {
+		*small = mkcast(&(*small)->pos, *small, (*large)->type);
+		return (*large)->type;
+	}
+	if(!(*large)->type->Prim.issigned) {
+		*small = mkcast(&(*small)->pos, *small, (*large)->type);
+		return (*large)->type;
+	}
+	if((*large)->type->Prim.issigned && canrepresent((*large)->type, (*small)->type)) {
+		*small = mkcast(&(*small)->pos, *small, (*large)->type);
+		return (*large)->type;
+	}
+	t = mkprimtype((*large)->type->Prim.type, 0);
+	*large = mkcast(&(*large)->pos, *large, t);
+	*small = mkcast(&(*small)->pos, *small, t);
+	return t;
 }
 
 static void
@@ -484,7 +484,7 @@ expect(int kind)
 	if(tok->k != kind)
 		errorposf(&tok->pos,"expected %s, got %s", 
 			tokktostr(kind), tokktostr(tok->k));
-    next();
+	next();
 }
 
 Node * 
@@ -538,7 +538,7 @@ definetype(SrcPos *pos, char *name, CTy *ty)
 	if(!define(types, name, ty)) {
 		/* TODO: 
 		 Check if types are compatible.
-	     errorpos(pos, "redefinition of type %s", name);
+		 errorpos(pos, "redefinition of type %s", name);
 		
 		*/
 	}
@@ -551,7 +551,7 @@ definesym(SrcPos *pos, char *name, void *sym)
 	if(!define(vars, name, sym)) {
 		/* TODO: 
 		 Check if types are compatible.
-	     errorpos(pos, "redefinition of type %s", name);
+		 errorpos(pos, "redefinition of type %s", name);
 		
 		*/
 	}
@@ -560,31 +560,31 @@ definesym(SrcPos *pos, char *name, void *sym)
 static Node *
 decl()
 {
-    int sclass;
-    char *name;
-    CTy  *basety;
-    CTy  *ty;
-    SrcPos *pos;
-    ListEnt *e;
-    Node *init;
-    NameTy *nt;
+	int sclass;
+	char *name;
+	CTy  *basety;
+	CTy  *ty;
+	SrcPos *pos;
+	ListEnt *e;
+	Node *init;
+	NameTy *nt;
 
-    if(tok->k == ';') {
-    	next();
-    	return 0;
-    }
-    pos = &tok->pos;
-    basety = declspecs(&sclass);
-    ty = declarator(basety, &name, &init);
-    if(sclass == SCTYPEDEF && name)
-    	definetype(pos, name, ty);
-    else if(name)
-        definesym(pos, name, "TODO");
-    if(isglobal() && tok->k == '{') {
+	if(tok->k == ';') {
+		next();
+		return 0;
+	}
+	pos = &tok->pos;
+	basety = declspecs(&sclass);
+	ty = declarator(basety, &name, &init);
+	if(sclass == SCTYPEDEF && name)
+		definetype(pos, name, ty);
+	else if(name)
+		definesym(pos, name, "TODO");
+	if(isglobal() && tok->k == '{') {
 		if(ty->t != CFUNC) 
-		    errorposf(pos, "expected a function");
+			errorposf(pos, "expected a function");
 		if(init)
-		    errorposf(pos, "function declaration has an initializer");
+			errorposf(pos, "function declaration has an initializer");
 		pushscope();
 		for(e = ty->Func.params->head; e != 0; e = e->next) {
 			nt = e->v;
@@ -597,13 +597,13 @@ decl()
 		return 0;
 	}
 	while(tok->k == ',') {
-	    next();
-	    pos = &tok->pos;
-	    ty = declarator(basety, &name, &init);
+		next();
+		pos = &tok->pos;
+		ty = declarator(basety, &name, &init);
 		if(sclass == SCTYPEDEF && name)
-    		definetype(pos, name, ty);
-	    else if(name)
-            definesym(pos, name, "TODO");
+			definetype(pos, name, ty);
+		else if(name)
+			definesym(pos, name, "TODO");
 	}
 	expect(';');
 	return 0;
@@ -617,7 +617,7 @@ issclasstok(Tok *t) {
 	case TOKREGISTER:
 	case TOKTYPEDEF:
 	case TOKAUTO:
-	    return 1;
+		return 1;
 	}
 	return 0;
 }
@@ -651,20 +651,20 @@ declspecs(int *sclass)
 
 	for(;;) {
 		if(issclasstok(tok)) {
-	        if(*sclass != SCNONE)
-	            errorposf(pos, "multiple storage classes in declaration specifiers.");
+			if(*sclass != SCNONE)
+				errorposf(pos, "multiple storage classes in declaration specifiers.");
 			switch(tok->k) {
 			case TOKEXTERN:
 				*sclass = SCEXTERN;
 				break;
 			case TOKSTATIC:
-		    	*sclass = SCSTATIC;
+				*sclass = SCSTATIC;
 				break;
 			case TOKREGISTER:
-		    	*sclass = SCREGISTER;
+				*sclass = SCREGISTER;
 				break;
 			case TOKAUTO:
-		    	*sclass = SCAUTO;
+				*sclass = SCAUTO;
 				break;
 			case TOKTYPEDEF:
 				*sclass = SCTYPEDEF;
@@ -676,8 +676,8 @@ declspecs(int *sclass)
 		switch(tok->k) {
 		case TOKCONST:
 		case TOKVOLATILE:
-		    next();
-		    break;
+			next();
+			break;
 		case TOKSTRUCT:
 		case TOKUNION:
 			if(bits)
@@ -695,26 +695,26 @@ declspecs(int *sclass)
 			if(bits&BITVOID)
 				goto err;
 			bits |= BITVOID;
-		    next();
-		    goto done;
+			next();
+			goto done;
 		case TOKCHAR:
 			if(bits&BITCHAR)
 				goto err;
 			bits |= BITCHAR;
-		    next();
-		    break;
+			next();
+			break;
 		case TOKSHORT:
 			if(bits&BITSHORT)
 				goto err;
 			bits |= BITSHORT;
-		    next();
-		    break;
+			next();
+			break;
 		case TOKINT:
 			if(bits&BITINT)
 				goto err;
 			bits |= BITINT;
-		    next();
-		    break;
+			next();
+			break;
 		case TOKLONG:
 			if(bits&BITLONGLONG)
 				goto err;
@@ -724,30 +724,30 @@ declspecs(int *sclass)
 			} else {
 				bits |= BITLONG;
 			}
-		    next();
-		    break;
+			next();
+			break;
 		case TOKFLOAT:
-		    if(bits&BITFLOAT)
-		    	goto err;
-		    bits |= BITFLOAT;
-		    next();
-		    break;
+			if(bits&BITFLOAT)
+				goto err;
+			bits |= BITFLOAT;
+			next();
+			break;
 		case TOKDOUBLE:
-		    if(bits&BITDOUBLE)
-		    	goto err;
-		    bits |= BITDOUBLE;
-		    next();
-		    break;
+			if(bits&BITDOUBLE)
+				goto err;
+			bits |= BITDOUBLE;
+			next();
+			break;
 		case TOKSIGNED:
 			if(bits&BITSIGNED)
-		    	goto err;
-		    bits |= BITSIGNED;
-		    next();
-		    break;
+				goto err;
+			bits |= BITSIGNED;
+			next();
+			break;
 		case TOKUNSIGNED:
 			if(bits&BITUNSIGNED)
-		    	goto err;
-		    bits |= BITUNSIGNED;
+				goto err;
+			bits |= BITUNSIGNED;
 			next();
 			break;
 		case TOKIDENT:
@@ -768,8 +768,8 @@ declspecs(int *sclass)
 		return mkprimtype(PRIMFLOAT, 0);
 	case BITDOUBLE:
 		return mkprimtype(PRIMDOUBLE, 0);
-    case BITLONG|BITDOUBLE:
-        return mkprimtype(PRIMLDOUBLE, 0);
+	case BITLONG|BITDOUBLE:
+		return mkprimtype(PRIMLDOUBLE, 0);
 	case BITSIGNED|BITCHAR:
 	case BITCHAR:
 		return mkprimtype(PRIMCHAR, 1);
@@ -810,7 +810,7 @@ declspecs(int *sclass)
 		t = newtype(CVOID);
 		return t;
 	case BITENUM:
-	    /* TODO */
+		/* TODO */
 	case BITSTRUCT:
 	case BITIDENT:
 		return t;
@@ -826,7 +826,7 @@ declspecs(int *sclass)
 static CTy *
 declarator(CTy *basety, char **name, Node **init) 
 {
-    CTy *t, *subt;
+	CTy *t, *subt;
 
 	while (tok->k == TOKCONST || tok->k == TOKVOLATILE)
 		next();
@@ -838,17 +838,17 @@ declarator(CTy *basety, char **name, Node **init)
 		t->Ptr.subty = subt;
 		return subt;
 	default:
-	    t = directdeclarator(basety, name);
-	    if(tok->k == '=') {
-	        if(!init)
-	            errorposf(&tok->pos, "unexpected initializer");
-	        next();
-	        *init = declinit();
-	    } else {
-	        if(init)
-	            *init = 0;
-	    }
-	    return t; 
+		t = directdeclarator(basety, name);
+		if(tok->k == '=') {
+			if(!init)
+				errorposf(&tok->pos, "unexpected initializer");
+			next();
+			*init = declinit();
+		} else {
+			if(init)
+				*init = 0;
+		}
+		return t; 
 	}
 
 }
@@ -856,11 +856,11 @@ declarator(CTy *basety, char **name, Node **init)
 static CTy *
 directdeclarator(CTy *basety, char **name) 
 {
-    *name = 0;
-    switch(tok->k) {
+	*name = 0;
+	switch(tok->k) {
 	case '(':
 		expect('(');
-	    basety = declarator(basety, name, 0);
+		basety = declarator(basety, name, 0);
 		expect(')');
 		return declaratortail(basety);
 	case TOKIDENT:
@@ -870,7 +870,7 @@ directdeclarator(CTy *basety, char **name)
 		return declaratortail(basety);
 	default:
 		if(!name)
-		    errorposf(&tok->pos, "expected ident or ( but got %s", tokktostr(tok->k));
+			errorposf(&tok->pos, "expected ident or ( but got %s", tokktostr(tok->k));
 		return declaratortail(basety);
 	}
 	errorf("unreachable");
@@ -892,9 +892,9 @@ declaratortail(CTy *basety)
 			break;
 		case '(':
 			t = newtype(CFUNC);
-		    t->Func.rtype = basety;
-		    t->Func.params = listnew();
-		    next();
+			t->Func.rtype = basety;
+			t->Func.params = listnew();
+			next();
 			params(t);
 			if(tok->k != ')')
 				errorposf(&tok->pos, "expected valid parameter or )");
@@ -909,56 +909,56 @@ declaratortail(CTy *basety)
 static CTy *
 pstruct() 
 {
-    char *tagname;
-    /* TODO: replace with predeclarations */
-    int shoulddefine;
-    int sclass;
-    char *name;
-    CTy *basety;
-    /* CTy *t; */
+	char *tagname;
+	/* TODO: replace with predeclarations */
+	int shoulddefine;
+	int sclass;
+	char *name;
+	CTy *basety;
+	/* CTy *t; */
 
-    tagname = 0;
-    shoulddefine = 0;
-    if(tok->k != TOKUNION && tok->k != TOKSTRUCT)
-	    errorposf(&tok->pos, "expected union or struct");
+	tagname = 0;
+	shoulddefine = 0;
+	if(tok->k != TOKUNION && tok->k != TOKSTRUCT)
+		errorposf(&tok->pos, "expected union or struct");
 	next();
 	if(tok->k == TOKIDENT) {
-        tagname = tok->v;
+		tagname = tok->v;
 		next();
 	}
 	if(tok->k == '{') {
-	    shoulddefine = 1;
-	    expect('{');
-	    while(tok->k != '}') {
-	        basety = declspecs(&sclass);
-            do {
-                if(tok->k == ',')
-                    next();
-                /* t = */ declarator(basety, &name, 0);
-            } while (tok->k == ',');
-		    if(tok->k == ':') {
-		        next();
-		        constexpr();
-		    }
-		    expect(';');
-	    }
-	    expect('}');
+		shoulddefine = 1;
+		expect('{');
+		while(tok->k != '}') {
+			basety = declspecs(&sclass);
+			do {
+				if(tok->k == ',')
+					next();
+				/* t = */ declarator(basety, &name, 0);
+			} while (tok->k == ',');
+			if(tok->k == ':') {
+				next();
+				constexpr();
+			}
+			expect(';');
+		}
+		expect('}');
 	}
 	if(tagname && shoulddefine)
 		if(!define(tags, tagname, "TODO"))
-		    errorposf(&tok->pos, "redefinition of tag %s", tagname);
-    return newtype(CSTRUCT);
+			errorposf(&tok->pos, "redefinition of tag %s", tagname);
+	return newtype(CSTRUCT);
 }
 
 static CTy *
 penum()
 {
-    CTy *t;
+	CTy *t;
 
 	expect(TOKENUM);
 	if(tok->k == TOKIDENT) {
 		if(!define(tags, tok->v, "TODO"))
-		    errorposf(&tok->pos, "redefinition of tag %s", tok->v);
+			errorposf(&tok->pos, "redefinition of tag %s", tok->v);
 		next();
 	}
 	expect('{');
@@ -966,7 +966,7 @@ penum()
 		if(tok->k == '}')
 			break;
 		if(!define(vars, tok->v, "TODO"))
-		    errorposf(&tok->pos, "redefinition of symbol %s", tok->v);
+			errorposf(&tok->pos, "redefinition of symbol %s", tok->v);
 		expect(TOKIDENT);
 		if(tok->k == '=') {
 			next();
@@ -984,12 +984,12 @@ penum()
 static Node *
 pif(void)
 {
-    SrcPos *p;
-    Node *e;
-    Node *t;
-    Node *f;
-    
-    p = &tok->pos;
+	SrcPos *p;
+	Node *e;
+	Node *t;
+	Node *f;
+	
+	p = &tok->pos;
 	expect(TOKIF);
 	expect('(');
 	e = expr();
@@ -998,8 +998,8 @@ pif(void)
 	if(tok->k != TOKELSE) {
 		f = 0;
 	} else {
-	    expect(TOKELSE);
-	    f = stmt();
+		expect(TOKELSE);
+		f = stmt();
 	}
 	return mkif(p, e, t, f);
 }
@@ -1007,26 +1007,26 @@ pif(void)
 static Node *
 pfor(void)
 {
-    SrcPos *p;
-    Node *i;
-    Node *c;
-    Node *s;
-    Node *st;
-    
-    p = &tok->pos;
+	SrcPos *p;
+	Node *i;
+	Node *c;
+	Node *s;
+	Node *st;
+	
+	p = &tok->pos;
 	expect(TOKFOR);
 	expect('(');
 	if(tok->k == ';') {
-	    next();
+		next();
 	} else {
-	    i = expr();
-	    expect(';');
+		i = expr();
+		expect(';');
 	}
 	if(tok->k == ';') {
-	    next();
+		next();
 	} else {
-	    c = expr();
-	    expect(';');
+		c = expr();
+		expect(';');
 	}
 	if(tok->k != ')')
 		s = expr();
@@ -1038,11 +1038,11 @@ pfor(void)
 static Node *
 pwhile(void)
 {
-    SrcPos *p;
-    Node *e;
-    Node *s;
-    
-    p = &tok->pos;    
+	SrcPos *p;
+	Node *e;
+	Node *s;
+	
+	p = &tok->pos;	
 	expect(TOKWHILE);
 	expect('(');
 	e = expr();
@@ -1054,11 +1054,11 @@ pwhile(void)
 static Node *
 dowhile(void)
 {
-    SrcPos *p;
-    Node *e;
-    Node *s;
+	SrcPos *p;
+	Node *e;
+	Node *s;
 
-    p = &tok->pos;
+	p = &tok->pos;
 	expect(TOKDO);
 	s = stmt();
 	expect(TOKWHILE);
@@ -1072,40 +1072,40 @@ dowhile(void)
 static int
 istypestart(Tok *t)
 {
-    switch(t->k) {
-    case TOKENUM:
-    case TOKSTRUCT:
-    case TOKUNION:
-    case TOKVOID:
-    case TOKCHAR:
-    case TOKSHORT:
-    case TOKINT:
-    case TOKLONG:
-    case TOKSIGNED:
-    case TOKUNSIGNED:
-        return 1;
-    case TOKIDENT:    
-        if(lookup(types, nexttok->v))
-            return 1;
-    }
-    return 0;
+	switch(t->k) {
+	case TOKENUM:
+	case TOKSTRUCT:
+	case TOKUNION:
+	case TOKVOID:
+	case TOKCHAR:
+	case TOKSHORT:
+	case TOKINT:
+	case TOKLONG:
+	case TOKSIGNED:
+	case TOKUNSIGNED:
+		return 1;
+	case TOKIDENT:	
+		if(lookup(types, nexttok->v))
+			return 1;
+	}
+	return 0;
 }
 
 static int
 isdeclstart(Tok *t)
 {
-    if(istypestart(t))
-        return 1;
-    switch(tok->k) {
+	if(istypestart(t))
+		return 1;
+	switch(tok->k) {
 	case TOKREGISTER:
 	case TOKSTATIC:
 	case TOKAUTO:
 	case TOKCONST:
 	case TOKVOLATILE:
-	    return 1;
+		return 1;
 	case TOKIDENT:
-	    if(lookup(types, t->v))
-	        return 1;
+		if(lookup(types, t->v))
+			return 1;
 	}
 	return 0;
 }
@@ -1113,19 +1113,19 @@ isdeclstart(Tok *t)
 static Node *
 declorstmt()
 {
-    Node *n;
-    Tok *t;
+	Node *n;
+	Tok *t;
 
-    if(isdeclstart(tok))
-	    return decl();
+	if(isdeclstart(tok))
+		return decl();
 	if(tok->k == TOKIDENT && nexttok->k == ':') {
-        t = tok;
-        next();
-        next();
-        n = newnode(NLABELED, &t->pos);
-        /* TODO make label. */
-        n->Labeled.stmt = stmt();
-        return n;
+		t = tok;
+		next();
+		next();
+		n = newnode(NLABELED, &t->pos);
+		/* TODO make label. */
+		n->Labeled.stmt = stmt();
+		return n;
 	}
 	return stmt();
 }
@@ -1145,24 +1145,24 @@ stmt(void)
 	case TOKRETURN:
 		return preturn();
 	case TOKSWITCH:
-	    return pswitch();
+		return pswitch();
 	case TOKCASE:
-	    return pcase();
+		return pcase();
 	case TOKDEFAULT:
-	    return pdefault();
+		return pdefault();
 	case TOKBREAK:
-	    return pbreak();
+		return pbreak();
 	case TOKCONTINUE:
-	    return pcontinue();
+		return pcontinue();
 	case TOKGOTO:
-	    next();
-	    expect(TOKIDENT);
-	    expect(';');
-	    return 0;
+		next();
+		expect(TOKIDENT);
+		expect(';');
+		return 0;
 	case '{':
 		return block();
 	case ';':
-	    return 0;
+		return 0;
 	default:
 		return exprstmt();
 	}
@@ -1171,42 +1171,42 @@ stmt(void)
 static Node *
 declinit(void)
 {
-    Node *n;
+	Node *n;
 
-    if(tok->k != '{')
-        return assignexpr();
-    expect('{');
-    n = newnode(NINIT, &tok->pos);
-    n->Init.inits = listnew();
-    while(1) {
-        if(tok->k == '}')
-            break;
-        switch(tok->k){
-        case '[':
-            next();
-            constexpr();
-            expect(']');
-            expect('=');
-            /* TODO */
-            listappend(n->Init.inits, declinit());
-            break;
-        case '.':
-            next();
-            expect(TOKIDENT);
-            expect('=');
-            /* TODO */
-            listappend(n->Init.inits, declinit());
-            break;
-        default:
-            listappend(n->Init.inits, declinit());
-            break;
-        }
-        if(tok->k != ',')
-            break;
-        next();
-    }
-    expect('}');
-    return n;
+	if(tok->k != '{')
+		return assignexpr();
+	expect('{');
+	n = newnode(NINIT, &tok->pos);
+	n->Init.inits = listnew();
+	while(1) {
+		if(tok->k == '}')
+			break;
+		switch(tok->k){
+		case '[':
+			next();
+			constexpr();
+			expect(']');
+			expect('=');
+			/* TODO */
+			listappend(n->Init.inits, declinit());
+			break;
+		case '.':
+			next();
+			expect(TOKIDENT);
+			expect('=');
+			/* TODO */
+			listappend(n->Init.inits, declinit());
+			break;
+		default:
+			listappend(n->Init.inits, declinit());
+			break;
+		}
+		if(tok->k != ',')
+			break;
+		next();
+	}
+	expect('}');
+	return n;
 }
 
 static Node *
@@ -1222,12 +1222,12 @@ exprstmt(void)
 static Node *
 preturn(void)
 {   
-    Node *n;
+	Node *n;
 
-    n = newnode(NRETURN, &tok->pos);
+	n = newnode(NRETURN, &tok->pos);
 	expect(TOKRETURN);
 	if(tok->k != ';')
-	    n->Return.expr = expr();
+		n->Return.expr = expr();
 	expect(';');
 	return n;
 }
@@ -1235,11 +1235,11 @@ preturn(void)
 static Node *
 pswitch(void)
 {
-    SrcPos *p;
-    Node *e;
-    Node *s;
-    
-    p = &tok->pos;
+	SrcPos *p;
+	Node *e;
+	Node *s;
+	
+	p = &tok->pos;
 	expect(TOKSWITCH);
 	expect('(');
 	e = expr();
@@ -1251,9 +1251,9 @@ pswitch(void)
 static Node *
 pcontinue(void)
 {
-    Node *n;
-    
-    n = newnode(NGOTO, &tok->pos);
+	Node *n;
+	
+	n = newnode(NGOTO, &tok->pos);
 	expect(TOKCONTINUE);
 	expect(';');
 	return n;
@@ -1262,9 +1262,9 @@ pcontinue(void)
 static Node *
 pbreak(void)
 {
-    Node *n;
-    
-    n = newnode(NGOTO, &tok->pos);
+	Node *n;
+	
+	n = newnode(NGOTO, &tok->pos);
 	expect(TOKBREAK);
 	expect(';');
 	return n;
@@ -1327,7 +1327,7 @@ isassignop(int k)
 	case TOKMODASS:
 	case TOKORASS:
 	case TOKANDASS:
-	    return 1;
+		return 1;
 	}
 	return 0;
 }
@@ -1335,9 +1335,9 @@ isassignop(int k)
 static Node *
 assignexpr(void)
 {
-    Tok  *t;
-    Node *l;
-    Node *r;
+	Tok  *t;
+	Node *l;
+	Node *r;
 
 	l = condexpr();
 	if(isassignop(tok->k)) {
@@ -1346,7 +1346,7 @@ assignexpr(void)
 		r = assignexpr();
 		l = mkbinop(&t->pos, t->k, l, r);
 	}
-    return l;
+	return l;
 }
 
 static Node *
@@ -1359,18 +1359,18 @@ constexpr(void)
 static Node *
 condexpr(void)
 {
-    /* TODO: implement */
+	/* TODO: implement */
 	return logorexpr();
 }
 
 static Node *
 logorexpr(void)
 {
-    Tok  *t;
-    Node *l;
-    Node *r;
+	Tok  *t;
+	Node *l;
+	Node *r;
 
-    l = logandexpr();
+	l = logandexpr();
 	while(tok->k == TOKLOR) {
 		t = tok;
 		next();
@@ -1383,9 +1383,9 @@ logorexpr(void)
 static Node *
 logandexpr(void)
 {
-    Tok  *t;
-    Node *l;
-    Node *r;
+	Tok  *t;
+	Node *l;
+	Node *r;
 
 	l = orexpr();
 	while(tok->k == TOKLAND) {
@@ -1400,9 +1400,9 @@ logandexpr(void)
 static Node *
 orexpr(void)
 {
-    Tok  *t;
-    Node *l;
-    Node *r;
+	Tok  *t;
+	Node *l;
+	Node *r;
 
 	l = xorexpr();
 	while(tok->k == '|') {
@@ -1417,9 +1417,9 @@ orexpr(void)
 static Node *
 xorexpr(void)
 {
-    Tok  *t;
-    Node *l;
-    Node *r;
+	Tok  *t;
+	Node *l;
+	Node *r;
 
 	l = andexpr();
 	while(tok->k == '^') {
@@ -1434,9 +1434,9 @@ xorexpr(void)
 static Node *
 andexpr(void) 
 {
-    Tok  *t;
-    Node *l;
-    Node *r;
+	Tok  *t;
+	Node *l;
+	Node *r;
 
 	l = eqlexpr();
 	while(tok->k == '&') {
@@ -1451,9 +1451,9 @@ andexpr(void)
 static Node *
 eqlexpr(void)
 {
-    Tok  *t;
-    Node *l;
-    Node *r;
+	Tok  *t;
+	Node *l;
+	Node *r;
 
 	l = relexpr();
 	while(tok->k == TOKEQL || tok->k == TOKNEQ) {
@@ -1468,13 +1468,13 @@ eqlexpr(void)
 static Node *
 relexpr(void)
 {
-    Tok  *t;
-    Node *l;
-    Node *r;
+	Tok  *t;
+	Node *l;
+	Node *r;
 
 	l = shiftexpr();
 	while(tok->k == '>' || tok->k == '<' 
-	      || tok->k == TOKLEQ || tok->k == TOKGEQ) {
+		  || tok->k == TOKLEQ || tok->k == TOKGEQ) {
 		t = tok;
 		next();
 		r = shiftexpr();
@@ -1486,16 +1486,16 @@ relexpr(void)
 static Node *
 shiftexpr(void)
 {
-    Tok  *t;
-    Node *l;
-    Node *r;
+	Tok  *t;
+	Node *l;
+	Node *r;
 
 	l = addexpr();
 	while(tok->k == TOKSHL || tok->k == TOKSHR) {
 		t = tok;
 		next();
 		r = addexpr();
-	    l = mkbinop(&t->pos, t->k, l, r);
+		l = mkbinop(&t->pos, t->k, l, r);
 	}
 	return l;
 }
@@ -1503,9 +1503,9 @@ shiftexpr(void)
 static Node *
 addexpr(void)
 {
-    Tok  *t;
-    Node *l;
-    Node *r;
+	Tok  *t;
+	Node *l;
+	Node *r;
 
 	l = mulexpr();
 	while(tok->k == '+' || tok->k == '-') {
@@ -1520,10 +1520,10 @@ addexpr(void)
 static Node *
 mulexpr(void)
 {
-    Tok  *t;
-    Node *l;
-    Node *r;
-    
+	Tok  *t;
+	Node *l;
+	Node *r;
+	
 	l = castexpr();
 	while(tok->k == '*' || tok->k == '/' || tok->k == '%') {
 		t = tok;
@@ -1537,10 +1537,10 @@ mulexpr(void)
 static Node *
 castexpr(void)
 {
-    Tok *t;
-    Node *o;
-    CTy *ty;
-    
+	Tok *t;
+	Node *o;
+	CTy *ty;
+	
 	if(tok->k == '(' && istypestart(nexttok)) {
 		t = tok;
 		expect('(');
@@ -1558,7 +1558,7 @@ typename(void)
 	int sclass;
 	CTy *t;
 	char *name;
-    
+	
 	t = declspecs(&sclass);
 	t = declarator(t, &name, 0);
 	return t;
@@ -1567,14 +1567,14 @@ typename(void)
 static Node *
 unaryexpr(void)
 {
-    Tok *t;
-    CTy * ty;
-    Node *n;
+	Tok *t;
+	CTy * ty;
+	Node *n;
 
 	switch (tok->k) {
 	case TOKINC:
 	case TOKDEC:
-	    t = tok;
+		t = tok;
 		next();
 		return mkunop(&tok->pos, t->k, unaryexpr());
 	case '*':
@@ -1583,21 +1583,21 @@ unaryexpr(void)
 	case '!':
 	case '~':
 	case '&':
-	    t = tok;
+		t = tok;
 		next();
 		return mkunop(&t->pos, t->k, castexpr());
 	case TOKSIZEOF:
-        n = newnode(NSIZEOF, &tok->pos);
-        next();
-        if(tok->k == '(' && istypestart(nexttok)) {
-            expect('(');
-            ty = typename();
-            expect(')');
-            return 0;
-	    }
-        n = unaryexpr();
-        ty = n->type;
-        return 0;
+		n = newnode(NSIZEOF, &tok->pos);
+		next();
+		if(tok->k == '(' && istypestart(nexttok)) {
+			expect('(');
+			ty = typename();
+			expect(')');
+			return 0;
+		}
+		n = unaryexpr();
+		ty = n->type;
+		return 0;
 	}
 	return postexpr();
 }
@@ -1605,18 +1605,18 @@ unaryexpr(void)
 static Node *
 postexpr(void)
 {
-    int done;
-    Tok *t;
-    Node *n1;
-    Node *n2;
-    Node *n3;
+	int done;
+	Tok *t;
+	Node *n1;
+	Node *n2;
+	Node *n3;
 
 	n1 = primaryexpr();
 	done = 0;
 	while(!done) {
 		switch(tok->k) {
 		case '[':
-		    t = tok;
+			t = tok;
 			next();
 			n2 = expr();
 			expect(']');
@@ -1643,9 +1643,9 @@ postexpr(void)
 			n1 = n2;
 			break;
 		case '(':
-		    n2 = newnode(NCALL, &tok->pos);
-		    n2->Call.funclike = n1;
-		    n2->Call.args = listnew();
+			n2 = newnode(NCALL, &tok->pos);
+			n2->Call.funclike = n1;
+			n2->Call.args = listnew();
 			next();
 			if(tok->k != ')') {
 				for(;;) {
@@ -1664,7 +1664,7 @@ postexpr(void)
 			next();
 			break;
 		case TOKDEC:
-		    n1 = mkunop(&tok->pos, TOKINC, n1);
+			n1 = mkunop(&tok->pos, TOKINC, n1);
 			next();
 			break;
 		default:
@@ -1677,10 +1677,10 @@ postexpr(void)
 static Node *
 primaryexpr(void) 
 {
-    Sym *sym;
-    Node *n;
-    Tok *t;
-    
+	Sym *sym;
+	Node *n;
+	Tok *t;
+	
 	switch (tok->k) {
 	case TOKIDENT:
 		sym = lookup(vars, tok->v);
