@@ -1,40 +1,21 @@
+HFILES=src/buff/buff.h src/cc/c.h src/ds/ds.h src/mem/mem.h
 override CFLAGS += -Isrc/ -g -Wall
+
+all:  bin/c bin/cpp
 
 .PHONY: all
 
-all: bin/c bin/cpp
-
-%.o: %.c
+%.o: %.c $(HFILES)
 	$(CC) $(CFLAGS) -o $@ -c $<
-
-LDSC=$(wildcard src/ds/*.c)
-LDSH=$(wildcard src/ds/*.h)
-LDSO=$(patsubst %.c, %.o, $(LDSC))
-src/ds/ds.a: $(LDSO) $(LDSH)
-	ar rs $@ $(LDSO)
-
-LMEMC=$(wildcard src/mem/*.c)
-LMEMH=$(wildcard src/mem/*.h)
-LMEMO=$(patsubst %.c, %.o, $(LMEMC))
-src/mem/mem.a: $(LMEMO) $(LMEMH)
-	ar rs $@ $(LMEMO)
-
-LCCC=$(wildcard src/cc/*.c)
-LCCH=$(wildcard src/cc/*.h)
-LCCO=$(patsubst %.c, %.o, $(LCCC))
-src/cc/cc.a: $(LCCO) $(LCCH)
-	ar rs $@ $(LCCO)
-
-BCC=$(wildcard src/cmd/c/*.c)
-BCH=$(wildcard src/cmd/c/*.h)
-BCO=$(patsubst %.c, %.o, $(BCC))
-bin/c: $(BCO) $(BCH) src/cc/cc.a src/ds/ds.a src/mem/mem.a
+src/cc/cc.a:  src/cc/cpp.o src/cc/lex.o src/cc/parse.o src/cc/util.o
+	$(AR) rs $@  src/cc/cpp.o src/cc/lex.o src/cc/parse.o src/cc/util.o
+src/ds/ds.a:  src/ds/list.o src/ds/map.o src/ds/strset.o
+	$(AR) rs $@  src/ds/list.o src/ds/map.o src/ds/strset.o
+src/mem/mem.a:  src/mem/mem.o
+	$(AR) rs $@  src/mem/mem.o
+bin/c:  src/cmd/c/emit.o src/cmd/c/main.o  src/cc/cc.a src/ds/ds.a src/mem/mem.a
 	mkdir -p bin
-	$(CC) $(BCO) src/cc/cc.a src/ds/ds.a src/mem/mem.a -o $@
-
-BCPPC=$(wildcard src/cmd/cpp/*.c)
-BCPPH=$(wildcard src/cmd/cpp/*.h)
-BCPPO=$(patsubst %.c, %.o, $(BCPPC))
-bin/cpp: $(BCPPO) $(BCPPH) src/cc/cc.a src/ds/ds.a src/mem/mem.a
+	$(CC)  src/cmd/c/emit.o src/cmd/c/main.o  src/cc/cc.a src/ds/ds.a src/mem/mem.a -o $@
+bin/cpp:  src/cmd/cpp/main.o  src/cc/cc.a src/ds/ds.a src/mem/mem.a
 	mkdir -p bin
-	$(CC) $(BCPPO) src/cc/cc.a src/ds/ds.a src/mem/mem.a -o $@
+	$(CC)  src/cmd/cpp/main.o  src/cc/cc.a src/ds/ds.a src/mem/mem.a -o $@

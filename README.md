@@ -8,6 +8,7 @@
 ## Building
 
 ```
+$ ./configure
 $ make
 ```
 
@@ -17,7 +18,11 @@ $ make
 "Mo code Mo problems" - Notorious B.I.G.
 "One of my most productive days was throwing away 1000 lines of code." - Ken Thompson
 
-## Style Guidelines
+## Style
+
+No header can include another header. This is important because it speeds up the build.
+It also 
+
 
 Follow plan9 conventions.
 
