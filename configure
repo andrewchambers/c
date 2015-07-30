@@ -35,7 +35,7 @@ do
     done
 	cat << EOF >> Makefile
 $OUTLIB: $OFILES
-	\$(AR) rs \$@ $OFILES
+	\$(AR) rcs \$@ $OFILES
 EOF
 done
 
