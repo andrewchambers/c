@@ -3,7 +3,7 @@
 ## Design choices
 
 - Be small, fast, just work.
-- Code size, quality and complexity are important.
+- Maintain small size, high quality, low complexity in code base.
 
 ## Building
 
