@@ -1,4 +1,4 @@
-override CFLAGS += -Isrc/
+override CFLAGS += -Isrc/ -g -Wall
 
 .PHONY: all
 
