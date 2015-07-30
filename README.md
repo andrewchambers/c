@@ -13,9 +13,9 @@ $ make
 
 ## Quotes
 
-"Gotta go fast" - Sonic
-"Mo code Mo problems" - Notorious B.I.G.
-"One of my most productive days was throwing away 1000 lines of code." - Ken Thompson
+- "Gotta go fast" - Sonic
+- "Mo code Mo problems" - Notorious B.I.G.
+- "One of my most productive days was throwing away 1000 lines of code." - Ken Thompson
 
 ## Style Guidelines
 

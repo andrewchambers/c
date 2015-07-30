@@ -6,10 +6,8 @@
 
 #define MAXINCLUDE 1024
 
-
 int nlexers;
 Lexer *lexers[MAXINCLUDE];
-
 
 static void
 pushlex(char *path)
@@ -37,8 +35,6 @@ poplex()
 	nlexers--;
 	fclose(lexers[nlexers]->f);
 }
-
-
 
 Tok *
 pp()
