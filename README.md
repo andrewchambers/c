@@ -1,25 +1,34 @@
-# The smaller, faster C compiler
+# The smaller, faster C compiler suite.
+
+## Design choices
+
+- Be small, fast, just work.
+- Code size, quality and complexity are important.
+
+## Building
+
+```
+$ make
+```
 
 ## Quotes
 
 "Gotta go fast" - Sonic
-
+"Mo code Mo problems" - Notorious B.I.G.
 "One of my most productive days was throwing away 1000 lines of code." - Ken Thompson
 
-
-## Design choices
-
-- Be small, fast.
-- Build real software.
-- Awesome cross compiling.
-- Use fast algorithms, keep compilation speed and code complexity in mind.
-- You should use a static checker for warnings.
-
 ## Style Guidelines
+
+Follow plan9 conventions.
 
 - http://www.lysator.liu.se/c/pikestyle.html
 - http://plan9.bell-labs.com/magic/man2html/6/style
 - http://aiju.de/b/style
+
+## Tests
+
+The only testing in this repo is the self bootstrap.
+All other tests are part of https://github.com/clean-c/cspec
 
 ## Useful Links
 
