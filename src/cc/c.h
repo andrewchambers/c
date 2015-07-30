@@ -60,10 +60,10 @@ enum {
 
 /* Storage classes */
 enum {
-    SCNONE,
-    SCEXTERN,
-    SCSTATIC,
-    SCREGISTER,
+	SCNONE,
+	SCEXTERN,
+	SCSTATIC,
+	SCREGISTER,
 	SCGLOBAL,
 	SCTYPEDEF,
 	SCAUTO,
@@ -88,23 +88,23 @@ typedef struct {
 } Sym;
 
 enum {
-    CVOID,
-    CPRIM,
-    CSTRUCT,
-    CPTR,
-    CFUNC,
+	CVOID,
+	CPRIM,
+	CSTRUCT,
+	CPTR,
+	CFUNC,
 };
 
 enum {
-    PRIMENUM,
-    PRIMCHAR,
-    PRIMSHORT,
-    PRIMINT,
-    PRIMLONG,
-    PRIMLLONG,
-    PRIMFLOAT,
-    PRIMDOUBLE,
-    PRIMLDOUBLE,
+	PRIMENUM,
+	PRIMCHAR,
+	PRIMSHORT,
+	PRIMINT,
+	PRIMLONG,
+	PRIMLLONG,
+	PRIMFLOAT,
+	PRIMDOUBLE,
+	PRIMLDOUBLE,
 };
 
 typedef struct StructMember StructMember;
@@ -112,13 +112,13 @@ typedef struct NameTy NameTy;
 typedef struct CTy CTy;
 
 struct StructMember {
-    char *name;
-    CTy  *type;		    
+	char *name;
+	CTy  *type;
 };
 
 struct NameTy {
-    char *name;
-    CTy  *type;		    
+	char *name;
+	CTy  *type;
 };
 
 struct CTy {
@@ -135,21 +135,21 @@ struct CTy {
 			List *members;
 		} Struct;
 		struct {
-            CTy *subty;
+			CTy *subty;
 		} Ptr;
 		struct {
-            CTy *subty;
+			CTy *subty;
 		} Arr;
 		struct {
-            int issigned;
-            int type;
+			int issigned;
+			int type;
 		} Prim;
 	};
 };
 
 enum {
-    NLABELED,
-    NWHILE,
+	NLABELED,
+	NWHILE,
 	NDOWHILE,
 	NFOR,
 	NNUMBER,
@@ -187,25 +187,25 @@ struct Node {
 			Node *expr;
 		} DoWhile;
 		struct {
-            Node *init;
-            Node *cond;
-            Node *step;
-            Node *stmt;
+			Node *init;
+			Node *cond;
+			Node *step;
+			Node *stmt;
 		} For;
 		struct {
 			Node *expr;
 			Node *stmt;
 		} While;
 		struct {
-		    Node *expr;
+			Node *expr;
 			Node *stmt;
 		} Switch;
 		struct {
-            char *l;
-            Node *stmt;
+			char *l;
+			Node *stmt;
 		} Labeled;
 		struct {
-            Node *expr;
+			Node *expr;
 		} Return;
 		struct {
 
@@ -217,19 +217,19 @@ struct Node {
 
 		} Func;
 		struct {
-		    int op;
-            Node *l;
-            Node *r;
+			int op;
+			Node *l;
+			Node *r;
 		} Binop;
 		struct {
-		    int   op;
-            Node *operand;
+			int   op;
+			Node *operand;
 		} Unop;
 		struct {
-            Node *operand;
+			Node *operand;
 		} Cast;
 		struct {
-            List *inits;
+			List *inits;
 		} Init;
 		struct {
 			/* TODO: parse to int */
@@ -240,27 +240,27 @@ struct Node {
 			char *v;
 		} Str;
 		struct {
-		    char *l;
+			char *l;
 		} Goto;
 		struct {
-		    char *n;
-		    Sym  *s;
+			char *n;
+			Sym  *s;
 		} Sym;
 		struct {
-		    Node *idx;
-		    Node *operand;
+			Node *idx;
+			Node *operand;
 		} Idx;
 		struct {
-		    int arrow;
-		    char *sel;
-		    Node *operand;
+			int arrow;
+			char *sel;
+			Node *operand;
 		} Sel;
 		struct {
-		    Node *funclike;
-		    List *args;
+			Node *funclike;
+			List *args;
 		} Call;
 		struct {
-		    CTy *t;
+			CTy *t;
 		} Sizeof;
 	};
 };
@@ -269,12 +269,12 @@ struct Node {
 
 typedef struct Lexer Lexer;
 struct Lexer {
-    FILE *f;
-    SrcPos pos;
-    SrcPos prevpos;
-    SrcPos markpos;
-    int  nchars;
-    char tokval[MAXTOKSZ+1];
+	FILE *f;
+	SrcPos pos;
+	SrcPos prevpos;
+	SrcPos markpos;
+	int  nchars;
+	char tokval[MAXTOKSZ+1];
 };
 
 typedef struct Tok Tok;
@@ -299,6 +299,4 @@ void  cppinit(char *);
 Node *parse(void);
 /* backend functions */
 void  emit(Node *);
-
-
 

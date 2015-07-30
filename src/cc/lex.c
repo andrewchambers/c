@@ -7,87 +7,87 @@
 char *
 tokktostr(int t) 
 {
-    switch(t) {
-    case TOKWHILE:    return "while";
-    case TOKVOLATILE: return "volatile";
-    case TOKVOID:     return "void";
-    case TOKUNSIGNED: return "unsigned";
-    case TOKUNION:    return "union";
-    case TOKTYPEDEF:  return "typedef";
-    case TOKSWITCH:   return "switch";
-    case TOKSUBASS:   return "-=";
-    case TOKSTRUCT:   return "struct";
-    case TOKSTR:      return "string";
-    case TOKSTATIC:   return "static";
-    case TOKSIZEOF:   return "sizeof";
-    case TOKSIGNED:   return "signed";
-    case TOKSHR:      return ">>";
-    case TOKSHORT:    return "short";
-    case TOKSHL:      return "<<";
-    case TOKRETURN:   return "return";
-    case TOKREGISTER: return "register";
-    case TOKORASS:    return "|=";
-    case TOKNUM:      return "number";
-    case TOKNEQ:      return "!=";
-    case TOKMULASS:   return "*=";
-    case TOKMODASS:   return "%=";
-    case TOKLOR:      return "||";
-    case TOKLONG:     return "long";
-    case TOKLEQ:      return "<=";
-    case TOKLAND:     return "&&";
-    case TOKINT:      return "int";
-    case TOKINC:      return "++";
-    case TOKIF:       return "if";
-    case TOKIDENT:    return "ident";
-    case TOKGOTO:     return "goto";
-    case TOKGEQ:      return ">=";
-    case TOKFOR:      return "for";
-    case TOKFLOAT:    return "float";
-    case TOKEXTERN:   return "extern";
-    case TOKEQL:      return "==";
-    case TOKEOF:      return "end of file";
-    case TOKENUM:     return "enum";
-    case TOKELSE:     return "else";
-    case TOKELLIPSIS: return "...";
-    case TOKDOUBLE:   return "double";
-    case TOKDO:       return "do";
-    case TOKDIVASS:   return "/=";
-    case TOKDEFAULT:  return "default";
-    case TOKDEC:      return "--";
-    case TOKCONTINUE: return "continue";
-    case TOKCONST:    return "const";
-    case TOKCHAR:     return "char";
-    case TOKCASE:     return "case";
-    case TOKBREAK:     return "break";
-    case TOKAUTO:     return "auto";
-    case TOKARROW:    return "->";
-    case TOKANDASS:   return "&=";
-    case TOKADDASS:   return "+=";
-    case '[':         return "[";
-    case '+':         return "+";
-    case '%':         return "%";
-    case '&':         return "&";
-    case '*':         return "*";
-    case '}':         return "}";
-    case '{':         return "{";
-    case ']':         return "]";
-    case ')':         return ")";
-    case '(':         return "(";
-    case '.':         return ".";
-    case '/':         return "/";
-    case '!':         return "!";
-    case ':':         return ":";
-    case ';':         return ";";
-    case '<':         return "<";
-    case '>':         return ">";
-    case ',':         return ",";
-    case '-':         return "-";
-    case '|':         return "|";
-    case '=':         return "=";
-    case '~':         return "~";
-    case '^':         return "^";
-    }
-    errorf("unknown token %d\n", t);
+	switch(t) {
+	case TOKWHILE:		return "while";
+	case TOKVOLATILE:	return "volatile";
+	case TOKVOID:		return "void";
+	case TOKUNSIGNED:	return "unsigned";
+	case TOKUNION:		return "union";
+	case TOKTYPEDEF:	return "typedef";
+	case TOKSWITCH:		return "switch";
+	case TOKSUBASS:		return "-=";
+	case TOKSTRUCT:		return "struct";
+	case TOKSTR:		return "string";
+	case TOKSTATIC:		return "static";
+	case TOKSIZEOF:		return "sizeof";
+	case TOKSIGNED:		return "signed";
+	case TOKSHR:		return ">>";
+	case TOKSHORT:		return "short";
+	case TOKSHL:		return "<<";
+	case TOKRETURN:		return "return";
+	case TOKREGISTER:	return "register";
+	case TOKORASS:		return "|=";
+	case TOKNUM:		return "number";
+	case TOKNEQ:		return "!=";
+	case TOKMULASS:		return "*=";
+	case TOKMODASS:		return "%=";
+	case TOKLOR:		return "||";
+	case TOKLONG:		return "long";
+	case TOKLEQ:		return "<=";
+	case TOKLAND:		return "&&";
+	case TOKINT:		return "int";
+	case TOKINC:		return "++";
+	case TOKIF:			return "if";
+	case TOKIDENT:		return "ident";
+	case TOKGOTO:		return "goto";
+	case TOKGEQ:		return ">=";
+	case TOKFOR:		return "for";
+	case TOKFLOAT:		return "float";
+	case TOKEXTERN:		return "extern";
+	case TOKEQL:		return "==";
+	case TOKEOF:		return "end of file";
+	case TOKENUM:		return "enum";
+	case TOKELSE:		return "else";
+	case TOKELLIPSIS:	return "...";
+	case TOKDOUBLE:		return "double";
+	case TOKDO:			return "do";
+	case TOKDIVASS:		return "/=";
+	case TOKDEFAULT:	return "default";
+	case TOKDEC:		return "--";
+	case TOKCONTINUE:	return "continue";
+	case TOKCONST:		return "const";
+	case TOKCHAR:		return "char";
+	case TOKCASE:		return "case";
+	case TOKBREAK:		return "break";
+	case TOKAUTO:		return "auto";
+	case TOKARROW:		return "->";
+	case TOKANDASS:		return "&=";
+	case TOKADDASS:		return "+=";
+	case '[':			return "[";
+	case '+':			return "+";
+	case '%':			return "%";
+	case '&':			return "&";
+	case '*':			return "*";
+	case '}':			return "}";
+	case '{':			return "{";
+	case ']':			return "]";
+	case ')':			return ")";
+	case '(':			return "(";
+	case '.':			return ".";
+	case '/':			return "/";
+	case '!':			return "!";
+	case ':':			return ":";
+	case ';':			return ";";
+	case '<':			return "<";
+	case '>':			return ">";
+	case ',':			return ",";
+	case '-':			return "-";
+	case '|':			return "|";
+	case '=':			return "=";
+	case '~':			return "~";
+	case '^':			return "^";
+	}
+	errorf("unknown token %d\n", t);
 	return 0;
 }
 
@@ -146,10 +146,10 @@ identkind(char *s) {
 static Tok *
 mktok(Lexer *l, int kind) {
 	Tok* r;
-    
-    l->tokval[l->nchars] = 0;
+	
+	l->tokval[l->nchars] = 0;
 	if(kind == TOKIDENT)
-	    kind = identkind(l->tokval);
+		kind = identkind(l->tokval);
 	r = zmalloc(sizeof(Tok));
 	r->pos.line = l->markpos.line;
 	r->pos.col = l->markpos.col;
@@ -157,13 +157,13 @@ mktok(Lexer *l, int kind) {
 	r->k = kind;
 	switch(kind){
 	case TOKSTR:
-    case TOKNUM:
-    case TOKIDENT:
-        r->v = zstrdup(l->tokval);
-        break;
+	case TOKNUM:
+	case TOKIDENT:
+		r->v = zstrdup(l->tokval);
+		break;
 	default:
-	    r->v = tokktostr(kind);
-	    break;
+		r->v = tokktostr(kind);
+		break;
 	}
 	return r;
 }
@@ -215,7 +215,7 @@ wsc(int c)
 static void 
 mark(Lexer *l)
 {
-    l->nchars = 0;
+	l->nchars = 0;
 	l->markpos.line = l->pos.line;
 	l->markpos.col = l->pos.col;
 }
@@ -223,18 +223,18 @@ mark(Lexer *l)
 static void 
 accept(Lexer *l, int c)
 {
-    l->tokval[l->nchars] = c;
-    l->nchars += 1;
-    if(l->nchars > MAXTOKSZ)
-        errorposf(&l->markpos, "token too large");
+	l->tokval[l->nchars] = c;
+	l->nchars += 1;
+	if(l->nchars > MAXTOKSZ)
+		errorposf(&l->markpos, "token too large");
 }
 
 static int 
 nextc(Lexer *l)
 {
 	int c;
-    l->prevpos.col = l->pos.col;
-    l->prevpos.line = l->pos.line;
+	l->prevpos.col = l->pos.col;
+	l->prevpos.line = l->pos.line;
 	c = fgetc(l->f);
 	if(c == '\n') {
 		l->pos.line += 1;
@@ -249,8 +249,8 @@ nextc(Lexer *l)
 static void
 ungetch(Lexer *l, int c) /* avoid name conflict */
 {
-    l->pos.col = l->prevpos.col;
-    l->pos.line = l->prevpos.line;
+	l->pos.col = l->prevpos.col;
+	l->pos.line = l->prevpos.line;
 	ungetc(c, l->f);
 }
 
@@ -258,7 +258,7 @@ Tok *
 lex(Lexer *l) 
 {
 	int c,c2;
-    
+	
 	mark(l);
 	c = nextc(l);
 	if(c == EOF) {
@@ -273,36 +273,36 @@ lex(Lexer *l)
 		ungetch(l, c);
 		return lex(l);
 	} else if (c == '"') {
-	    accept(l, c);
-	    for(;;) {
+		accept(l, c);
+		for(;;) {
 			c = nextc(l);
 			if(c == EOF)
-			    errorf("unclosed string\n"); /* TODO error pos */
+				errorf("unclosed string\n"); /* TODO error pos */
 			accept(l, c);
 			if(c == '\\') {
-			    c = nextc(l);
-			    if(c == EOF || c == '\n')
-			        errorf("EOF or newline in string literal");
-			    accept(l, c);
-			    continue;
+				c = nextc(l);
+				if(c == EOF || c == '\n')
+					errorf("EOF or newline in string literal");
+				accept(l, c);
+				continue;
 			}
 			if (c == '"') { /* TODO: escape chars */ 
 				return mktok(l, TOKSTR);
 			}
 		}
 	} else if (c == '\'') {
-	    accept(l, c);
-	    for(;;) {
+		accept(l, c);
+		for(;;) {
 			c = nextc(l);
 			if(c == EOF)
-			    errorf("unclosed char\n"); /* TODO error pos */
+				errorf("unclosed char\n"); /* TODO error pos */
 			accept(l, c);
 			if(c == '\\') {
-			    c = nextc(l);
-			    if(c == EOF || c == '\n')
-			        errorf("EOF or newline in char literal");
-			    accept(l, c);
-			    continue;
+				c = nextc(l);
+				if(c == EOF || c == '\n')
+					errorf("EOF or newline in char literal");
+				accept(l, c);
+				continue;
 			}
 			if (c == '\'') { /* TODO: escape chars */ 
 				return mktok(l, TOKNUM);
@@ -382,26 +382,26 @@ lex(Lexer *l)
 				errorf("expected ...\n");
 			return mktok(l, TOKELLIPSIS);
 		} else if(c == '+' && c2 == '=') return mktok(l, TOKADDASS);
-		  else if(c == '-' && c2 == '=') return mktok(l, TOKSUBASS);
-		  else if(c == '-' && c2 == '>') return mktok(l, TOKARROW);
-		  else if(c == '*' && c2 == '=') return mktok(l, TOKMULASS);
-		  else if(c == '/' && c2 == '=') return mktok(l, TOKDIVASS);
-		  else if(c == '%' && c2 == '=') return mktok(l, TOKMODASS);
-		  else if(c == '&' && c2 == '=') return mktok(l, TOKANDASS);
-		  else if(c == '|' && c2 == '=') return mktok(l, TOKORASS);
-		  else if(c == '>' && c2 == '=') return mktok(l, TOKGEQ);
-		  else if(c == '<' && c2 == '=') return mktok(l, TOKLEQ);
-		  else if(c == '!' && c2 == '=') return mktok(l, TOKNEQ);
-		  else if(c == '=' && c2 == '=') return mktok(l, TOKEQL);
-		  else if(c == '+' && c2 == '+') return mktok(l, TOKINC);
-		  else if(c == '-' && c2 == '-') return mktok(l, TOKDEC);
-		  else if(c == '<' && c2 == '<') return mktok(l, TOKSHL);
-		  else if(c == '>' && c2 == '>') return mktok(l, TOKSHR);
-		  else if(c == '|' && c2 == '|') return mktok(l, TOKLOR);
-		  else if(c == '|' && c2 == '|') return mktok(l, TOKLOR);
-		  else if(c == '&' && c2 == '&') return mktok(l, TOKLAND);
+		else if(c == '-' && c2 == '=') return mktok(l, TOKSUBASS);
+		else if(c == '-' && c2 == '>') return mktok(l, TOKARROW);
+		else if(c == '*' && c2 == '=') return mktok(l, TOKMULASS);
+		else if(c == '/' && c2 == '=') return mktok(l, TOKDIVASS);
+		else if(c == '%' && c2 == '=') return mktok(l, TOKMODASS);
+		else if(c == '&' && c2 == '=') return mktok(l, TOKANDASS);
+		else if(c == '|' && c2 == '=') return mktok(l, TOKORASS);
+		else if(c == '>' && c2 == '=') return mktok(l, TOKGEQ);
+		else if(c == '<' && c2 == '=') return mktok(l, TOKLEQ);
+		else if(c == '!' && c2 == '=') return mktok(l, TOKNEQ);
+		else if(c == '=' && c2 == '=') return mktok(l, TOKEQL);
+		else if(c == '+' && c2 == '+') return mktok(l, TOKINC);
+		else if(c == '-' && c2 == '-') return mktok(l, TOKDEC);
+		else if(c == '<' && c2 == '<') return mktok(l, TOKSHL);
+		else if(c == '>' && c2 == '>') return mktok(l, TOKSHR);
+		else if(c == '|' && c2 == '|') return mktok(l, TOKLOR);
+		else if(c == '|' && c2 == '|') return mktok(l, TOKLOR);
+		else if(c == '&' && c2 == '&') return mktok(l, TOKLAND);
 		else {
-		    /* TODO, detect invalid operators */
+			/* TODO, detect invalid operators */
 			ungetch(l, c2);
 			return mktok(l, c);
 		}

@@ -20,10 +20,10 @@ pushlex(char *path)
 		errorf("include depth limit reached!");
 	l = zmalloc(sizeof(Lexer));
 	l->pos.file = path;
-    l->prevpos.file = path;
-    l->markpos.file = path;
-    l->pos.line = 1;
-    l->pos.col = 1;
+	l->prevpos.file = path;
+	l->markpos.file = path;
+	l->pos.line = 1;
+	l->pos.col = 1;
 	l->f = fopen(path, "r");
 	if (!l->f)
 		errorf("error opening file %s.\n", path);
@@ -56,6 +56,6 @@ void
 cppinit(char *path)
 {
 	nlexers = 0;
-    pushlex(path);
+	pushlex(path);
 }
 
