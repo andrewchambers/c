@@ -1,4 +1,2 @@
-Makefile
 *.o
-*.a
 bin
