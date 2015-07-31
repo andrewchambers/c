@@ -18,7 +18,7 @@ all:  bin/c bin/cpp
 .PHONY: all clean
 
 %.o: %.c $(HFILES)
-	$(CC) -Isrc/ $(CFLAGS) -o $@ -c $<
+	$(CC) -g -O0 -Wall -Isrc/ -o $@ -c $<
 
 bin/c: $(CO) $(LIBO)
 	@ mkdir -p bin
