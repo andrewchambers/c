@@ -159,13 +159,14 @@ newnode(int type, SrcPos *p)
 }
 
 static Node *
-mkfunc(SrcPos *p, CTy *t, Node *body)
+mkfunc(SrcPos *p, CTy *t, char *name, Node *body)
 {
 	Node *n;
 
 	n = newnode(NFUNC, p);
 	n->type = t;
 	n->Func.body = body;
+	n->Func.name = name;
 	return n;
 }
 
@@ -518,22 +519,21 @@ expect(int kind)
 	next();
 }
 
-Node * 
-parse()
+void
+parseinit()
 {
-	Node *n;
-
 	nscopes = 0;
 	pushscope();
 	next();
 	next();
-	for(;;) {
-		if(tok->k == TOKEOF)
-			break;
-		n = decl();
-	}
-	popscope();
-	return n;
+}
+
+Node * 
+parsenext()
+{
+	if(tok->k == TOKEOF)
+		return 0;
+	return decl();
 }
 
 static void
@@ -619,6 +619,8 @@ decl()
 			errorposf(pos, "expected a function");
 		if(init)
 			errorposf(pos, "function declaration has an initializer");
+		if(!name)
+			errorposf(pos, "function declaration requires a name");
 		pushscope();
 		for(e = ty->Func.params->head; e != 0; e = e->next) {
 			nt = e->v;
@@ -628,7 +630,7 @@ decl()
 		}
 		fbody = block();
 		popscope();
-		return mkfunc(pos, ty, fbody);
+		return mkfunc(pos, ty, name, fbody);
 	}
 	while(tok->k == ',') {
 		next();

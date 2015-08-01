@@ -18,7 +18,8 @@ main(int argc, char *argv[])
 	if (argc != 2)
 		usage();
 	cppinit(argv[1]);
-	n = parse();
-	emit(n);
+	parseinit();
+	emitinit(stdout);
+	emit();
 	return 0;
 }

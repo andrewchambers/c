@@ -180,6 +180,7 @@ struct Node {
 	CTy *type;
 	union {
 		struct {
+			char *name;
 			Node *body;
 		} Func;
 		struct {
@@ -294,15 +295,16 @@ struct Tok {
 /* helper functions */
 void errorf(char *, ...);
 void errorposf(SrcPos *, char *, ...);
-void dumpast(FILE *, Node *);
 /* cpp functions */
 void  cppinit(char *);
 char *tokktostr(int);
 Tok  *lex(Lexer *);
 Tok  *pp();
 /* parser functions */
-Node *parse(void);
+void  parseinit(void);
+Node *parsenext(void);
 /* backend functions */
-void  emit(Node *);
+void  emitinit(FILE *);
+void  emit();
 
 
