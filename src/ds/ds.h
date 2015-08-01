@@ -34,3 +34,15 @@ struct StrSet {
 
 StrSet *strsetadd(StrSet *, char *);
 int     strsethas(StrSet *, char *);
+
+typedef struct Vec Vec;
+struct Vec {
+	int   cap;
+	int   len;
+	void **d;
+};
+
+Vec  *vec();
+void *vecget(Vec *, int);
+void  vecset(Vec *, int, void *);
+void  vecappend(Vec *, void *);

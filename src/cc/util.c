@@ -80,6 +80,13 @@ static void
 _dumpast(FILE *f, int depth, Node *n)
 {
 	switch(n->t) {
+	case NFUNC:
+		ws(f, depth); fprintf(f, "{\n");
+		ws(f, depth); fprintf(f, ":tag :NFUNC\n");
+		ws(f, depth); fprintf(f, ":body\n");
+		_dumpast(f, depth + 2 ,n->Func.body);
+		ws(f, depth); fprintf(f, "}\n");
+		return;
 	case NLABELED:
 		ws(f, depth); fprintf(f, "{\n");
 		ws(f, depth); fprintf(f, ":tag :NLABLED\n");
@@ -100,6 +107,13 @@ _dumpast(FILE *f, int depth, Node *n)
 		ws(f, depth); fprintf(f, ":n %s\n", n->Sym.n);
 		ws(f, depth); fprintf(f, "}\n");
 		return;
+	case NRETURN:
+		ws(f, depth); fprintf(f, "{\n");
+		ws(f, depth); fprintf(f, ":tag :NRETURN\n");
+		ws(f, depth); fprintf(f, ":expr\n");
+		_dumpast(f, depth + 2 ,n->Return.expr);
+		ws(f, depth); fprintf(f, "}\n");
+		return;
 	/*
 	case NNUM:
 	case NSTR:
@@ -112,7 +126,6 @@ _dumpast(FILE *f, int depth, Node *n)
 	case NUNOP:
 	case NCAST:
 	case NINIT:
-	case NRETURN:
 	case NSWITCH:
 	case NGOTO:
 	case NWHILE:

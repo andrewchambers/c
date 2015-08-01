@@ -501,6 +501,8 @@ expect(int kind)
 Node * 
 parse()
 {
+	Node *n;
+
 	nscopes = 0;
 	pushscope();
 	next();
@@ -508,10 +510,10 @@ parse()
 	for(;;) {
 		if(tok->k == TOKEOF)
 			break;
-		decl();
+		n = decl();
 	}
 	popscope();
-	return 0;
+	return n;
 }
 
 static void
@@ -1304,10 +1306,12 @@ pcase(void)
 static Node *
 block(void)
 {
+	Node *n;
+	
 	pushscope();
 	expect('{');
 	while(tok->k != '}' && tok->k != TOKEOF)
-		declorstmt();
+		n = declorstmt();
 	expect('}');
 	popscope();
 	return 0;

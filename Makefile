@@ -7,6 +7,7 @@ CCO    = src/cc/cpp.o \
 MEMO   = src/mem/mem.o
 DSO    = src/ds/list.o \
          src/ds/map.o \
+         src/ds/vec.o \
          src/ds/strset.o
 LIBO   = $(CCO) $(MEMO) $(DSO)
 CO     = src/cmd/c/emit.o \
