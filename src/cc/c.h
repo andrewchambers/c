@@ -154,8 +154,10 @@ enum {
 	NDOWHILE,
 	NFOR,
 	NBINOP,
+	NBLOCK,
 	NUNOP,
 	NCAST,
+	NCOMMA,
 	NINIT,
 	NRETURN,
 	NSWITCH,
@@ -211,7 +213,10 @@ struct Node {
 			Node *expr;
 		} Return;
 		struct {
-
+			Vec *exprs;
+		} Comma;
+		struct {
+			Vec *stmts;
 		} Block;
 		struct {
 

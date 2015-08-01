@@ -79,6 +79,8 @@ ws(FILE *f, int n)
 static void
 _dumpast(FILE *f, int depth, Node *n)
 {
+	int i;
+
 	switch(n->t) {
 	case NFUNC:
 		ws(f, depth); fprintf(f, "{\n");
@@ -97,7 +99,7 @@ _dumpast(FILE *f, int depth, Node *n)
 		return;
 	case NNUM:
 		ws(f, depth); fprintf(f, "{\n");
-		ws(f, depth); fprintf(f, ":tag :NNUMBER\n");
+		ws(f, depth); fprintf(f, ":tag :NNUM\n");
 		ws(f, depth); fprintf(f, ":v %s\n", n->Num.v);
 		ws(f, depth); fprintf(f, "}\n");
 		return;
@@ -110,12 +112,20 @@ _dumpast(FILE *f, int depth, Node *n)
 	case NRETURN:
 		ws(f, depth); fprintf(f, "{\n");
 		ws(f, depth); fprintf(f, ":tag :NRETURN\n");
-		ws(f, depth); fprintf(f, ":expr\n");
-		_dumpast(f, depth + 2 ,n->Return.expr);
+		if(n->Return.expr) {
+			ws(f, depth); fprintf(f, ":expr\n");
+			_dumpast(f, depth + 2 ,n->Return.expr);
+		}
 		ws(f, depth); fprintf(f, "}\n");
 		return;
+	case NBLOCK:
+		ws(f, depth); fprintf(f, "[\n");
+		for(i = 0; i < n->Block.stmts->len ; i++) {
+			_dumpast(f, depth + 2 , vecget(n->Block.stmts, i));
+		}
+		ws(f, depth); fprintf(f, "]\n");
+		return;
 	/*
-	case NNUM:
 	case NSTR:
 	case NIDX:
 	case NSEL:

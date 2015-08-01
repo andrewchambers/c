@@ -39,7 +39,7 @@ static void
 vecresize(Vec *v, int cap)
 {
 	int i;
-	void *nd;
+	void **nd;
 
 	if(v->cap >= cap)
 		return;

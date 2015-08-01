@@ -170,6 +170,26 @@ mkfunc(SrcPos *p, CTy *t, Node *body)
 }
 
 static Node *
+mkblock(SrcPos *p, Vec *v)
+{
+	Node *n;
+
+	n = newnode(NBLOCK, p);
+	n->Block.stmts = v;
+	return n;
+}
+
+static Node *
+mkcomma(SrcPos *p, Vec *v)
+{
+	Node *n;
+
+	n = newnode(NCOMMA, p);
+	n->Comma.exprs = v;
+	return n;
+}
+
+static Node *
 mkbinop(SrcPos *p, int op, Node *l, Node *r)
 {
 	Node *n;
@@ -1306,27 +1326,37 @@ pcase(void)
 static Node *
 block(void)
 {
-	Node *n;
-	
+	Vec *v;
+	SrcPos *p;
+
+	v = vec();
 	pushscope();
+	p = &tok->pos;
 	expect('{');
 	while(tok->k != '}' && tok->k != TOKEOF)
-		n = declorstmt();
+		vecappend(v, declorstmt());
 	expect('}');
 	popscope();
-	return 0;
+	return mkblock(p, v);
 }
 
 static Node *
 expr(void)
 {
+	SrcPos *p;
+	Vec *v;
 	Node *n;
-	
-	for(;;) {
-		n = assignexpr();
-		if(tok->k != ',')
-			break;
-		next();
+
+	p = &tok->pos;
+	n = assignexpr();
+	if(tok->k == ',') {
+		v = vec();
+		vecappend(v, n);
+		while(tok->k == ',') {
+			next();
+			vecappend(v, assignexpr());
+		}
+		n = mkcomma(p, v);
 	}
 	return n;
 }
@@ -1393,7 +1423,7 @@ logorexpr(void)
 		r = logandexpr();
 		l = mkbinop(&t->pos, t->k, l, r);
 	}
-	return 0;
+	return l;
 }
 
 static Node *
