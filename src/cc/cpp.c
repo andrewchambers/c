@@ -6,7 +6,7 @@
 
 #define MAXINCLUDE 1024
 
-int nlexers;
+int    nlexers;
 Lexer *lexers[MAXINCLUDE];
 
 static void
@@ -43,9 +43,12 @@ pp()
 	
 	t = lex(lexers[nlexers - 1]);
 	if(t->k == TOKEOF && nlexers == 1)
-			return t;
-	poplex();
-	return pp();
+		return t;
+	if(t->k == TOKEOF && nlexers > 1) {
+		poplex();
+		return t;
+	}
+	return t;
 }
 
 void

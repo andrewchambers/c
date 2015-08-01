@@ -1,40 +1,32 @@
-override CFLAGS += -Isrc/ -g -Wall
 
-.PHONY: all
+HFILES = src/buff/buff.h src/cc/c.h src/ds/ds.h src/mem/mem.h
+CCO    = src/cc/cpp.o \
+         src/cc/lex.o \
+         src/cc/parse.o \
+         src/cc/util.o 
+MEMO   = src/mem/mem.o
+DSO    = src/ds/list.o \
+         src/ds/map.o \
+         src/ds/strset.o
+LIBO   = $(CCO) $(MEMO) $(DSO)
+CO     = src/cmd/c/emit.o \
+         src/cmd/c/main.o 
+CPPO   = src/cmd/cpp/main.o 
 
-all: bin/c bin/cpp
+all:  bin/c bin/cpp
 
-%.o: %.c
-	$(CC) $(CFLAGS) -o $@ -c $<
+.PHONY: all clean
 
-LDSC=$(wildcard src/ds/*.c)
-LDSH=$(wildcard src/ds/*.h)
-LDSO=$(patsubst %.c, %.o, $(LDSC))
-src/ds/ds.a: $(LDSO) $(LDSH)
-	ar rs $@ $(LDSO)
+%.o: %.c $(HFILES)
+	$(CC) -g -O0 -Wall -Isrc/ -o $@ -c $<
 
-LMEMC=$(wildcard src/mem/*.c)
-LMEMH=$(wildcard src/mem/*.h)
-LMEMO=$(patsubst %.c, %.o, $(LMEMC))
-src/mem/mem.a: $(LMEMO) $(LMEMH)
-	ar rs $@ $(LMEMO)
+bin/c: $(CO) $(LIBO)
+	@ mkdir -p bin
+	$(CC) $(CO) $(LIBO) -o $@
 
-LCCC=$(wildcard src/cc/*.c)
-LCCH=$(wildcard src/cc/*.h)
-LCCO=$(patsubst %.c, %.o, $(LCCC))
-src/cc/cc.a: $(LCCO) $(LCCH)
-	ar rs $@ $(LCCO)
+bin/cpp:  $(CPPO) $(LIBO)
+	@ mkdir -p bin
+	$(CC) $(CPPO) $(LIBO) -o $@
 
-BCC=$(wildcard src/cmd/c/*.c)
-BCH=$(wildcard src/cmd/c/*.h)
-BCO=$(patsubst %.c, %.o, $(BCC))
-bin/c: $(BCO) $(BCH) src/cc/cc.a src/ds/ds.a src/mem/mem.a
-	mkdir -p bin
-	$(CC) $(BCO) src/cc/cc.a src/ds/ds.a src/mem/mem.a -o $@
-
-BCPPC=$(wildcard src/cmd/cpp/*.c)
-BCPPH=$(wildcard src/cmd/cpp/*.h)
-BCPPO=$(patsubst %.c, %.o, $(BCPPC))
-bin/cpp: $(BCPPO) $(BCPPH) src/cc/cc.a src/ds/ds.a src/mem/mem.a
-	mkdir -p bin
-	$(CC) $(BCPPO) src/cc/cc.a src/ds/ds.a src/mem/mem.a -o $@
+clean:
+	rm -rf $(LIBO) $(CPPO) $(CO) bin 

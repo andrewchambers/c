@@ -159,6 +159,17 @@ newnode(int type, SrcPos *p)
 }
 
 static Node *
+mkfunc(SrcPos *p, CTy *t, Node *body)
+{
+	Node *n;
+
+	n = newnode(NFUNC, p);
+	n->type = t;
+	n->Func.body = body;
+	return n;
+}
+
+static Node *
 mkbinop(SrcPos *p, int op, Node *l, Node *r)
 {
 	Node *n;
@@ -567,6 +578,7 @@ decl()
 	SrcPos *pos;
 	ListEnt *e;
 	Node *init;
+	Node *fbody;
 	NameTy *nt;
 
 	if(tok->k == ';') {
@@ -592,9 +604,9 @@ decl()
 				definesym(pos, nt->name, "TODO");
 			}
 		}
-		block();
+		fbody = block();
 		popscope();
-		return 0;
+		return mkfunc(pos, ty, fbody);
 	}
 	while(tok->k == ',') {
 		next();

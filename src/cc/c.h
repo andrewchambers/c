@@ -148,11 +148,11 @@ struct CTy {
 };
 
 enum {
+	NFUNC,
 	NLABELED,
 	NWHILE,
 	NDOWHILE,
 	NFOR,
-	NNUMBER,
 	NBINOP,
 	NUNOP,
 	NCAST,
@@ -177,6 +177,9 @@ struct Node {
 	SrcPos pos;
 	CTy *type;
 	union {
+		struct {
+			Node *body;
+		} Func;
 		struct {
 			Node *expr;
 			Node *iftrue;
@@ -213,9 +216,6 @@ struct Node {
 		struct {
 
 		} Decl;
-		struct {
-
-		} Func;
 		struct {
 			int op;
 			Node *l;
@@ -287,16 +287,17 @@ struct Tok {
 };
 
 /* helper functions */
-void  errorf(char *, ...);
-void  errorposf(SrcPos *, char *, ...);
+void errorf(char *, ...);
+void errorposf(SrcPos *, char *, ...);
+void dumpast(FILE *, Node *);
 /* cpp functions */
+void  cppinit(char *);
 char *tokktostr(int);
 Tok  *lex(Lexer *);
 Tok  *pp();
-void  cppinit(char *);
-
 /* parser functions */
 Node *parse(void);
 /* backend functions */
 void  emit(Node *);
+
 

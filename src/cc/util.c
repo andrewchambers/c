@@ -67,4 +67,65 @@ errorposf(SrcPos *p, char *fmt, ...)
 	exit(1);
 }
 
+static void
+ws(FILE *f, int n)
+{
+	int i;
 
+	for(i = 0; i < n; i++)
+		fputc(' ', f);
+}
+
+static void
+_dumpast(FILE *f, int depth, Node *n)
+{
+	switch(n->t) {
+	case NLABELED:
+		ws(f, depth); fprintf(f, "{\n");
+		ws(f, depth); fprintf(f, ":tag :NLABLED\n");
+		ws(f, depth); fprintf(f, ":l %s\n", n->Labeled.l);
+		ws(f, depth); fprintf(f, ":stmt\n");
+		_dumpast(f, depth + 2 ,n->Labeled.stmt);
+		ws(f, depth); fprintf(f, "}\n");
+		return;
+	case NNUM:
+		ws(f, depth); fprintf(f, "{\n");
+		ws(f, depth); fprintf(f, ":tag :NNUMBER\n");
+		ws(f, depth); fprintf(f, ":v %s\n", n->Num.v);
+		ws(f, depth); fprintf(f, "}\n");
+		return;
+	case NSYM:
+		ws(f, depth); fprintf(f, "{\n");
+		ws(f, depth); fprintf(f, ":tag :NSYM\n");
+		ws(f, depth); fprintf(f, ":n %s\n", n->Sym.n);
+		ws(f, depth); fprintf(f, "}\n");
+		return;
+	/*
+	case NNUM:
+	case NSTR:
+	case NIDX:
+	case NSEL:
+	case NCALL:
+	case NSIZEOF:
+	case NIF:
+	case NBINOP:
+	case NUNOP:
+	case NCAST:
+	case NINIT:
+	case NRETURN:
+	case NSWITCH:
+	case NGOTO:
+	case NWHILE:
+	case NDOWHILE:
+	case NFOR:
+	*/
+	default:
+		errorf("unimplemented dumpast - %d", n->t);
+	}
+}
+
+void
+dumpast(FILE *f, Node *n)
+{
+	_dumpast(f, 0, n);
+}
