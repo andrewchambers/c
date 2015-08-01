@@ -1048,7 +1048,11 @@ pfor(void)
 	Node *c;
 	Node *s;
 	Node *st;
-	
+
+	i = 0;
+	c = 0;
+	s = 0;
+	st = 0;
 	p = &tok->pos;
 	expect(TOKFOR);
 	expect('(');
