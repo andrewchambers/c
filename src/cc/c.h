@@ -160,7 +160,7 @@ enum {
 	NRETURN,
 	NSWITCH,
 	NGOTO,
-	NSYM,
+	NIDENT,
 	NNUM,
 	NSTR,
 	NIDX,
@@ -249,9 +249,8 @@ struct Node {
 			char *l;
 		} Goto;
 		struct {
-			char *n;
-			Sym  *s;
-		} Sym;
+			Sym  *sym;
+		} Ident;
 		struct {
 			Node *idx;
 			Node *operand;

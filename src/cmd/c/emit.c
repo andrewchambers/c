@@ -45,6 +45,56 @@ emitreturn(Node *r)
 }
 
 static void
+emitassign(Node *l, Node *r)
+{
+	Sym *sym;
+
+	emitstmt(r);
+	out("movq %%rax, %%rbx\n");
+	switch(l->t) {
+	case NIDENT:
+		sym = l->Ident.sym;
+		switch(sym->sclass) {
+		case SCSTATIC:
+		case SCGLOBAL:
+			out("leaq %s(%%rip), %%rax\n", sym->label);
+			out("movq %%rbx, (%%rax)\n");
+			break;
+		}
+		return;
+	}
+	errorf("unimplemented emit assign\n");
+}
+
+static void
+emitbinop(Node *n)
+{
+	switch(n->Binop.op) {
+	case '=':
+		emitassign(n->Binop.l, n->Binop.r);
+		return;
+	default:
+		errorf("unimplemented binop\n");
+	}
+}
+
+static void
+emitident(Node *n)
+{
+	Sym *sym;
+
+	sym = n->Ident.sym;
+	switch(sym->sclass) {
+	case SCSTATIC:
+	case SCGLOBAL:
+		out("leaq %s(%%rip), %%rax\n", sym->label);
+		out("movq (%%rax), %%rax\n");
+		return;
+	}
+	errorf("unimplemented ident\n");
+}
+
+static void
 emitstmt(Node *n)
 {
 	switch(n->t){
@@ -54,11 +104,14 @@ emitstmt(Node *n)
 	case NNUM:
 		out("movq $%s, %%rax\n", n->Num.v);
 		return;
+	case NIDENT:
+		emitident(n);
+		return;
 	case NBINOP:
-		out("XXX binop\n");
+		emitbinop(n);
 		return;
 	default:
-		errorf("unimplemented emit stmt\n");
+		errorf("unimplemented emit stmt %d\n", n->t);
 	}	
 }
 
@@ -74,10 +127,7 @@ emitglobaldecl(Node *n)
 		abort(); /* Invariant violated */
 	for(i = 0; i < n->Decl.syms->len ; i++) {
 		sym = vecget(n->Decl.syms, i);
-		if(sym->sclass == SCGLOBAL)
-			out(".global %s\n", sym->label);
-		out("%s:\n", sym->label);
-		out(".lcomm %s, %d\n", sym->label, 8);
+		out(".comm %s, %d, %d\n", sym->label, 8, 8);
 	}
 
 }

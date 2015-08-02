@@ -1813,9 +1813,8 @@ primaryexpr(void)
 			errorposf(&tok->pos, "undefined symbol %s", tok->v);
 		t = tok;
 		next();
-		n = mknode(NSYM, &tok->pos);
-		n->Sym.s = sym;
-		n->Sym.n = t->v;
+		n = mknode(NIDENT, &tok->pos);
+		n->Ident.sym = sym;
 		return n;
 	case TOKNUM:
 		n = mknode(NNUM, &tok->pos);
