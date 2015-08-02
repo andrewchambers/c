@@ -60,6 +60,8 @@ static Map *tags[MAXSCOPES];
 static Map *types[MAXSCOPES];
 static Map *vars[MAXSCOPES];
 
+int localoffset;
+
 static void
 popscope()
 {
@@ -148,7 +150,7 @@ newnamety(char *n, CTy *t)
 }
 
 static Node *
-newnode(int type, SrcPos *p)
+mknode(int type, SrcPos *p)
 {
 	Node *n;
 
@@ -159,11 +161,24 @@ newnode(int type, SrcPos *p)
 }
 
 static Node *
+mkdecl(SrcPos *p, int sclass, Vec *names, Vec *types, Vec *inits)
+{
+	Node *n;
+
+	n = mknode(NDECL, p);
+	n->Decl.sclass = sclass;
+	n->Decl.names = names;
+	n->Decl.types = types;
+	n->Decl.inits = inits;
+	return n;
+}
+
+static Node *
 mkfunc(SrcPos *p, CTy *t, char *name, Node *body)
 {
 	Node *n;
 
-	n = newnode(NFUNC, p);
+	n = mknode(NFUNC, p);
 	n->type = t;
 	n->Func.body = body;
 	n->Func.name = name;
@@ -175,7 +190,7 @@ mkblock(SrcPos *p, Vec *v)
 {
 	Node *n;
 
-	n = newnode(NBLOCK, p);
+	n = mknode(NBLOCK, p);
 	n->Block.stmts = v;
 	return n;
 }
@@ -185,7 +200,7 @@ mkcomma(SrcPos *p, Vec *v)
 {
 	Node *n;
 
-	n = newnode(NCOMMA, p);
+	n = mknode(NCOMMA, p);
 	n->Comma.exprs = v;
 	return n;
 }
@@ -195,7 +210,7 @@ mkbinop(SrcPos *p, int op, Node *l, Node *r)
 {
 	Node *n;
 
-	n = newnode(NBINOP, p);
+	n = mknode(NBINOP, p);
 	n->Binop.op = op;
 	n->Binop.l = l;
 	n->Binop.r = r;
@@ -207,7 +222,7 @@ mkunop(SrcPos *p, int op, Node *o)
 {
 	Node *n;
 
-	n = newnode(NUNOP, p);
+	n = mknode(NUNOP, p);
 	n->Unop.op = op;
 	n->Unop.operand = 0;
 	return n;
@@ -218,7 +233,7 @@ mkcast(SrcPos *p, Node *o, CTy *to)
 {
 	Node *n;
 	
-	n = newnode(NCAST, p);
+	n = mknode(NCAST, p);
 	n->type = to;
 	n->Cast.operand = o;
 	return n;
@@ -229,7 +244,7 @@ mkfor(SrcPos *p, Node *init, Node *cond, Node *step, Node *stmt)
 {
 	Node *n;
 	
-	n = newnode(NFOR, p);
+	n = mknode(NFOR, p);
 	n->For.init = init;
 	n->For.cond = cond;
 	n->For.step = step;
@@ -242,7 +257,7 @@ mkwhile(SrcPos *p, Node *expr, Node *stmt)
 {
 	Node *n;
 	
-	n = newnode(NWHILE, p);
+	n = mknode(NWHILE, p);
 	n->While.expr = expr;
 	n->While.stmt = stmt;
 	return n;
@@ -253,7 +268,7 @@ mkdowhile(SrcPos *p, Node *expr, Node *stmt)
 {
 	Node *n;
 	
-	n = newnode(NDOWHILE, p);
+	n = mknode(NDOWHILE, p);
 	n->DoWhile.expr = expr;
 	n->DoWhile.stmt = stmt;
 	return n;
@@ -264,7 +279,7 @@ mkswitch(SrcPos *p, Node *expr, Node *stmt)
 {
 	Node *n;
 	
-	n = newnode(NSWITCH, p);
+	n = mknode(NSWITCH, p);
 	n->DoWhile.expr = expr;
 	n->DoWhile.stmt = stmt;
 	return n;
@@ -275,7 +290,7 @@ mkif(SrcPos *p, Node *expr, Node *iftrue, Node *iffalse)
 {
 	Node *n;
 	
-	n = newnode(NIF, p);
+	n = mknode(NIF, p);
 	n->If.expr = expr;
 	n->If.iftrue = iftrue;
 	n->If.iffalse = iffalse;
@@ -590,59 +605,111 @@ definesym(SrcPos *pos, char *name, void *sym)
 	}
 }
 
+static Sym *
+localsym(char *name, CTy *t)
+{
+	Sym *s;
+
+    s = zmalloc(sizeof(Sym));
+	s->t = LSYM;
+	s->name = name;
+	s->type = t;
+	s->offset = localoffset;
+	localoffset += 8; // TODO: correct size.
+}
+
+static Sym *
+globalsym(char *name, CTy *t)
+{
+	Sym *s;
+
+    s = zmalloc(sizeof(Sym));
+	s->t = GSYM;
+	s->name = name;
+	s->type = t;
+}
+
 static Node *
 decl()
 {
+	int i;
 	int sclass;
 	char *name;
+	Sym  *sym;
 	CTy  *basety;
-	CTy  *ty;
+	CTy  *type;
 	SrcPos *pos;
 	ListEnt *e;
 	Node *init;
 	Node *fbody;
 	NameTy *nt;
+	Vec *names;
+	Vec *types;
+	Vec *inits;
 
-	if(tok->k == ';') {
-		next();
-		return 0;
-	}
 	pos = &tok->pos;
+	names = vec();
+	types = vec();
+	inits = vec();
 	basety = declspecs(&sclass);
-	ty = declarator(basety, &name, &init);
-	if(sclass == SCTYPEDEF && name)
-		definetype(pos, name, ty);
-	else if(name)
-		definesym(pos, name, "TODO");
-	if(isglobal() && tok->k == '{') {
-		if(ty->t != CFUNC) 
-			errorposf(pos, "expected a function");
-		if(init)
-			errorposf(pos, "function declaration has an initializer");
-		if(!name)
-			errorposf(pos, "function declaration requires a name");
-		pushscope();
-		for(e = ty->Func.params->head; e != 0; e = e->next) {
-			nt = e->v;
-			if(nt->name) {
-				definesym(pos, nt->name, "TODO");
+	while(tok->k != ';' || tok->k != TOKEOF) {
+		type = declarator(basety, &name, &init);
+		vecappend(names, name);
+		vecappend(types, type);
+		vecappend(inits, init);
+		if(isglobal() && tok->k == '{') {
+			localoffset = 0;
+			if(type->t != CFUNC) 
+				errorposf(pos, "expected a function");
+			if(init)
+				errorposf(pos, "function declaration has an initializer");
+			if(!name)
+				errorposf(pos, "function declaration requires a name");
+			pushscope();
+			for(e = type->Func.params->head; e != 0; e = e->next) {
+				nt = e->v;
+				if(nt->name) {
+					definesym(pos, nt->name, "TODO");
+				}
 			}
+			fbody = block();
+			popscope();
+			return mkfunc(pos, type, name, fbody);
 		}
-		fbody = block();
-		popscope();
-		return mkfunc(pos, ty, name, fbody);
-	}
-	while(tok->k == ',') {
-		next();
-		pos = &tok->pos;
-		ty = declarator(basety, &name, &init);
-		if(sclass == SCTYPEDEF && name)
-			definetype(pos, name, ty);
-		else if(name)
-			definesym(pos, name, "TODO");
+		if(tok->k == ',')
+			next();
 	}
 	expect(';');
-	return 0;
+	for(i = 0; i < names->len; i++) {
+		name = vecget(names, i);
+		type = vecget(types, i);
+		init = vecget(inits, i);
+		switch(sclass){
+		case SCSTATIC:
+			definesym(pos, name, globalsym(name, type));
+			break;
+		case SCNONE:
+			if(isglobal()) {
+				sclass = SCGLOBAL;
+				definesym(pos, name, globalsym(name, type));
+			} else {
+				sclass = SCAUTO;
+				definesym(pos, name, localsym(name, type));
+			}
+			break;
+		case SCAUTO:
+			if(isglobal())
+				errorposf(pos, "automatic storage outside of function");
+			definesym(pos, name, localsym(name, type));
+			break;
+		case SCTYPEDEF:
+			if(init)
+				errorposf(pos, "typedef cannot have an initializer");
+			definetype(pos, name, type);
+			break;
+		}
+	}
+	return mkdecl(pos, sclass, names, types, inits);
 }
 
 static int
@@ -1162,7 +1229,7 @@ declorstmt()
 		t = tok;
 		next();
 		next();
-		n = newnode(NLABELED, &t->pos);
+		n = mknode(NLABELED, &t->pos);
 		/* TODO make label. */
 		n->Labeled.stmt = stmt();
 		return n;
@@ -1216,7 +1283,7 @@ declinit(void)
 	if(tok->k != '{')
 		return assignexpr();
 	expect('{');
-	n = newnode(NINIT, &tok->pos);
+	n = mknode(NINIT, &tok->pos);
 	n->Init.inits = listnew();
 	while(1) {
 		if(tok->k == '}')
@@ -1264,7 +1331,7 @@ preturn(void)
 {   
 	Node *n;
 
-	n = newnode(NRETURN, &tok->pos);
+	n = mknode(NRETURN, &tok->pos);
 	expect(TOKRETURN);
 	if(tok->k != ';')
 		n->Return.expr = expr();
@@ -1293,7 +1360,7 @@ pcontinue(void)
 {
 	Node *n;
 	
-	n = newnode(NGOTO, &tok->pos);
+	n = mknode(NGOTO, &tok->pos);
 	expect(TOKCONTINUE);
 	expect(';');
 	return n;
@@ -1304,7 +1371,7 @@ pbreak(void)
 {
 	Node *n;
 	
-	n = newnode(NGOTO, &tok->pos);
+	n = mknode(NGOTO, &tok->pos);
 	expect(TOKBREAK);
 	expect(';');
 	return n;
@@ -1639,7 +1706,7 @@ unaryexpr(void)
 		next();
 		return mkunop(&t->pos, t->k, castexpr());
 	case TOKSIZEOF:
-		n = newnode(NSIZEOF, &tok->pos);
+		n = mknode(NSIZEOF, &tok->pos);
 		next();
 		if(tok->k == '(' && istypestart(nexttok)) {
 			expect('(');
@@ -1672,13 +1739,13 @@ postexpr(void)
 			next();
 			n2 = expr();
 			expect(']');
-			n3 = newnode(NIDX, &t->pos);
+			n3 = mknode(NIDX, &t->pos);
 			n3->Idx.idx = n2;
 			n3->Idx.operand = n1;
 			n1 = n3;
 			break;
 		case '.':
-			n2 = newnode(NSEL, &tok->pos);
+			n2 = mknode(NSEL, &tok->pos);
 			next();
 			n2->Sel.sel = tok->v;
 			n2->Sel.operand = n1;
@@ -1686,7 +1753,7 @@ postexpr(void)
 			n1 = n2;
 			break;
 		case TOKARROW:
-			n2 = newnode(NSEL, &tok->pos);
+			n2 = mknode(NSEL, &tok->pos);
 			next();
 			n2->Sel.sel = tok->v;
 			n2->Sel.operand = n1;
@@ -1695,7 +1762,7 @@ postexpr(void)
 			n1 = n2;
 			break;
 		case '(':
-			n2 = newnode(NCALL, &tok->pos);
+			n2 = mknode(NCALL, &tok->pos);
 			n2->Call.funclike = n1;
 			n2->Call.args = listnew();
 			next();
@@ -1740,17 +1807,17 @@ primaryexpr(void)
 			errorposf(&tok->pos, "undefined symbol %s", tok->v);
 		t = tok;
 		next();
-		n = newnode(NSYM, &tok->pos);
+		n = mknode(NSYM, &tok->pos);
 		n->Sym.s = sym;
 		n->Sym.n = t->v;
 		return n;
 	case TOKNUM:
-		n = newnode(NNUM, &tok->pos);
+		n = mknode(NNUM, &tok->pos);
 		n->Num.v = tok->v;
 		next();
 		return n;
 	case TOKSTR:
-		n = newnode(NSTR, &tok->pos);
+		n = mknode(NSTR, &tok->pos);
 		n->Str.v = tok->v;
 		next();
 		return n;

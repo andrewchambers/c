@@ -76,17 +76,6 @@ struct SrcPos {
 	int   col;
 };
 
-typedef struct {
-	union {
-		struct {
-
-		} LSym;
-		struct {
-			char *name;
-		} GSym;
-	};
-} Sym;
-
 enum {
 	CVOID,
 	CPRIM,
@@ -148,6 +137,18 @@ struct CTy {
 };
 
 enum {
+	LSYM,
+	GSYM,
+};
+
+typedef struct {
+	int   t;
+	int   offset; // LSYM only.
+	char *name;
+	CTy  *type;
+} Sym;
+
+enum {
 	NFUNC,
 	NLABELED,
 	NWHILE,
@@ -170,6 +171,7 @@ enum {
 	NCALL,
 	NSIZEOF,
 	NIF,
+	NDECL,
 };
 
 typedef struct Node Node;
@@ -183,6 +185,12 @@ struct Node {
 			char *name;
 			Node *body;
 		} Func;
+		struct {
+			int sclass;
+			Vec *names;
+			Vec *types;
+			Vec *inits;
+		} Decl;
 		struct {
 			Node *expr;
 			Node *iftrue;
@@ -219,9 +227,6 @@ struct Node {
 		struct {
 			Vec *stmts;
 		} Block;
-		struct {
-
-		} Decl;
 		struct {
 			int op;
 			Node *l;
