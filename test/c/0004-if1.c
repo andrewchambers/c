@@ -3,7 +3,7 @@ main() {
 	if(0) {
 		return 1;
 	} else if(0) {
-		/* pass */	
+		/* empty */	
 	} else {
 		if(1) {
 			if(0)

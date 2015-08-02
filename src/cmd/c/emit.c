@@ -103,6 +103,29 @@ emitident(Node *n)
 }
 
 static void
+emitif(Node *n)
+{
+	emitstmt(n->If.expr);
+	out("test %%rax, %%rax\n");
+	out("jz %s\n", n->If.lelse);
+	emitstmt(n->If.iftrue);
+	out("%s:\n", n->If.lelse);
+	if(n->If.iffalse)
+		emitstmt(n->If.iffalse);
+}
+
+static void
+emitblock(Node *n)
+{
+	Vec *v;
+	int i;
+
+	v = n->Block.stmts;
+	for(i = 0; i < v->len ; i++)
+		emitstmt(vecget(v, i));
+}
+
+static void
 emitstmt(Node *n)
 {
 	switch(n->t){
@@ -121,6 +144,12 @@ emitstmt(Node *n)
 	case NBINOP:
 		emitbinop(n);
 		return;
+	case NIF:
+		emitif(n);
+		return;
+	case NBLOCK:
+		emitblock(n);
+		return;
 	default:
 		errorf("unimplemented emit stmt %d\n", n->t);
 	}	
@@ -134,7 +163,7 @@ emitglobaldecl(Node *n)
 
 	if(n->Decl.sclass == SCTYPEDEF)
 		return;
-	if(n->Decl.sclass != SCGLOBAL && n->Decl.sclass != SCGLOBAL)
+	if(n->Decl.sclass != SCGLOBAL && n->Decl.sclass != SCSTATIC)
 		abort(); /* Invariant violated */
 	for(i = 0; i < n->Decl.syms->len ; i++) {
 		sym = vecget(n->Decl.syms, i);

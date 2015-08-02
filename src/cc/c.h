@@ -190,6 +190,7 @@ struct Node {
 			Node *expr;
 			Node *iftrue;
 			Node *iffalse;
+			char *lelse;
 		} If;
 		struct {
 			Node *stmt;

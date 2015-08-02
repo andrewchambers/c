@@ -70,6 +70,9 @@ newlabel()
 	int n;
 
 	n = snprintf(0, 0, ".L%d", labelcount);
+	if(n < 0)
+		errorf("internal error\n");
+	n += 1;
 	s = zmalloc(n);
 	snprintf(s, n, ".L%d", labelcount);
 	labelcount++;
@@ -303,6 +306,7 @@ mkif(SrcPos *p, Node *expr, Node *iftrue, Node *iffalse)
 	Node *n;
 	
 	n = mknode(NIF, p);
+	n->If.lelse = newlabel();
 	n->If.expr = expr;
 	n->If.iftrue = iftrue;
 	n->If.iffalse = iffalse;
