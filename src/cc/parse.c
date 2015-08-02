@@ -1804,17 +1804,15 @@ primaryexpr(void)
 {
 	Sym *sym;
 	Node *n;
-	Tok *t;
 	
 	switch (tok->k) {
 	case TOKIDENT:
 		sym = lookup(vars, tok->v);
 		if(!sym)
 			errorposf(&tok->pos, "undefined symbol %s", tok->v);
-		t = tok;
-		next();
 		n = mknode(NIDENT, &tok->pos);
 		n->Ident.sym = sym;
+		next();
 		return n;
 	case TOKNUM:
 		n = mknode(NNUM, &tok->pos);

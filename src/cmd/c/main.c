@@ -13,8 +13,6 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	Node *n;
-
 	if (argc != 2)
 		usage();
 	cppinit(argv[1]);
