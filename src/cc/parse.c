@@ -61,6 +61,20 @@ static Map *types[MAXSCOPES];
 static Map *vars[MAXSCOPES];
 
 int localoffset;
+int labelcount;
+
+char *
+newlabel()
+{
+	char *s;
+	int n;
+
+	n = sprintf(0, ".L%d", labelcount);
+	s = zmalloc(n);
+	sprintf(s, ".L%d", labelcount);
+	labelcount++;
+	return s;
+}
 
 static void
 popscope()
@@ -161,15 +175,13 @@ mknode(int type, SrcPos *p)
 }
 
 static Node *
-mkdecl(SrcPos *p, int sclass, Vec *names, Vec *types, Vec *inits)
+mkdecl(SrcPos *p, int sclass, Vec *syms)
 {
 	Node *n;
 
 	n = mknode(NDECL, p);
 	n->Decl.sclass = sclass;
-	n->Decl.names = names;
-	n->Decl.types = types;
-	n->Decl.inits = inits;
+	n->Decl.syms = syms;
 	return n;
 }
 
@@ -580,10 +592,10 @@ params(CTy *fty)
 }
 
 static void
-definetype(SrcPos *pos, char *name, CTy *ty)
+definetype(char *name, Sym *sym)
 {
 	/* Handle valid redefines */
-	if(!define(types, name, ty)) {
+	if(!define(types, name, sym)) {
 		/* TODO: 
 		 Check if types are compatible.
 		 errorpos(pos, "redefinition of type %s", name);
@@ -593,7 +605,7 @@ definetype(SrcPos *pos, char *name, CTy *ty)
 }
 
 static void
-definesym(SrcPos *pos, char *name, void *sym)
+definesym(char *name, Sym *sym)
 {
    	/* Handle valid redefines */
 	if(!define(vars, name, sym)) {
@@ -606,36 +618,39 @@ definesym(SrcPos *pos, char *name, void *sym)
 }
 
 static Sym *
-localsym(char *name, CTy *t)
+mksym(SrcPos *p, int sclass, char *name, CTy *t)
 {
 	Sym *s;
 
-    s = zmalloc(sizeof(Sym));
-	s->t = LSYM;
+	s = zmalloc(sizeof(Sym));
+	s->pos = p;
+	s->sclass = sclass;
 	s->name = name;
 	s->type = t;
-	s->offset = localoffset;
-	localoffset += 8; // TODO: correct size.
-}
-
-static Sym *
-globalsym(char *name, CTy *t)
-{
-	Sym *s;
-
-    s = zmalloc(sizeof(Sym));
-	s->t = GSYM;
-	s->name = name;
-	s->type = t;
+	switch(sclass) {
+	case SCGLOBAL:
+		s->label = name;
+		break;
+	case SCSTATIC:
+		s->label = newlabel();
+		break;
+	case SCAUTO:
+		if(isglobal())
+			errorposf(p, "automatic storage outside of function");
+		s->offset = localoffset;
+		localoffset += 8; // TODO: correct size.
+		break;
+	default:
+		errorf("internal error");
+	}
+	return s;
 }
 
 static Node *
 decl()
 {
-	int i;
 	int sclass;
 	char *name;
-	Sym  *sym;
 	CTy  *basety;
 	CTy  *type;
 	SrcPos *pos;
@@ -643,20 +658,35 @@ decl()
 	Node *init;
 	Node *fbody;
 	NameTy *nt;
-	Vec *names;
-	Vec *types;
-	Vec *inits;
+	Sym  *sym;
+	Vec *syms;
 
 	pos = &tok->pos;
-	names = vec();
-	types = vec();
-	inits = vec();
+	syms  = vec();
 	basety = declspecs(&sclass);
-	while(tok->k != ';' || tok->k != TOKEOF) {
+	while(tok->k != ';' && tok->k != TOKEOF) {
 		type = declarator(basety, &name, &init);
-		vecappend(names, name);
-		vecappend(types, type);
-		vecappend(inits, init);
+		switch(sclass){
+		case SCNONE:
+			if(isglobal()) {
+				sclass = SCGLOBAL;
+			} else {
+				sclass = SCAUTO;
+			}
+			break;
+		case SCTYPEDEF:
+			if(init)
+				errorposf(pos, "typedef cannot have an initializer");
+			break;
+		}
+		if(!name)
+			errorposf(pos, "decl needs to specify a name");
+		sym = mksym(pos, sclass, name, type);
+		vecappend(syms, sym);
+		if(sclass == SCTYPEDEF)
+			definetype(name, sym);
+		else
+			definesym(name, sym);
 		if(isglobal() && tok->k == '{') {
 			localoffset = 0;
 			if(type->t != CFUNC) 
@@ -668,9 +698,8 @@ decl()
 			pushscope();
 			for(e = type->Func.params->head; e != 0; e = e->next) {
 				nt = e->v;
-				if(nt->name) {
-					definesym(pos, nt->name, "TODO");
-				}
+				if(nt->name)
+					definesym(nt->name, mksym(pos, SCAUTO, nt->name, type));
 			}
 			fbody = block();
 			popscope();
@@ -678,38 +707,11 @@ decl()
 		}
 		if(tok->k == ',')
 			next();
+		else
+			break;
 	}
 	expect(';');
-	for(i = 0; i < names->len; i++) {
-		name = vecget(names, i);
-		type = vecget(types, i);
-		init = vecget(inits, i);
-		switch(sclass){
-		case SCSTATIC:
-			definesym(pos, name, globalsym(name, type));
-			break;
-		case SCNONE:
-			if(isglobal()) {
-				sclass = SCGLOBAL;
-				definesym(pos, name, globalsym(name, type));
-			} else {
-				sclass = SCAUTO;
-				definesym(pos, name, localsym(name, type));
-			}
-			break;
-		case SCAUTO:
-			if(isglobal())
-				errorposf(pos, "automatic storage outside of function");
-			definesym(pos, name, localsym(name, type));
-			break;
-		case SCTYPEDEF:
-			if(init)
-				errorposf(pos, "typedef cannot have an initializer");
-			definetype(pos, name, type);
-			break;
-		}
-	}
-	return mkdecl(pos, sclass, names, types, inits);
+	return mkdecl(pos, sclass, syms);
 }
 
 static int
@@ -730,6 +732,7 @@ declspecs(int *sclass)
 {
 	CTy *t;
 	SrcPos *pos;
+	Sym *sym;
 	int bits;
 
 	enum {
@@ -748,6 +751,7 @@ declspecs(int *sclass)
 		BITIDENT = 1<<12,
 	};
 
+	t = 0;
 	bits = 0;
 	pos = &tok->pos;
 	*sclass = SCNONE;
@@ -854,7 +858,9 @@ declspecs(int *sclass)
 			next();
 			break;
 		case TOKIDENT:
-			t = lookup(types, tok->v);
+			sym = lookup(types, tok->v);
+			if(sym)
+				t = sym->type;
 			if(t && !bits) {
 				bits |= BITIDENT;
 				next();

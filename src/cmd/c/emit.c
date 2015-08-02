@@ -4,7 +4,7 @@
 #include "ds/ds.h"
 #include "cc/c.h"
 
-static void emitn(Node *n);
+static void emitstmt(Node *n);
 
 static FILE *o;
 
@@ -31,7 +31,7 @@ emitfunc(Node *f)
 	out("movq %%rsp, %%rbp\n");
 	v = f->Func.body->Block.stmts;
 	for(i = 0; i < v->len; i++)
-		emitn(vecget(v, i));
+		emitstmt(vecget(v, i));
 	out("leave\n");
 	out("ret\n");
 }
@@ -39,24 +39,61 @@ emitfunc(Node *f)
 static void
 emitreturn(Node *r)
 {
-	emitn(r->Return.expr);
+	emitstmt(r->Return.expr);
 	out("leave\n");
 	out("ret\n");
 }
 
 static void
-emitn(Node *n)
+emitstmt(Node *n)
 {
 	switch(n->t){
-	case NFUNC:
-		emitfunc(n);
-		return;
 	case NRETURN:
 		emitreturn(n);
 		return;
 	case NNUM:
 		out("movq $%s, %%rax\n", n->Num.v);
 		return;
+	case NBINOP:
+		out("XXX binop\n");
+		return;
+	default:
+		errorf("unimplemented emit stmt\n");
+	}	
+}
+
+static void
+emitglobaldecl(Node *n)
+{
+	int  i;
+	Sym *sym;
+
+	if(n->Decl.sclass == SCTYPEDEF)
+		return;
+	if(n->Decl.sclass != SCGLOBAL && n->Decl.sclass != SCGLOBAL)
+		abort(); /* Invariant violated */
+	for(i = 0; i < n->Decl.syms->len ; i++) {
+		sym = vecget(n->Decl.syms, i);
+		if(sym->sclass == SCGLOBAL)
+			out(".global %s\n", sym->label);
+		out("%s:\n", sym->label);
+		out(".lcomm %s, %d\n", sym->label, 8);
+	}
+
+}
+
+static void
+emitglobal(Node *n)
+{
+	switch(n->t){
+	case NFUNC:
+		emitfunc(n);
+		return;
+	case NDECL:
+		emitglobaldecl(n);
+		return;
+	default:
+		errorf("unimplemented emit global\n");
 	}
 }
 
@@ -67,7 +104,7 @@ emitinit(FILE *out)
 }
 
 void
-emit()
+emit(void)
 {
 	Node *n;
 
@@ -75,6 +112,6 @@ emit()
 		n = parsenext();
 		if(!n)
 			return;
-		emitn(n);
+		emitglobal(n);
 	}
 }

@@ -136,16 +136,13 @@ struct CTy {
 	};
 };
 
-enum {
-	LSYM,
-	GSYM,
-};
-
 typedef struct {
-	int   t;
-	int   offset; // LSYM only.
-	char *name;
-	CTy  *type;
+	SrcPos *pos;
+	int     sclass;
+	CTy    *type;
+	char   *name;
+	char   *label;  /* SCGLOBAL, SCSTATIC. */
+	int     offset; /* SCAUTO only. */
 } Sym;
 
 enum {
@@ -187,9 +184,7 @@ struct Node {
 		} Func;
 		struct {
 			int sclass;
-			Vec *names;
-			Vec *types;
-			Vec *inits;
+			Vec *syms;
 		} Decl;
 		struct {
 			Node *expr;
@@ -304,12 +299,12 @@ void errorposf(SrcPos *, char *, ...);
 void  cppinit(char *);
 char *tokktostr(int);
 Tok  *lex(Lexer *);
-Tok  *pp();
+Tok  *pp(void);
 /* parser functions */
 void  parseinit(void);
 Node *parsenext(void);
 /* backend functions */
 void  emitinit(FILE *);
-void  emit();
+void  emit(void);
 
 
