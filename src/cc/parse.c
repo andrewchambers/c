@@ -637,8 +637,8 @@ mksym(SrcPos *p, int sclass, char *name, CTy *t)
 	case SCAUTO:
 		if(isglobal())
 			errorposf(p, "automatic storage outside of function");
+		localoffset -= 8; // TODO: correct size.
 		s->offset = localoffset;
-		localoffset += 8; // TODO: correct size.
 		break;
 	default:
 		errorf("internal error");

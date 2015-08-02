@@ -60,6 +60,10 @@ emitassign(Node *l, Node *r)
 			out("leaq %s(%%rip), %%rax\n", sym->label);
 			out("movq %%rbx, (%%rax)\n");
 			break;
+		case SCAUTO:
+			out("leaq %d(%%rbp), %%rax\n", sym->offset);
+			out("movq %%rbx, (%%rax)\n");
+			break;
 		}
 		return;
 	}
@@ -90,6 +94,10 @@ emitident(Node *n)
 		out("leaq %s(%%rip), %%rax\n", sym->label);
 		out("movq (%%rax), %%rax\n");
 		return;
+	case SCAUTO:
+		out("leaq %d(%%rbp), %%rax\n", sym->offset);
+		out("movq (%%rax), %%rax\n");
+		return;
 	}
 	errorf("unimplemented ident\n");
 }
@@ -98,6 +106,9 @@ static void
 emitstmt(Node *n)
 {
 	switch(n->t){
+	case NDECL:
+		/* TODO */
+		return;
 	case NRETURN:
 		emitreturn(n);
 		return;
