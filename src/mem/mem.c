@@ -25,6 +25,6 @@ zstrdup(char *s)
 
 	l = strlen(s) + 1;
 	r = zmalloc(l);
-	strcpy(r, s);
+	strlcpy(r, s, l);
 	return r;
 }

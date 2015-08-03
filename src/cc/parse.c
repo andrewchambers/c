@@ -69,9 +69,9 @@ newlabel()
 	char *s;
 	int n;
 
-	n = sprintf(0, ".L%d", labelcount);
+	n = snprintf(0, 0, ".L%d", labelcount);
 	s = zmalloc(n);
-	sprintf(s, ".L%d", labelcount);
+	snprintf(s, n, ".L%d", labelcount);
 	labelcount++;
 	return s;
 }
