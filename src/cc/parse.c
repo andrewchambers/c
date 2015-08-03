@@ -260,6 +260,8 @@ mkfor(SrcPos *p, Node *init, Node *cond, Node *step, Node *stmt)
 	Node *n;
 	
 	n = mknode(NFOR, p);
+	n->For.lstart = newlabel();
+	n->For.lend = newlabel();
 	n->For.init = init;
 	n->For.cond = cond;
 	n->For.step = step;
@@ -1028,7 +1030,6 @@ static CTy *
 pstruct() 
 {
 	char *tagname;
-	/* TODO: replace with predeclarations */
 	int shoulddefine;
 	int sclass;
 	char *name;
@@ -1283,8 +1284,6 @@ stmt(void)
 		return 0;
 	case '{':
 		return block();
-	case ';':
-		return 0;
 	default:
 		return exprstmt();
 	}
@@ -1335,8 +1334,11 @@ static Node *
 exprstmt(void)
 {
 	Node *n;
-
-	n = expr();
+	
+	n = mknode(NEXPRSTMT, &tok->pos);
+	if(tok->k == ';')
+		return n;
+	n->ExprStmt.expr = expr();
 	expect(';');
 	return n;
 }

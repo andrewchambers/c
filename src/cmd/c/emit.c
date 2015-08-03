@@ -4,7 +4,8 @@
 #include "ds/ds.h"
 #include "cc/c.h"
 
-static void emitstmt(Node *n);
+static void emitexpr(Node *);
+static void emitstmt(Node *);
 
 static FILE *o;
 
@@ -39,7 +40,7 @@ emitfunc(Node *f)
 static void
 emitreturn(Node *r)
 {
-	emitstmt(r->Return.expr);
+	emitexpr(r->Return.expr);
 	out("leave\n");
 	out("ret\n");
 }
@@ -49,7 +50,7 @@ emitassign(Node *l, Node *r)
 {
 	Sym *sym;
 
-	emitstmt(r);
+	emitexpr(r);
 	out("movq %%rax, %%rbx\n");
 	switch(l->t) {
 	case NIDENT:
@@ -83,9 +84,9 @@ emitbinop(Node *n)
 		emitassign(n->Binop.l, n->Binop.r);
 		return;
 	}
-	emitstmt(n->Binop.l);
+	emitexpr(n->Binop.l);
 	out("pushq %%rax\n");
-	emitstmt(n->Binop.r);
+	emitexpr(n->Binop.r);
 	out("movq %%rax, %%rcx\n");
 	out("popq %%rax\n");
 	switch(op) {
@@ -177,7 +178,7 @@ emitident(Node *n)
 static void
 emitif(Node *n)
 {
-	emitstmt(n->If.expr);
+	emitexpr(n->If.expr);
 	out("test %%rax, %%rax\n");
 	out("jz %s\n", n->If.lelse);
 	emitstmt(n->If.iftrue);
@@ -187,10 +188,27 @@ emitif(Node *n)
 }
 
 static void
+emitfor(Node *n)
+{
+	if(n->For.init)
+		emitexpr(n->For.init);
+	out("%s:\n", n->For.lstart);
+	if(n->For.cond)
+		emitexpr(n->For.cond);
+	out("test %%rax, %%rax\n");
+	out("jz %s\n", n->For.lend);
+	emitstmt(n->For.stmt);
+	if(n->For.step)
+		emitexpr(n->For.step);
+	out("jmp %s\n", n->For.lstart);
+	out("%s:\n", n->For.lend);
+}
+
+static void
 emitwhile(Node *n)
 {
 	out("%s:\n", n->While.lstart);
-	emitstmt(n->While.expr);
+	emitexpr(n->While.expr);
 	out("test %%rax, %%rax\n");
 	out("jz %s\n", n->While.lend);
 	emitstmt(n->While.stmt);
@@ -204,7 +222,7 @@ emitdowhile(Node *n)
 	out("%s:\n", n->DoWhile.lstart);
 	emitstmt(n->DoWhile.stmt);
 	out("%s:\n", n->DoWhile.lcond);
-	emitstmt(n->DoWhile.expr);
+	emitexpr(n->DoWhile.expr);
 	out("test %%rax, %%rax\n");
 	out("jz %s\n", n->DoWhile.lend);
 	out("jmp %s\n", n->DoWhile.lstart);
@@ -223,15 +241,9 @@ emitblock(Node *n)
 }
 
 static void
-emitstmt(Node *n)
+emitexpr(Node *n)
 {
 	switch(n->t){
-	case NDECL:
-		/* TODO */
-		return;
-	case NRETURN:
-		emitreturn(n);
-		return;
 	case NNUM:
 		out("movq $%s, %%rax\n", n->Num.v);
 		return;
@@ -241,17 +253,39 @@ emitstmt(Node *n)
 	case NBINOP:
 		emitbinop(n);
 		return;
+	default:
+		errorf("unimplemented emit expr %d\n", n->t);
+	}
+}
+
+static void
+emitstmt(Node *n)
+{
+	switch(n->t){
+	case NDECL:
+		/* TODO */
+		return;
+	case NRETURN:
+		emitreturn(n);
+		return;
 	case NIF:
 		emitif(n);
 		return;
 	case NWHILE:
 		emitwhile(n);
 		return;
+	case NFOR:
+		emitfor(n);
+		return;	
 	case NDOWHILE:
 		emitdowhile(n);
 		return;	
 	case NBLOCK:
 		emitblock(n);
+		return;
+	case NEXPRSTMT:
+		if(n->ExprStmt.expr)
+			emitexpr(n->ExprStmt.expr);
 		return;
 	default:
 		errorf("unimplemented emit stmt %d\n", n->t);
@@ -272,7 +306,6 @@ emitglobaldecl(Node *n)
 		sym = vecget(n->Decl.syms, i);
 		out(".comm %s, %d, %d\n", sym->label, 8, 8);
 	}
-
 }
 
 static void

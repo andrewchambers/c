@@ -169,6 +169,7 @@ enum {
 	NSIZEOF,
 	NIF,
 	NDECL,
+	NEXPRSTMT,
 };
 
 typedef struct Node Node;
@@ -187,12 +188,14 @@ struct Node {
 			Vec *syms;
 		} Decl;
 		struct {
+			char *lelse;
 			Node *expr;
 			Node *iftrue;
 			Node *iffalse;
-			char *lelse;
 		} If;
 		struct {
+			char *lstart;
+			char *lend;
 			Node *init;
 			Node *cond;
 			Node *step;
@@ -266,6 +269,9 @@ struct Node {
 			char *sel;
 			Node *operand;
 		} Sel;
+		struct {
+			Node *expr;
+		} ExprStmt;
 		struct {
 			Node *funclike;
 			List *args;
