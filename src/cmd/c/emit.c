@@ -283,6 +283,9 @@ emitstmt(Node *n)
 	case NBLOCK:
 		emitblock(n);
 		return;
+	case NGOTO:
+		out("jmp %s\n", n->Goto.l);
+		return;
 	case NEXPRSTMT:
 		if(n->ExprStmt.expr)
 			emitexpr(n->ExprStmt.expr);

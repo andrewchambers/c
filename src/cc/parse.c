@@ -127,6 +127,22 @@ popcontbrk(void)
 		errorf("internal error\n");
 }
 
+static char *
+curcont()
+{
+	if(contdepth == 0)
+		return 0;
+	return conts[contdepth - 1];
+}
+
+static char *
+curbrk()
+{
+	if(brkdepth == 0)
+		return 0;
+	return breaks[brkdepth - 1];
+}
+
 static void
 pushbrk(char *lbreak)
 {
@@ -1436,9 +1452,16 @@ preturn(void)
 static Node *
 pcontinue(void)
 {
+	SrcPos *pos;
 	Node *n;
+	char *l;
 	
-	n = mknode(NGOTO, &tok->pos);
+	pos = &tok->pos;
+	n = mknode(NGOTO, pos);
+	l = curcont();
+	if(!l)
+		errorposf(pos, "continue without parent statement");
+	n->Goto.l = l;
 	expect(TOKCONTINUE);
 	expect(';');
 	return n;
@@ -1447,9 +1470,16 @@ pcontinue(void)
 static Node *
 pbreak(void)
 {
+	SrcPos *pos;
 	Node *n;
+	char *l;
 	
-	n = mknode(NGOTO, &tok->pos);
+	pos = &tok->pos;
+	n = mknode(NGOTO, pos);
+	l = curbrk();
+	if(!l)
+		errorposf(pos, "break without parent statement");
+	n->Goto.l = l;
 	expect(TOKBREAK);
 	expect(';');
 	return n;
