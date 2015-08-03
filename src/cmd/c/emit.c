@@ -74,7 +74,7 @@ emitassign(Node *l, Node *r)
 static void
 emitbinop(Node *n)
 {
-	int op;
+	int   op;
 	char *lset;
 	char *lafter;
 	char *opc;
@@ -257,7 +257,7 @@ static void
 emitblock(Node *n)
 {
 	Vec *v;
-	int i;
+	int  i;
 
 	v = n->Block.stmts;
 	for(i = 0; i < v->len ; i++)

@@ -76,7 +76,7 @@ char *
 newlabel(void)
 {
 	char *s;
-	int n;
+	int   n;
 
 	n = snprintf(0, 0, ".L%d", labelcount);
 	if(n < 0)
@@ -204,7 +204,7 @@ define(Map *scope[], char *k, void *v)
 static void *
 lookup(Map *scope[], char *k)
 {
-	int i;
+	int   i;
 	void *v;
 	
 	i = nscopes;
@@ -522,7 +522,7 @@ CTy *
 usualarithconv(Node **large, Node **small)
 {   
 	Node **tmp;
-	CTy *t;
+	CTy   *t;
 
 	if(!isarithtype((*large)->type) || !isarithtype((*small)->type))
 		errorf("internal error\n");
@@ -596,9 +596,9 @@ parsenext()
 static void
 params(CTy *fty)
 {
-	int sclass;
-	CTy *t;
-	char *name;
+	int     sclass;
+	CTy    *t;
+	char   *name;
 	SrcPos *pos;
 
 	fty->Func.isvararg = 0;
@@ -772,10 +772,10 @@ issclasstok(Tok *t) {
 static CTy *
 declspecs(int *sclass)
 {
-	CTy *t;
+	CTy    *t;
 	SrcPos *pos;
-	Sym *sym;
-	int bits;
+	Sym    *sym;
+	int     bits;
 
 	enum {
 		BITCHAR = 1<<0,
@@ -977,7 +977,8 @@ declspecs(int *sclass)
 static CTy *
 declarator(CTy *basety, char **name, Node **init) 
 {
-	CTy *t, *subt;
+	CTy *t;
+	CTy *subt;
 
 	while (tok->k == TOKCONST || tok->k == TOKVOLATILE)
 		next();
@@ -1060,11 +1061,11 @@ declaratortail(CTy *basety)
 static CTy *
 pstruct() 
 {
+	int   shoulddefine;
+	int   sclass;
 	char *tagname;
-	int shoulddefine;
-	int sclass;
 	char *name;
-	CTy *basety;
+	CTy  *basety;
 	/* CTy *t; */
 
 	tagname = 0;
@@ -1135,10 +1136,10 @@ static Node *
 pif(void)
 {
 	SrcPos *p;
-	Node *n;
-	Node *e;
-	Node *t;
-	Node *f;
+	Node   *n;
+	Node   *e;
+	Node   *t;
+	Node   *f;
 	
 	p = &tok->pos;
 	expect(TOKIF);
@@ -1164,13 +1165,13 @@ static Node *
 pfor(void)
 {
 	SrcPos *p;
-	Node *n;
-	Node *i;
-	Node *c;
-	Node *s;
-	Node *st;
-	char *lcont;
-	char *lbreak;
+	Node   *n;
+	Node   *i;
+	Node   *c;
+	Node   *s;
+	Node   *st;
+	char   *lcont;
+	char   *lbreak;
 
 	i = 0;
 	c = 0;
@@ -1213,11 +1214,11 @@ static Node *
 pwhile(void)
 {
 	SrcPos *p;
-	Node *n;
-	Node *e;
-	Node *s;
-	char *lcont;
-	char *lbreak;
+	Node   *n;
+	Node   *e;
+	Node   *s;
+	char   *lcont;
+	char   *lbreak;
 	
 	lcont = newlabel();
 	lbreak = newlabel();
@@ -1484,8 +1485,8 @@ static Node *
 pcontinue(void)
 {
 	SrcPos *pos;
-	Node *n;
-	char *l;
+	Node   *n;
+	char   *l;
 	
 	pos = &tok->pos;
 	n = mknode(NGOTO, pos);
@@ -1502,8 +1503,8 @@ static Node *
 pbreak(void)
 {
 	SrcPos *pos;
-	Node *n;
-	char *l;
+	Node   *n;
+	char   *l;
 	
 	pos = &tok->pos;
 	n = mknode(NGOTO, pos);
@@ -1560,7 +1561,7 @@ pcase(void)
 static Node *
 block(void)
 {
-	Vec *v;
+	Vec    *v;
 	SrcPos *p;
 
 	v = vec();
@@ -1578,8 +1579,8 @@ static Node *
 expr(void)
 {
 	SrcPos *p;
-	Vec *v;
-	Node *n;
+	Vec    *v;
+	Node   *n;
 
 	p = &tok->pos;
 	n = assignexpr();
@@ -1817,9 +1818,9 @@ mulexpr(void)
 static Node *
 castexpr(void)
 {
-	Tok *t;
+	Tok  *t;
 	Node *o;
-	CTy *ty;
+	CTy  *ty;
 	
 	if(tok->k == '(' && istypestart(nexttok)) {
 		t = tok;
@@ -1835,8 +1836,8 @@ castexpr(void)
 static CTy *
 typename(void)
 {
-	int sclass;
-	CTy *t;
+	int   sclass;
+	CTy  *t;
 	char *name;
 	
 	t = declspecs(&sclass);
@@ -1847,8 +1848,8 @@ typename(void)
 static Node *
 unaryexpr(void)
 {
-	Tok *t;
-	CTy * ty;
+	Tok  *t;
+	CTy  *ty;
 	Node *n;
 
 	switch (tok->k) {
@@ -1885,8 +1886,8 @@ unaryexpr(void)
 static Node *
 postexpr(void)
 {
-	int done;
-	Tok *t;
+	int   done;
+	Tok  *t;
 	Node *n1;
 	Node *n2;
 	Node *n3;
@@ -1957,7 +1958,7 @@ postexpr(void)
 static Node *
 primaryexpr(void) 
 {
-	Sym *sym;
+	Sym  *sym;
 	Node *n;
 	
 	switch (tok->k) {
