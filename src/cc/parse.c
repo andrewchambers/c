@@ -1336,8 +1336,10 @@ exprstmt(void)
 	Node *n;
 	
 	n = mknode(NEXPRSTMT, &tok->pos);
-	if(tok->k == ';')
+	if(tok->k == ';') {
+		next();
 		return n;
+	}
 	n->ExprStmt.expr = expr();
 	expect(';');
 	return n;
