@@ -155,6 +155,7 @@ enum {
 	NBLOCK,
 	NUNOP,
 	NCAST,
+	NCASE,
 	NCOMMA,
 	NINIT,
 	NRETURN,
@@ -219,7 +220,13 @@ struct Node {
 			char *ldefault;
 			Node *expr;
 			Node *stmt;
+			Vec  *cases;
 		} Switch;
+		struct {
+			char *l;
+			Node *expr;
+			Node *stmt;
+		} Case;
 		struct {
 			char *l;
 			Node *stmt;

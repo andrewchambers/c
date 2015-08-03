@@ -47,7 +47,6 @@ static CTy  *typename(void);
 static CTy  *declarator(CTy *, char **name, Node **init);
 static CTy  *directdeclarator(CTy *, char **name); 
 static CTy  *declaratortail(CTy *);
-
 static void  expect(int);
 
 Tok *tok;
@@ -105,7 +104,7 @@ popswitch(void)
 }
 
 static Node *
-getswitch(void)
+curswitch(void)
 {
 	if(switchdepth == 0)
 		return 0;
@@ -1289,6 +1288,7 @@ pswitch(void)
 	n = mknode(NSWITCH, p);
 	n->Switch.lend = lbreak;
 	n->Switch.expr = e;
+	n->Switch.cases = vec();
 	pushbrk(lbreak);
 	pushswitch(n);
 	s = stmt();
@@ -1356,19 +1356,24 @@ isdeclstart(Tok *t)
 static Node *
 declorstmt()
 {
-	Node *n;
-	Node *label;
-	Tok  *t;
-
 	if(isdeclstart(tok))
 		return decl();
+	return stmt();
+}
+
+static Node *
+stmt(void)
+{
+	Tok  *t;
+	Node *n;
+	char *label;
+
 	if(tok->k == TOKIDENT && nexttok->k == ':') {
 		t = tok;
 		next();
 		next();
 		n = mknode(NLABELED, &t->pos);
-		/* TODO make label. */
-		n->Labeled.stmt = declorstmt();
+		n->Labeled.stmt = stmt();
 		n->Labeled.l = newlabel();
 		label = mapget(labels, t->v);
 		if(label)
@@ -1376,12 +1381,6 @@ declorstmt()
 		mapset(labels, t->v, n->Labeled.l);
 		return n;
 	}
-	return stmt();
-}
-
-static Node *
-stmt(void)
-{
 	switch(tok->k) {
 	case TOKIF:
 		return pif();
@@ -1520,20 +1519,42 @@ pbreak(void)
 static Node *
 pdefault(void)
 {
+	SrcPos *pos;
+	Node   *n;
+	Node   *s;
+	char   *l;
+
+	pos = &tok->pos;
+	l = newlabel();
+	n = mknode(NLABELED, pos);
+	n->Labeled.l = l;
+	s = curswitch();
+	if(s->Switch.ldefault)
+		errorposf(pos, "switch already has default");
+	s->Switch.ldefault = l;
 	expect(TOKDEFAULT);
 	expect(':');
-	stmt();
-	return 0;
+	n->Labeled.stmt = stmt();
+	return n;
 }
 
 static Node *
 pcase(void)
 {
+	SrcPos *pos;
+	Node   *n;
+	Node   *s;
+
+	pos = &tok->pos;
+	s = curswitch();
 	expect(TOKCASE);
-	constexpr();
+	n = mknode(NCASE, pos);
+	n->Case.expr = constexpr();
 	expect(':');
-	stmt();
-	return 0;
+	n->Case.l = newlabel();
+	n->Case.stmt = stmt();
+	vecappend(s->Switch.cases, n);
+	return n;
 }
 
 static Node *

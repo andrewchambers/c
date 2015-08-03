@@ -230,6 +230,30 @@ emitdowhile(Node *n)
 }
 
 static void
+emitswitch(Node *n)
+{
+	int   i;
+	Node *c;
+
+	emitexpr(n->Switch.expr);
+	for(i = 0; i < n->Switch.cases->len; i++) {
+		c = vecget(n->Switch.cases, i);
+		if(c->Case.expr->t != NNUM)
+			errorposf(&c->pos, "unimplemented");
+		out("mov $%s, %%rcx\n", c->Case.expr->Num.v);
+		out("cmp %%rax, %%rcx\n");
+		out("je %s\n", c->Case.l);
+	}
+	if(n->Switch.ldefault) {
+		out("jmp %s\n", n->Switch.ldefault);
+	} else {
+		out("jmp %s\n", n->Switch.lend);
+	}
+	emitstmt(n->Switch.stmt);
+	out("%s:\n", n->Switch.lend);
+}
+
+static void
 emitblock(Node *n)
 {
 	Vec *v;
@@ -276,15 +300,22 @@ emitstmt(Node *n)
 		return;
 	case NFOR:
 		emitfor(n);
-		return;	
+		return;
 	case NDOWHILE:
 		emitdowhile(n);
-		return;	
+		return;
 	case NBLOCK:
 		emitblock(n);
 		return;
+	case NSWITCH:
+		emitswitch(n);
+		return;
 	case NGOTO:
 		out("jmp %s\n", n->Goto.l);
+		return;
+	case NCASE:
+		out("%s:\n", n->Case.l);
+		emitstmt(n->Case.stmt);
 		return;
 	case NLABELED:
 		out("%s:\n", n->Labeled.l);
