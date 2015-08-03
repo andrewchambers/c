@@ -54,17 +54,24 @@ Tok *tok;
 Tok *nexttok;
 
 #define MAXSCOPES 1024
-
 static int nscopes;
 static Map *tags[MAXSCOPES];
 static Map *types[MAXSCOPES];
 static Map *vars[MAXSCOPES];
 
+#define MAXLABELDEPTH 2048
+static int   switchdepth;
+static int   brkdepth;
+static int   contdepth;
+static char *breaks[MAXLABELDEPTH];
+static char *conts[MAXLABELDEPTH];
+static Node *switches[MAXLABELDEPTH];
+
 int localoffset;
 int labelcount;
 
 char *
-newlabel()
+newlabel(void)
 {
 	char *s;
 	int n;
@@ -80,7 +87,64 @@ newlabel()
 }
 
 static void
-popscope()
+pushswitch(Node *n)
+{
+	switches[switchdepth] = n;
+	switchdepth += 1;
+}
+
+static void
+popswitch(void)
+{
+	switchdepth -= 1;
+	if(switchdepth < 0)
+		errorf("internal error\n");
+}
+
+static Node *
+getswitch(void)
+{
+	if(switchdepth == 0)
+		return 0;
+	return switches[switchdepth - 1];
+}
+
+static void
+pushcontbrk(char *lcont, char *lbreak)
+{
+	conts[contdepth] = lcont;
+	breaks[brkdepth] = lbreak;
+	brkdepth += 1;
+	contdepth += 1;
+}
+
+static void
+popcontbrk(void)
+{
+	brkdepth -= 1;
+	contdepth -= 1;
+	if(brkdepth < 0 || contdepth < 0)
+		errorf("internal error\n");
+}
+
+static void
+pushbrk(char *lbreak)
+{
+	breaks[brkdepth] = lbreak;
+	brkdepth += 1;
+}
+
+static void
+popbrk(void)
+{
+	brkdepth -= 1;
+	if(brkdepth < 0)
+		errorf("internal error\n");
+}
+
+
+static void
+popscope(void)
 {
 	nscopes -= 1;
 	if(nscopes < 0)
@@ -91,7 +155,7 @@ popscope()
 }
 
 static void
-pushscope()
+pushscope(void)
 {
 	vars[nscopes] = map();
 	tags[nscopes] = map();
@@ -102,7 +166,7 @@ pushscope()
 }
 
 static int
-isglobal()
+isglobal(void)
 {
 	return nscopes == 1;
 }
@@ -251,72 +315,6 @@ mkcast(SrcPos *p, Node *o, CTy *to)
 	n = mknode(NCAST, p);
 	n->type = to;
 	n->Cast.operand = o;
-	return n;
-}
-
-static Node *
-mkfor(SrcPos *p, Node *init, Node *cond, Node *step, Node *stmt)
-{
-	Node *n;
-	
-	n = mknode(NFOR, p);
-	n->For.lstart = newlabel();
-	n->For.lend = newlabel();
-	n->For.init = init;
-	n->For.cond = cond;
-	n->For.step = step;
-	n->For.stmt = stmt;
-	return n;
-}
-
-static Node *
-mkwhile(SrcPos *p, Node *expr, Node *stmt)
-{
-	Node *n;
-	
-	n = mknode(NWHILE, p);
-	n->While.lstart = newlabel();
-	n->While.lend = newlabel();
-	n->While.expr = expr;
-	n->While.stmt = stmt;
-	return n;
-}
-
-static Node *
-mkdowhile(SrcPos *p, Node *expr, Node *stmt)
-{
-	Node *n;
-	
-	n = mknode(NDOWHILE, p);
-	n->DoWhile.lstart = newlabel();
-	n->DoWhile.lcond = newlabel();
-	n->DoWhile.lend = newlabel();
-	n->DoWhile.expr = expr;
-	n->DoWhile.stmt = stmt;
-	return n;
-}
-
-static Node *
-mkswitch(SrcPos *p, Node *expr, Node *stmt)
-{
-	Node *n;
-	
-	n = mknode(NSWITCH, p);
-	n->DoWhile.expr = expr;
-	n->DoWhile.stmt = stmt;
-	return n;
-}
-
-static Node *
-mkif(SrcPos *p, Node *expr, Node *iftrue, Node *iffalse)
-{
-	Node *n;
-	
-	n = mknode(NIF, p);
-	n->If.lelse = newlabel();
-	n->If.expr = expr;
-	n->If.iftrue = iftrue;
-	n->If.iffalse = iffalse;
 	return n;
 }
 
@@ -560,6 +558,9 @@ expect(int kind)
 void
 parseinit()
 {
+	switchdepth = 0;
+	brkdepth = 0;
+	contdepth = 0;
 	nscopes = 0;
 	pushscope();
 	next();
@@ -1104,6 +1105,7 @@ static Node *
 pif(void)
 {
 	SrcPos *p;
+	Node *n;
 	Node *e;
 	Node *t;
 	Node *f;
@@ -1120,22 +1122,32 @@ pif(void)
 		expect(TOKELSE);
 		f = stmt();
 	}
-	return mkif(p, e, t, f);
+	n = mknode(NIF, p);
+	n->If.lelse = newlabel();
+	n->If.expr = e;
+	n->If.iftrue = t;
+	n->If.iffalse = f;
+	return n;
 }
 
 static Node *
 pfor(void)
 {
 	SrcPos *p;
+	Node *n;
 	Node *i;
 	Node *c;
 	Node *s;
 	Node *st;
+	char *lcont;
+	char *lbreak;
 
 	i = 0;
 	c = 0;
 	s = 0;
 	st = 0;
+	lcont = newlabel();
+	lbreak = newlabel();
 	p = &tok->pos;
 	expect(TOKFOR);
 	expect('(');
@@ -1154,42 +1166,105 @@ pfor(void)
 	if(tok->k != ')')
 		s = expr();
 	expect(')');
+	pushcontbrk(lcont, lbreak);
 	st = stmt();
-	return mkfor(p, i, c, s, st);
+	popcontbrk();
+	n = mknode(NFOR, p);
+	n->For.lstart = lcont;
+	n->For.lend = lbreak;
+	n->For.init = i;
+	n->For.cond = c;
+	n->For.step = s;
+	n->For.stmt = st;
+	return n;
 }
 
 static Node *
 pwhile(void)
 {
 	SrcPos *p;
+	Node *n;
 	Node *e;
 	Node *s;
+	char *lcont;
+	char *lbreak;
 	
+	lcont = newlabel();
+	lbreak = newlabel();
 	p = &tok->pos;	
 	expect(TOKWHILE);
 	expect('(');
 	e = expr();
 	expect(')');
+	pushcontbrk(lcont, lbreak);
 	s = stmt();
-	return mkwhile(p, e, s);
+	popcontbrk();
+	n = mknode(NWHILE, p);
+	n->While.lstart = lcont;
+	n->While.lend = lbreak;
+	n->While.expr = e;
+	n->While.stmt = s;
+	return n;
 }
 
 static Node *
 dowhile(void)
 {
 	SrcPos *p;
+	Node *n;
 	Node *e;
 	Node *s;
-
+	char *lstart;
+	char *lcont;
+	char *lbreak;
+	
+	lstart = newlabel();
+	lcont = newlabel();
+	lbreak = newlabel();
 	p = &tok->pos;
 	expect(TOKDO);
+	pushcontbrk(lcont, lbreak);
 	s = stmt();
+	popcontbrk();
 	expect(TOKWHILE);
 	expect('(');
 	e = expr();
 	expect(')');
 	expect(';');
-	return mkdowhile(p, e, s);
+	n = mknode(NDOWHILE, p);
+	n->DoWhile.lstart = lstart;
+	n->DoWhile.lcond = lcont;
+	n->DoWhile.lend = lbreak;
+	n->DoWhile.expr = e;
+	n->DoWhile.stmt = s;
+	return n;
+}
+
+static Node *
+pswitch(void)
+{
+	SrcPos *p;
+	Node *n;
+	Node *e;
+	Node *s;
+	char *lbreak;
+	
+	lbreak = newlabel();
+	p = &tok->pos;
+	expect(TOKSWITCH);
+	expect('(');
+	e = expr();
+	expect(')');
+	n = mknode(NSWITCH, p);
+	n->Switch.lend = lbreak;
+	n->Switch.expr = e;
+	pushbrk(lbreak);
+	pushswitch(n);
+	s = stmt();
+	popswitch();
+	popbrk();
+	n->Switch.stmt = s;
+	return n;
 }
 
 static int
@@ -1356,22 +1431,6 @@ preturn(void)
 		n->Return.expr = expr();
 	expect(';');
 	return n;
-}
-
-static Node *
-pswitch(void)
-{
-	SrcPos *p;
-	Node *e;
-	Node *s;
-	
-	p = &tok->pos;
-	expect(TOKSWITCH);
-	expect('(');
-	e = expr();
-	expect(')');
-	s = stmt();
-	return mkswitch(p, e, s);
 }
 
 static Node *

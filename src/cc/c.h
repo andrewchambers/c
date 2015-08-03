@@ -215,6 +215,8 @@ struct Node {
 			Node *stmt;
 		} While;
 		struct {
+			char *lend;
+			char *ldefault;
 			Node *expr;
 			Node *stmt;
 		} Switch;
