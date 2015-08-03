@@ -1,5 +1,6 @@
 int
-main() {
+main()
+{
 	if(0) {
 		return 1;
 	} else if(0) {

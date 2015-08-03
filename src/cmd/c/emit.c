@@ -73,10 +73,82 @@ emitassign(Node *l, Node *r)
 static void
 emitbinop(Node *n)
 {
-	switch(n->Binop.op) {
-	case '=':
+	int op;
+	char *lset;
+	char *lafter;
+	char *opc;
+	
+	op = n->Binop.op;
+	if(op == '=') {
 		emitassign(n->Binop.l, n->Binop.r);
 		return;
+	}
+	emitstmt(n->Binop.l);
+	out("pushq %%rax\n");
+	emitstmt(n->Binop.r);
+	out("movq %%rax, %%rcx\n");
+	out("popq %%rax\n");
+	switch(op) {
+	case '+':
+		out("addq %%rcx, %%rax\n");
+		break;
+	case '-':
+		out("subq %%rcx, %%rax\n");
+		break;
+	case '*':
+		out("imul %%rcx, %%rax\n");
+		break;
+	case '/':
+		out("cqto\n");
+		out("idiv %%rcx\n");
+		break;
+	case '%':
+		out("idiv %%rcx\n");
+		out("mov %%rdx, %%rax\n");
+		break;
+	case '|':
+		out("or %%rcx, %%rax\n");
+		break;
+	case '&':
+		out("and %%rcx, %%rax\n");
+		break;
+	case '^':
+		out("xor %%rcx, %%rax\n");
+		break;
+	case TOKSHR:
+		out("sar %%cl, %%rax\n");
+		break;
+	case TOKSHL:
+		out("sal %%cl, %%rax\n");
+		break;
+	case TOKEQL:
+	case TOKNEQ:
+	case '>':
+	case '<':
+		lset = newlabel();
+		lafter = newlabel();
+		switch(op) {
+		case TOKEQL:
+			opc = "jz";
+			break;
+		case TOKNEQ:
+			opc = "jnz";
+			break;
+		case '<':
+			opc = "jl";
+			break;
+		case '>':
+			opc = "jg";
+			break;
+		}
+		out("cmp %%rcx, %%rax\n");
+		out("%s %s\n", opc, lset);
+		out("movq $0, %%rax\n");
+		out("jmp %s\n", lafter);
+		out("%s:\n", lset);
+		out("movq $1, %%rax\n");
+		out("%s:\n", lafter);
+		break;
 	default:
 		errorf("unimplemented binop\n");
 	}

@@ -303,6 +303,7 @@ Tok  *pp(void);
 /* parser functions */
 void  parseinit(void);
 Node *parsenext(void);
+char *newlabel();
 /* backend functions */
 void  emitinit(FILE *);
 void  emit(void);
