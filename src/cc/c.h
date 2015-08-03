@@ -193,16 +193,21 @@ struct Node {
 			char *lelse;
 		} If;
 		struct {
-			Node *stmt;
-			Node *expr;
-		} DoWhile;
-		struct {
 			Node *init;
 			Node *cond;
 			Node *step;
 			Node *stmt;
 		} For;
 		struct {
+			char *lstart;
+			char *lcond;
+			char *lend;
+			Node *stmt;
+			Node *expr;
+		} DoWhile;
+		struct {
+			char *lstart;
+			char *lend;
 			Node *expr;
 			Node *stmt;
 		} While;

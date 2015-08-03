@@ -273,6 +273,8 @@ mkwhile(SrcPos *p, Node *expr, Node *stmt)
 	Node *n;
 	
 	n = mknode(NWHILE, p);
+	n->While.lstart = newlabel();
+	n->While.lend = newlabel();
 	n->While.expr = expr;
 	n->While.stmt = stmt;
 	return n;
@@ -284,6 +286,9 @@ mkdowhile(SrcPos *p, Node *expr, Node *stmt)
 	Node *n;
 	
 	n = mknode(NDOWHILE, p);
+	n->DoWhile.lstart = newlabel();
+	n->DoWhile.lcond = newlabel();
+	n->DoWhile.lend = newlabel();
 	n->DoWhile.expr = expr;
 	n->DoWhile.stmt = stmt;
 	return n;

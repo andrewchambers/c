@@ -3,10 +3,8 @@ main()
 {
 	int x;
 	
-	x = 0;
-	while(1) {
-		x = x + 1;
-		if (x == 10)
-			return x - 10;
-	}
+	x = 10;
+	while(x)
+		x = x - 1;
+	return x;
 }

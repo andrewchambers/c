@@ -187,6 +187,31 @@ emitif(Node *n)
 }
 
 static void
+emitwhile(Node *n)
+{
+	out("%s:\n", n->While.lstart);
+	emitstmt(n->While.expr);
+	out("test %%rax, %%rax\n");
+	out("jz %s\n", n->While.lend);
+	emitstmt(n->While.stmt);
+	out("jmp %s\n", n->While.lstart);
+	out("%s:\n", n->While.lend);
+}
+
+static void
+emitdowhile(Node *n)
+{
+	out("%s:\n", n->DoWhile.lstart);
+	emitstmt(n->DoWhile.stmt);
+	out("%s:\n", n->DoWhile.lcond);
+	emitstmt(n->DoWhile.expr);
+	out("test %%rax, %%rax\n");
+	out("jz %s\n", n->DoWhile.lend);
+	out("jmp %s\n", n->DoWhile.lstart);
+	out("%s:\n", n->DoWhile.lend);
+}
+
+static void
 emitblock(Node *n)
 {
 	Vec *v;
@@ -219,6 +244,12 @@ emitstmt(Node *n)
 	case NIF:
 		emitif(n);
 		return;
+	case NWHILE:
+		emitwhile(n);
+		return;
+	case NDOWHILE:
+		emitdowhile(n);
+		return;	
 	case NBLOCK:
 		emitblock(n);
 		return;
