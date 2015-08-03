@@ -67,6 +67,9 @@ static char *breaks[MAXLABELDEPTH];
 static char *conts[MAXLABELDEPTH];
 static Node *switches[MAXLABELDEPTH];
 
+Map *labels;
+Vec *gotos;
+
 int localoffset;
 int labelcount;
 
@@ -677,17 +680,20 @@ mksym(SrcPos *p, int sclass, char *name, CTy *t)
 static Node *
 decl()
 {
-	int sclass;
-	char *name;
-	CTy  *basety;
-	CTy  *type;
-	SrcPos *pos;
+	int      sclass;
+	int      i;
+	char    *name;
+	char    *l;
+	CTy     *basety;
+	CTy     *type;
+	SrcPos  *pos;
 	ListEnt *e;
-	Node *init;
-	Node *fbody;
-	NameTy *nt;
-	Sym  *sym;
-	Vec *syms;
+	Node    *init;
+	Node    *fbody;
+	NameTy  *nt;
+	Sym     *sym;
+	Vec     *syms;
+	Node    *gotofixup;
 
 	pos = &tok->pos;
 	syms  = vec();
@@ -724,6 +730,8 @@ decl()
 			if(!name)
 				errorposf(pos, "function declaration requires a name");
 			pushscope();
+			labels = map();
+			gotos = vec();
 			for(e = type->Func.params->head; e != 0; e = e->next) {
 				nt = e->v;
 				if(nt->name)
@@ -731,6 +739,13 @@ decl()
 			}
 			fbody = block();
 			popscope();
+			for(i = 0 ; i < gotos->len ; i++) {
+				gotofixup = vecget(gotos, i);
+				l = mapget(labels, gotofixup->Goto.name);
+				if(!l)
+					errorposf(&gotofixup->pos, "goto target does not exist");
+				gotofixup->Goto.l = l;
+			}
 			return mkfunc(pos, type, name, fbody);
 		}
 		if(tok->k == ',')
@@ -1283,6 +1298,20 @@ pswitch(void)
 	return n;
 }
 
+static Node *
+pgoto()
+{
+	Node *n;
+
+	n = mknode(NGOTO, &tok->pos);
+	expect(TOKGOTO);
+	n->Goto.name = tok->v;
+	expect(TOKIDENT);
+	expect(';');
+	vecappend(gotos, n);
+	return n;
+}
+
 static int
 istypestart(Tok *t)
 {
@@ -1328,7 +1357,8 @@ static Node *
 declorstmt()
 {
 	Node *n;
-	Tok *t;
+	Node *label;
+	Tok  *t;
 
 	if(isdeclstart(tok))
 		return decl();
@@ -1338,7 +1368,12 @@ declorstmt()
 		next();
 		n = mknode(NLABELED, &t->pos);
 		/* TODO make label. */
-		n->Labeled.stmt = stmt();
+		n->Labeled.stmt = declorstmt();
+		n->Labeled.l = newlabel();
+		label = mapget(labels, t->v);
+		if(label)
+			errorposf(&t->pos, "redefinition of label %s", t->v);
+		mapset(labels, t->v, n->Labeled.l);
 		return n;
 	}
 	return stmt();
@@ -1369,10 +1404,7 @@ stmt(void)
 	case TOKCONTINUE:
 		return pcontinue();
 	case TOKGOTO:
-		next();
-		expect(TOKIDENT);
-		expect(';');
-		return 0;
+		return pgoto();
 	case '{':
 		return block();
 	default:

@@ -258,6 +258,7 @@ struct Node {
 		} Str;
 		struct {
 			char *l;
+			char *name;
 		} Goto;
 		struct {
 			Sym  *sym;

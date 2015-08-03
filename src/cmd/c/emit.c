@@ -286,6 +286,10 @@ emitstmt(Node *n)
 	case NGOTO:
 		out("jmp %s\n", n->Goto.l);
 		return;
+	case NLABELED:
+		out("%s:\n", n->Labeled.l);
+		emitstmt(n->Labeled.stmt);
+		return;
 	case NEXPRSTMT:
 		if(n->ExprStmt.expr)
 			emitexpr(n->ExprStmt.expr);
