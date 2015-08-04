@@ -4,7 +4,6 @@
 #include "ds/ds.h"
 #include "c.h"
 
-Node  *parse(void);
 static Node *stmt(void);
 static Node *pif(void);
 static Node *pfor(void);
@@ -321,7 +320,7 @@ mkunop(SrcPos *p, int op, Node *o)
 
 	n = mknode(NUNOP, p);
 	n->Unop.op = op;
-	n->Unop.operand = 0;
+	n->Unop.operand = o;
 	return n;
 }
 
@@ -1859,7 +1858,6 @@ unaryexpr(void)
 		next();
 		return mkunop(&tok->pos, t->k, unaryexpr());
 	case '*':
-	case '+':
 	case '-':
 	case '!':
 	case '~':

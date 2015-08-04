@@ -25,6 +25,7 @@ emitfunc(Node *f)
 {
 	Vec *v;
 	int i;
+	
 	out(".text\n");
 	out(".globl %s\n", f->Func.name);
 	out("%s:\n", f->Func.name);
@@ -156,6 +157,30 @@ emitbinop(Node *n)
 }
 
 static void
+emitunop(Node *n)
+{
+	switch(n->Unop.op) {
+	case '~':
+		emitexpr(n->Unop.operand);
+		out("notq %%rax\n");
+		break;
+	case '!':
+		emitexpr(n->Unop.operand);
+		out("xorq %%rcx, %%rcx\n");
+		out("testq %%rax, %%rax\n");
+		out("setnz %%cl\n");
+		out("movq %%rcx, %%rax\n");
+		break;
+	case '-':
+		emitexpr(n->Unop.operand);
+		out("neg %%rax\n");
+		break;
+	default:
+		errorf("unimplemented unop %d\n", n->Unop.op);
+	}
+}
+
+static void
 emitident(Node *n)
 {
 	Sym *sym;
@@ -166,13 +191,15 @@ emitident(Node *n)
 	case SCGLOBAL:
 		out("leaq %s(%%rip), %%rax\n", sym->label);
 		out("movq (%%rax), %%rax\n");
-		return;
+		break;
 	case SCAUTO:
 		out("leaq %d(%%rbp), %%rax\n", sym->offset);
 		out("movq (%%rax), %%rax\n");
-		return;
+		break;
+	default:
+		errorf("unimplemented ident\n");
 	}
-	errorf("unimplemented ident\n");
+	
 }
 
 static void
@@ -270,13 +297,16 @@ emitexpr(Node *n)
 	switch(n->t){
 	case NNUM:
 		out("movq $%s, %%rax\n", n->Num.v);
-		return;
+		break;
 	case NIDENT:
 		emitident(n);
-		return;
+		break;
+	case NUNOP:
+		emitunop(n);
+		break;
 	case NBINOP:
 		emitbinop(n);
-		return;
+		break;
 	default:
 		errorf("unimplemented emit expr %d\n", n->t);
 	}
@@ -288,43 +318,43 @@ emitstmt(Node *n)
 	switch(n->t){
 	case NDECL:
 		/* TODO */
-		return;
+		break;
 	case NRETURN:
 		emitreturn(n);
-		return;
+		break;
 	case NIF:
 		emitif(n);
-		return;
+		break;
 	case NWHILE:
 		emitwhile(n);
-		return;
+		break;
 	case NFOR:
 		emitfor(n);
-		return;
+		break;
 	case NDOWHILE:
 		emitdowhile(n);
-		return;
+		break;
 	case NBLOCK:
 		emitblock(n);
-		return;
+		break;
 	case NSWITCH:
 		emitswitch(n);
-		return;
+		break;
 	case NGOTO:
 		out("jmp %s\n", n->Goto.l);
-		return;
+		break;
 	case NCASE:
 		out("%s:\n", n->Case.l);
 		emitstmt(n->Case.stmt);
-		return;
+		break;
 	case NLABELED:
 		out("%s:\n", n->Labeled.l);
 		emitstmt(n->Labeled.stmt);
-		return;
+		break;
 	case NEXPRSTMT:
 		if(n->ExprStmt.expr)
 			emitexpr(n->ExprStmt.expr);
-		return;
+		break;
 	default:
 		errorf("unimplemented emit stmt %d\n", n->t);
 	}	
@@ -352,10 +382,10 @@ emitglobal(Node *n)
 	switch(n->t){
 	case NFUNC:
 		emitfunc(n);
-		return;
+		break;
 	case NDECL:
 		emitglobaldecl(n);
-		return;
+		break;
 	default:
 		errorf("unimplemented emit global\n");
 	}
