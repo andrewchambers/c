@@ -55,7 +55,28 @@ emitloadreg(int sz)
 		out("movsbq (%%rax), %%rax\n");
 		break;
 	default:
-		errorf("unimplemented emitloadreg\n");
+		errorf("internal error emitloadreg\n");
+	}
+}
+
+static void
+emitstorereg(int sz)
+{
+	switch(sz) {
+	case 8:
+		out("movq %%rbx, (%%rax)\n");
+		break;
+	case 4:
+		out("movl %%ebx, (%%rax)\n");
+		break;
+	case 2:
+		out("movw %%bx, (%%rax)\n");
+		break;
+	case 1:
+		out("movb %%bl, (%%rax)\n");
+		break;
+	default:
+		errorf("internal emitstorereg\n");
 	}
 }
 
@@ -81,7 +102,7 @@ emitassign(Node *l, Node *r)
 		out("pushq %%rbx\n");
 		emitexpr(l->Unop.operand);
 		out("popq %%rbx\n");
-		out("movq %%rbx, (%%rax)\n");
+		emitstorereg(8);
 		break;
 	case NIDENT:
 		sym = l->Ident.sym;
@@ -89,11 +110,11 @@ emitassign(Node *l, Node *r)
 		case SCSTATIC:
 		case SCGLOBAL:
 			out("leaq %s(%%rip), %%rax\n", sym->label);
-			out("movq %%rbx, (%%rax)\n");
+			emitstorereg(8);
 			break;
 		case SCAUTO:
 			out("leaq %d(%%rbp), %%rax\n", sym->offset);
-			out("movq %%rbx, (%%rax)\n");
+			emitstorereg(8);
 			break;
 		}
 		break;
