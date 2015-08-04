@@ -54,6 +54,14 @@ emitassign(Node *l, Node *r)
 	emitexpr(r);
 	out("movq %%rax, %%rbx\n");
 	switch(l->t) {
+	case NUNOP:
+		if(l->Unop.op != '*')
+			errorf("internal error");
+		out("pushq %%rbx\n");
+		emitexpr(l->Unop.operand);
+		out("popq %%rbx\n");
+		out("movq %%rbx, (%%rax)\n");
+		break;
 	case NIDENT:
 		sym = l->Ident.sym;
 		switch(sym->sclass) {
@@ -67,9 +75,33 @@ emitassign(Node *l, Node *r)
 			out("movq %%rbx, (%%rax)\n");
 			break;
 		}
-		return;
+		break;
+	default:
+		errorf("unimplemented emitassign\n");
 	}
-	errorf("unimplemented emit assign\n");
+}
+
+static void
+emitaddr(Node *n)
+{
+	Sym *sym;
+
+	switch(n->t) {
+	case NIDENT:
+		sym = n->Ident.sym;
+		switch(sym->sclass) {
+		case SCSTATIC:
+		case SCGLOBAL:
+			out("leaq %s(%%rip), %%rax\n", sym->label);
+			break;
+		case SCAUTO:
+			out("leaq %d(%%rbp), %%rax\n", sym->offset);
+			break;
+		}
+		break;
+	default:
+		errorf("unimplemented emitaddr\n");
+	}
 }
 
 static void
@@ -160,6 +192,13 @@ static void
 emitunop(Node *n)
 {
 	switch(n->Unop.op) {
+	case '*':
+		emitexpr(n->Unop.operand);
+		out("movq (%%rax), %%rax\n");
+		break;
+	case '&':
+		emitaddr(n->Unop.operand);
+		break;
 	case '~':
 		emitexpr(n->Unop.operand);
 		out("notq %%rax\n");
