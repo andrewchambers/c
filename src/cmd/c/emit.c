@@ -25,6 +25,7 @@ emitfunc(Node *f)
 {
 	Vec *v;
 	int i;
+	
 	out(".text\n");
 	out(".globl %s\n", f->Func.name);
 	out("%s:\n", f->Func.name);
@@ -35,6 +36,69 @@ emitfunc(Node *f)
 		emitstmt(vecget(v, i));
 	out("leave\n");
 	out("ret\n");
+}
+
+static void
+emitdecl(Node *n)
+{
+	int  i;
+	Sym *sym;
+	switch(n->Decl.sclass) {
+	case SCTYPEDEF:
+		break;
+	case SCAUTO:
+		break;
+	case SCSTATIC:
+	case SCGLOBAL:
+		out(".data\n");
+		for(i = 0; i < n->Decl.syms->len; i++) {
+			sym = vecget(n->Decl.syms, i);
+			out(".comm %s, %d, %d\n", sym->label, 8, 8);
+		}
+		break;
+	}
+}
+
+static void
+emitloadreg(int sz)
+{
+	switch(sz) {
+	case 8:
+		out("movq (%%rax), %%rax\n");
+		break;
+	case 4:
+		out("movslq (%%rax), %%rax\n");
+		break;
+	case 2:
+		out("movswq (%%rax), %%rax\n");
+		break;
+	case 1:
+		out("movsbq (%%rax), %%rax\n");
+		break;
+	default:
+		errorf("internal error emitloadreg\n");
+	}
+}
+
+static void
+emitstorereg(int sz)
+{
+	switch(sz) {
+	case 8:
+		out("movq %%rbx, (%%rax)\n");
+		break;
+	case 4:
+		out("movl %%ebx, (%%rax)\n");
+		break;
+	case 2:
+		out("movw %%bx, (%%rax)\n");
+		break;
+	case 1:
+		out("movb %%bl, (%%rax)\n");
+		break;
+	default:
+		errorf("internal emitstorereg\n");
+	}
 }
 
 static void
@@ -53,28 +117,60 @@ emitassign(Node *l, Node *r)
 	emitexpr(r);
 	out("movq %%rax, %%rbx\n");
 	switch(l->t) {
+	case NUNOP:
+		if(l->Unop.op != '*')
+			errorf("internal error");
+		out("pushq %%rbx\n");
+		emitexpr(l->Unop.operand);
+		out("popq %%rbx\n");
+		emitstorereg(8);
+		break;
 	case NIDENT:
 		sym = l->Ident.sym;
 		switch(sym->sclass) {
 		case SCSTATIC:
 		case SCGLOBAL:
 			out("leaq %s(%%rip), %%rax\n", sym->label);
-			out("movq %%rbx, (%%rax)\n");
+			emitstorereg(8);
 			break;
 		case SCAUTO:
 			out("leaq %d(%%rbp), %%rax\n", sym->offset);
-			out("movq %%rbx, (%%rax)\n");
+			emitstorereg(8);
 			break;
 		}
-		return;
+		break;
+	default:
+		errorf("unimplemented emitassign\n");
 	}
-	errorf("unimplemented emit assign\n");
+}
+
+static void
+emitaddr(Node *n)
+{
+	Sym *sym;
+
+	switch(n->t) {
+	case NIDENT:
+		sym = n->Ident.sym;
+		switch(sym->sclass) {
+		case SCSTATIC:
+		case SCGLOBAL:
+			out("leaq %s(%%rip), %%rax\n", sym->label);
+			break;
+		case SCAUTO:
+			out("leaq %d(%%rbp), %%rax\n", sym->offset);
+			break;
+		}
+		break;
+	default:
+		errorf("unimplemented emitaddr\n");
+	}
 }
 
 static void
 emitbinop(Node *n)
 {
-	int op;
+	int   op;
 	char *lset;
 	char *lafter;
 	char *opc;
@@ -156,8 +252,40 @@ emitbinop(Node *n)
 }
 
 static void
+emitunop(Node *n)
+{
+	switch(n->Unop.op) {
+	case '*':
+		emitexpr(n->Unop.operand);
+		emitloadreg(8);
+		break;
+	case '&':
+		emitaddr(n->Unop.operand);
+		break;
+	case '~':
+		emitexpr(n->Unop.operand);
+		out("notq %%rax\n");
+		break;
+	case '!':
+		emitexpr(n->Unop.operand);
+		out("xorq %%rcx, %%rcx\n");
+		out("testq %%rax, %%rax\n");
+		out("setnz %%cl\n");
+		out("movq %%rcx, %%rax\n");
+		break;
+	case '-':
+		emitexpr(n->Unop.operand);
+		out("neg %%rax\n");
+		break;
+	default:
+		errorf("unimplemented unop %d\n", n->Unop.op);
+	}
+}
+
+static void
 emitident(Node *n)
 {
+	int  sz;
 	Sym *sym;
 
 	sym = n->Ident.sym;
@@ -165,14 +293,15 @@ emitident(Node *n)
 	case SCSTATIC:
 	case SCGLOBAL:
 		out("leaq %s(%%rip), %%rax\n", sym->label);
-		out("movq (%%rax), %%rax\n");
-		return;
+		break;
 	case SCAUTO:
 		out("leaq %d(%%rbp), %%rax\n", sym->offset);
-		out("movq (%%rax), %%rax\n");
-		return;
+		break;
+	default:
+		errorf("unimplemented ident\n");
 	}
-	errorf("unimplemented ident\n");
+	sz = 8; /* TODO: tysize(n->type); */
+	emitloadreg(sz);
 }
 
 static void
@@ -257,7 +386,7 @@ static void
 emitblock(Node *n)
 {
 	Vec *v;
-	int i;
+	int  i;
 
 	v = n->Block.stmts;
 	for(i = 0; i < v->len ; i++)
@@ -270,13 +399,16 @@ emitexpr(Node *n)
 	switch(n->t){
 	case NNUM:
 		out("movq $%s, %%rax\n", n->Num.v);
-		return;
+		break;
 	case NIDENT:
 		emitident(n);
-		return;
+		break;
+	case NUNOP:
+		emitunop(n);
+		break;
 	case NBINOP:
 		emitbinop(n);
-		return;
+		break;
 	default:
 		errorf("unimplemented emit expr %d\n", n->t);
 	}
@@ -287,63 +419,48 @@ emitstmt(Node *n)
 {
 	switch(n->t){
 	case NDECL:
-		/* TODO */
-		return;
+		emitdecl(n);
+		out(".text\n");
+		break;
 	case NRETURN:
 		emitreturn(n);
-		return;
+		break;
 	case NIF:
 		emitif(n);
-		return;
+		break;
 	case NWHILE:
 		emitwhile(n);
-		return;
+		break;
 	case NFOR:
 		emitfor(n);
-		return;
+		break;
 	case NDOWHILE:
 		emitdowhile(n);
-		return;
+		break;
 	case NBLOCK:
 		emitblock(n);
-		return;
+		break;
 	case NSWITCH:
 		emitswitch(n);
-		return;
+		break;
 	case NGOTO:
 		out("jmp %s\n", n->Goto.l);
-		return;
+		break;
 	case NCASE:
 		out("%s:\n", n->Case.l);
 		emitstmt(n->Case.stmt);
-		return;
+		break;
 	case NLABELED:
 		out("%s:\n", n->Labeled.l);
 		emitstmt(n->Labeled.stmt);
-		return;
+		break;
 	case NEXPRSTMT:
 		if(n->ExprStmt.expr)
 			emitexpr(n->ExprStmt.expr);
-		return;
+		break;
 	default:
 		errorf("unimplemented emit stmt %d\n", n->t);
 	}	
-}
-
-static void
-emitglobaldecl(Node *n)
-{
-	int  i;
-	Sym *sym;
-
-	if(n->Decl.sclass == SCTYPEDEF)
-		return;
-	if(n->Decl.sclass != SCGLOBAL && n->Decl.sclass != SCSTATIC)
-		abort(); /* Invariant violated */
-	for(i = 0; i < n->Decl.syms->len ; i++) {
-		sym = vecget(n->Decl.syms, i);
-		out(".comm %s, %d, %d\n", sym->label, 8, 8);
-	}
 }
 
 static void
@@ -352,10 +469,10 @@ emitglobal(Node *n)
 	switch(n->t){
 	case NFUNC:
 		emitfunc(n);
-		return;
+		break;
 	case NDECL:
-		emitglobaldecl(n);
-		return;
+		emitdecl(n);
+		break;
 	default:
 		errorf("unimplemented emit global\n");
 	}
