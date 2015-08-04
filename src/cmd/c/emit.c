@@ -148,7 +148,7 @@ static void
 emitaddr(Node *n)
 {
 	Sym *sym;
-
+	
 	switch(n->t) {
 	case NIDENT:
 		sym = n->Ident.sym;
@@ -394,9 +394,32 @@ emitblock(Node *n)
 }
 
 static void
+emitcast(Node *n)
+{
+	CTy *from;
+	CTy *to;
+	
+	emitexpr(n->Cast.operand);
+	from = n->Cast.operand->type;
+	to = n->type;
+	if(isptr(from) && isptr(to))
+		return;
+	if(isptr(to) && isitype(from))
+		return;
+	if(isptr(from) && isitype(to))
+		return;
+	if(isitype(from) && isitype(to))
+		return;
+	errorf("unimplemented cast\n");
+}
+
+static void
 emitexpr(Node *n)
 {
 	switch(n->t){
+	case NCAST:
+		emitcast(n);
+		break;
 	case NNUM:
 		out("movq $%s, %%rax\n", n->Num.v);
 		break;

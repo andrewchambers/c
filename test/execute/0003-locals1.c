@@ -2,7 +2,7 @@
 int
 main()
 {
-	long long x;
+	int x;
 
 	x = 0;
 	return x;

@@ -15,7 +15,7 @@ strlcpy(char *dst, const char *src, size_t size)
 		else
 			break;
 	}
-	dst[i + 1] = 0;
+	dst[i] = 0;
 	return i;
 }
 #endif
