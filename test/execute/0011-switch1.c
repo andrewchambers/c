@@ -1,9 +1,11 @@
 
 
 int
-main() {
-	int x = 0;
+main()
+{
+	int x;
 
+	x = 0;
 	switch(x)
 		case 0:
 			;

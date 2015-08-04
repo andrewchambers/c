@@ -1,9 +1,7 @@
-
 int
 main()
 {
-	int x;
-
+	long long x;
 	x = 0;
 	return x;
 }

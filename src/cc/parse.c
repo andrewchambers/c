@@ -48,6 +48,10 @@ static CTy  *directdeclarator(CTy *, char **);
 static CTy  *declaratortail(CTy *);
 static void  expect(int);
 
+static Node *ipromote(Node *);
+static CTy  *usualarithconv(Node **, Node **);
+static Node *mkcast(SrcPos *, Node *, CTy *);
+
 Tok *tok;
 Tok *nexttok;
 
@@ -306,11 +310,23 @@ static Node *
 mkbinop(SrcPos *p, int op, Node *l, Node *r)
 {
 	Node *n;
-
+	CTy  *t;
+	
+	switch(op) {
+	case '=':
+		r = mkcast(p, r, l->type);
+		break;
+	default:
+		l = ipromote(l);
+		r = ipromote(r);
+		t = usualarithconv(&l, &r);
+		break;
+	}
 	n = mknode(NBINOP, p);
 	n->Binop.op = op;
 	n->Binop.l = l;
 	n->Binop.r = r;
+	n->type = t;
 	return n;
 }
 
@@ -318,9 +334,24 @@ static Node *
 mkunop(SrcPos *p, int op, Node *o)
 {
 	Node *n;
-
+	
 	n = mknode(NUNOP, p);
 	n->Unop.op = op;
+	switch(op) {
+	case '&':
+		n->type = newtype(CPTR);
+		n->type->Ptr.subty = o->type;
+		break;
+	case '*':
+		if(!isptr(o->type))
+			errorposf(p, "cannot deref non pointer");
+		n->type = o->type->Ptr.subty;
+		break;
+	default:
+		o = ipromote(o);
+		n->type = o->type;
+		break;
+	}
 	n->Unop.operand = o;
 	return n;
 }
@@ -330,6 +361,8 @@ mkcast(SrcPos *p, Node *o, CTy *to)
 {
 	Node *n;
 	
+	if(sametype(o->type, to))
+		return o;
 	n = mknode(NCAST, p);
 	n->type = to;
 	n->Cast.operand = o;
@@ -370,7 +403,7 @@ compatiblestruct(CTy *l, CTy *r)
 	return 0;
 }
 
-static int 
+int 
 sametype(CTy *l, CTy *r)
 {
 	/* TODO */
@@ -424,21 +457,26 @@ isitype(CTy *t)
 int
 tysize(CTy *t)
 {
-	if(t->t != CPRIM)
-		errorf("unimplemented tysize");
-	switch(t->Prim.type){
-	case PRIMCHAR:
-		return 1;
-	case PRIMSHORT:
-		return 2;
-	case PRIMINT:
-		return 4;
-	case PRIMLONG:
+	switch(t->t) {
+	case CPTR:
 		return 8;
-	case PRIMLLONG:
-		return 8;
+	case CPRIM:
+		switch(t->Prim.type){
+		case PRIMCHAR:
+			return 1;
+		case PRIMSHORT:
+			return 2;
+		case PRIMINT:
+			return 4;
+		case PRIMLONG:
+			return 8;
+		case PRIMLLONG:
+			return 8;
+		default:
+			errorf("unimplemented primsize\n");
+		}
 	}
-	errorf("unimplemented tysize");
+	errorf("unimplemented tysize\n");
 	return -1;
 }
 
@@ -539,18 +577,21 @@ ipromote(Node *n)
 	return n;
 }
 
-CTy *
-usualarithconv(Node **large, Node **small)
+static CTy *
+usualarithconv(Node **a, Node **b)
 {   
-	Node **tmp;
+	Node **large;
+	Node **small;
 	CTy   *t;
 
-	if(!isarithtype((*large)->type) || !isarithtype((*small)->type))
+	if(!isarithtype((*a)->type) || !isarithtype((*b)->type))
 		errorf("internal error\n");
-	if(convrank((*large)->type) < convrank((*small)->type)) {
-		tmp = large;
-		large = small;
-		small = tmp;
+	if(convrank((*a)->type) < convrank((*b)->type)) {
+		large = a;
+		small = b;
+	} else {
+		large = b;
+		small = a;
 	}
 	if(isftype((*large)->type)) {
 		*small = mkcast(&(*small)->pos, *small, (*large)->type);
@@ -1014,7 +1055,7 @@ declarator(CTy *basety, char **name, Node **init)
 		subt = declarator(basety, name, init);
 		t = newtype(CPTR);
 		t->Ptr.subty = subt;
-		return subt;
+		return t;
 	default:
 		t = directdeclarator(basety, name);
 		if(tok->k == '=') {
@@ -1875,7 +1916,6 @@ static Node *
 unaryexpr(void)
 {
 	Tok  *t;
-	CTy  *ty;
 	Node *n;
 
 	switch (tok->k) {
@@ -1885,10 +1925,10 @@ unaryexpr(void)
 		next();
 		return mkunop(&tok->pos, t->k, unaryexpr());
 	case '*':
+	case '&':
 	case '-':
 	case '!':
 	case '~':
-	case '&':
 		t = tok;
 		next();
 		return mkunop(&t->pos, t->k, castexpr());
@@ -1897,13 +1937,12 @@ unaryexpr(void)
 		next();
 		if(tok->k == '(' && istypestart(nexttok)) {
 			expect('(');
-			ty = typename();
+			typename();
 			expect(')');
 			return 0;
 		}
 		n = unaryexpr();
-		ty = n->type;
-		return 0;
+		return n;
 	}
 	return postexpr();
 }
@@ -1993,11 +2032,13 @@ primaryexpr(void)
 			errorposf(&tok->pos, "undefined symbol %s", tok->v);
 		n = mknode(NIDENT, &tok->pos);
 		n->Ident.sym = sym;
+		n->type = sym->type;
 		next();
 		return n;
 	case TOKNUM:
 		n = mknode(NNUM, &tok->pos);
 		n->Num.v = tok->v;
+		n->type = mkprimtype(PRIMINT, 1);
 		next();
 		return n;
 	case TOKSTR:

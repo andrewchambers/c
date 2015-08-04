@@ -1,4 +1,4 @@
 *.o
-test/execute/*.bin
-test/execute/*.s
+test/*/*.bin
+test/*/*.s
 bin/*
