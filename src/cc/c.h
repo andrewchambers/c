@@ -260,7 +260,6 @@ struct Node {
 			char *v;
 		} Num;
 		struct {
-			/* TODO: parse to int */
 			char *v;
 		} Str;
 		struct {
