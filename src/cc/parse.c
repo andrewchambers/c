@@ -390,7 +390,7 @@ sametype(CTy *l, CTy *r)
 	return 0;
 }
 
-static int
+int
 isftype(CTy *t)
 {
 	if(t->t != CPRIM)
@@ -404,7 +404,7 @@ isftype(CTy *t)
 	return 0;
 }
 
-static int
+int
 isitype(CTy *t)
 {
 	if(t->t != CPRIM)
@@ -420,13 +420,34 @@ isitype(CTy *t)
 	return 0;
 }
 
-static int
+int
+tysize(CTy *t)
+{
+	if(t->t != CPRIM)
+		errorf("unimplemented tysize");
+	switch(t->Prim.type){
+	case PRIMCHAR:
+		return 1;
+	case PRIMSHORT:
+		return 2;
+	case PRIMINT:
+		return 4;
+	case PRIMLONG:
+		return 8;
+	case PRIMLLONG:
+		return 8;
+	}
+	errorf("unimplemented tysize");
+	return -1;
+}
+
+int
 isarithtype(CTy *t)
 {
 	return isftype(t) || isitype(t);
 }
 
-static int
+int
 isptr(CTy *t)
 {
 	return t->t == CPTR;
@@ -650,6 +671,7 @@ static Sym *
 mksym(SrcPos *p, int sclass, char *name, CTy *t)
 {
 	Sym *s;
+	int  sz;
 
 	s = zmalloc(sizeof(Sym));
 	s->pos = p;
@@ -666,7 +688,11 @@ mksym(SrcPos *p, int sclass, char *name, CTy *t)
 	case SCAUTO:
 		if(isglobal())
 			errorposf(p, "automatic storage outside of function");
-		localoffset -= 8; // TODO: correct size.
+		sz = tysize(t);
+		if(sz < 8)
+			sz = 8;
+		sz = sz + (sz % 8);
+		localoffset -= sz;
 		s->offset = localoffset;
 		break;
 	default:

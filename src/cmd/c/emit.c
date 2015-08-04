@@ -39,6 +39,27 @@ emitfunc(Node *f)
 }
 
 static void
+emitloadreg(int sz)
+{
+	switch(sz) {
+	case 8:
+		out("movq (%%rax), %%rax\n");
+		break;
+	case 4:
+		out("movslq (%%rax), %%rax\n");
+		break;
+	case 2:
+		out("movswq (%%rax), %%rax\n");
+		break;
+	case 1:
+		out("movsbq (%%rax), %%rax\n");
+		break;
+	default:
+		errorf("unimplemented emitloadreg\n");
+	}
+}
+
+static void
 emitreturn(Node *r)
 {
 	emitexpr(r->Return.expr);
@@ -194,7 +215,7 @@ emitunop(Node *n)
 	switch(n->Unop.op) {
 	case '*':
 		emitexpr(n->Unop.operand);
-		out("movq (%%rax), %%rax\n");
+		emitloadreg(8);
 		break;
 	case '&':
 		emitaddr(n->Unop.operand);
@@ -222,6 +243,7 @@ emitunop(Node *n)
 static void
 emitident(Node *n)
 {
+	int  sz;
 	Sym *sym;
 
 	sym = n->Ident.sym;
@@ -229,16 +251,15 @@ emitident(Node *n)
 	case SCSTATIC:
 	case SCGLOBAL:
 		out("leaq %s(%%rip), %%rax\n", sym->label);
-		out("movq (%%rax), %%rax\n");
 		break;
 	case SCAUTO:
 		out("leaq %d(%%rbp), %%rax\n", sym->offset);
-		out("movq (%%rax), %%rax\n");
 		break;
 	default:
 		errorf("unimplemented ident\n");
 	}
-	
+	sz = 8; /* TODO: tysize(n->type); */
+	emitloadreg(sz);
 }
 
 static void

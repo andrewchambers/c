@@ -320,6 +320,12 @@ void  cppinit(char *);
 char *tokktostr(int);
 Tok  *lex(Lexer *);
 Tok  *pp(void);
+/* type functions */
+int isftype(CTy *);
+int isitype(CTy *);
+int isarithtype(CTy *t);
+int isptr(CTy *t);
+int tysize(CTy *);
 /* parser functions */
 void  parseinit(void);
 Node *parsenext(void);
