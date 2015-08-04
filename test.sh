@@ -1,7 +1,7 @@
 set -e
 make -Bs
 
-for T in test/execute/*.c
+for T in test/execute/*.c test/bugs/*.c
 do
 	if ! ( bin/c $T > $T.s && gcc $T.s -o $T.bin && $T.bin )
 	then
