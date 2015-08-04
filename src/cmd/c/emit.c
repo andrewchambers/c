@@ -39,6 +39,27 @@ emitfunc(Node *f)
 }
 
 static void
+emitdecl(Node *n)
+{
+	int  i;
+	Sym *sym;
+	switch(n->Decl.sclass) {
+	case SCTYPEDEF:
+		break;
+	case SCAUTO:
+		break;
+	case SCSTATIC:
+	case SCGLOBAL:
+		out(".data\n");
+		for(i = 0; i < n->Decl.syms->len ; i++) {
+			sym = vecget(n->Decl.syms, i);
+			out(".comm %s, %d, %d\n", sym->label, 8, 8);
+		}
+		break;
+	}
+}
+
+static void
 emitloadreg(int sz)
 {
 	switch(sz) {
@@ -398,7 +419,8 @@ emitstmt(Node *n)
 {
 	switch(n->t){
 	case NDECL:
-		/* TODO */
+		emitdecl(n);
+		out(".text\n");
 		break;
 	case NRETURN:
 		emitreturn(n);
@@ -442,22 +464,6 @@ emitstmt(Node *n)
 }
 
 static void
-emitglobaldecl(Node *n)
-{
-	int  i;
-	Sym *sym;
-
-	if(n->Decl.sclass == SCTYPEDEF)
-		return;
-	if(n->Decl.sclass != SCGLOBAL && n->Decl.sclass != SCSTATIC)
-		abort(); /* Invariant violated */
-	for(i = 0; i < n->Decl.syms->len ; i++) {
-		sym = vecget(n->Decl.syms, i);
-		out(".comm %s, %d, %d\n", sym->label, 8, 8);
-	}
-}
-
-static void
 emitglobal(Node *n)
 {
 	switch(n->t){
@@ -465,7 +471,7 @@ emitglobal(Node *n)
 		emitfunc(n);
 		break;
 	case NDECL:
-		emitglobaldecl(n);
+		emitdecl(n);
 		break;
 	default:
 		errorf("unimplemented emit global\n");
