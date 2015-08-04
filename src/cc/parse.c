@@ -39,12 +39,12 @@ static Node *primaryexpr(void);
 static Node *declorstmt(void);
 static Node *decl(void);
 static Node *declinit(void);
-static CTy  *declspecs(int *specs);
+static CTy  *declspecs(int *);
 static CTy  *pstruct(void);
 static CTy  *penum(void);
 static CTy  *typename(void);
-static CTy  *declarator(CTy *, char **name, Node **init);
-static CTy  *directdeclarator(CTy *, char **name); 
+static CTy  *declarator(CTy *, char **, Node **);
+static CTy  *directdeclarator(CTy *, char **);
 static CTy  *declaratortail(CTy *);
 static void  expect(int);
 

@@ -51,7 +51,7 @@ emitdecl(Node *n)
 	case SCSTATIC:
 	case SCGLOBAL:
 		out(".data\n");
-		for(i = 0; i < n->Decl.syms->len ; i++) {
+		for(i = 0; i < n->Decl.syms->len; i++) {
 			sym = vecget(n->Decl.syms, i);
 			out(".comm %s, %d, %d\n", sym->label, 8, 8);
 		}
