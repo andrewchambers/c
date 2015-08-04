@@ -270,7 +270,7 @@ mkdecl(SrcPos *p, int sclass, Vec *syms)
 }
 
 static Node *
-mkfunc(SrcPos *p, CTy *t, char *name, Node *body)
+mkfunc(SrcPos *p, CTy *t, char *name, Node *body, int localsz)
 {
 	Node *n;
 
@@ -278,6 +278,7 @@ mkfunc(SrcPos *p, CTy *t, char *name, Node *body)
 	n->type = t;
 	n->Func.body = body;
 	n->Func.name = name;
+	n->Func.localsz = localsz;
 	return n;
 }
 
@@ -770,7 +771,7 @@ decl()
 					errorposf(&gotofixup->pos, "goto target does not exist");
 				gotofixup->Goto.l = l;
 			}
-			return mkfunc(pos, type, name, fbody);
+			return mkfunc(pos, type, name, fbody, localoffset);
 		}
 		if(tok->k == ',')
 			next();

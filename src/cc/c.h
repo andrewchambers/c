@@ -181,6 +181,7 @@ struct Node {
 	CTy *type;
 	union {
 		struct {
+			int   localsz;
 			char *name;
 			Node *body;
 		} Func;

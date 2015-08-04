@@ -31,6 +31,8 @@ emitfunc(Node *f)
 	out("%s:\n", f->Func.name);
 	out("pushq %%rbp\n");
 	out("movq %%rsp, %%rbp\n");
+	if (f->Func.localsz)
+		out("add $%d, %%rsp\n", f->Func.localsz);
 	v = f->Func.body->Block.stmts;
 	for(i = 0; i < v->len; i++)
 		emitstmt(vecget(v, i));
