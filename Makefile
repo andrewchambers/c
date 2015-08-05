@@ -1,7 +1,8 @@
 
 CFLAGS = -g -Wall
 
-HFILES = src/buff/buff.h src/cc/c.h src/ds/ds.h src/mem/mem.h
+# NOTE if one of these headers does not exist, the wildcard rule fails.
+HFILES = src/cc/c.h src/ds/ds.h src/mem/mem.h
 CCO    = src/cc/cpp.o \
          src/cc/lex.o \
          src/cc/parse.o \
