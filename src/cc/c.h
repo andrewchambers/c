@@ -102,6 +102,7 @@ typedef struct CTy CTy;
 
 struct StructMember {
 	char *name;
+	int   offset;
 	CTy  *type;
 };
 
@@ -113,6 +114,8 @@ struct NameTy {
 struct CTy {
 	/* type tag, one of the C* types */
 	int t;
+	int size;
+	int align;
 	union {
 		struct {
 			CTy  *rtype;
@@ -328,8 +331,6 @@ int isftype(CTy *);
 int isitype(CTy *);
 int isarithtype(CTy *);
 int isptr(CTy *);
-int tysize(CTy *);
-int tyalign(CTy *);
 int sametype(CTy *, CTy *);
 /* parser functions */
 void  parseinit(void);

@@ -230,6 +230,18 @@ newtype(int type)
 }
 
 static CTy *
+mkptr(CTy *t)
+{
+	CTy *p;
+
+	p = newtype(CPTR);
+	p->Ptr.subty = t;
+	p->size = 8;
+	p->align = 8;
+	return p;
+}
+
+static CTy *
 mkprimtype(int type, int sig)
 {
 	CTy *t;
@@ -237,6 +249,30 @@ mkprimtype(int type, int sig)
 	t = newtype(CPRIM);
 	t->Prim.type = type;
 	t->Prim.issigned = sig;
+	switch(t->Prim.type){
+	case PRIMCHAR:
+		t->size = 1;
+		t->align = 1;
+		break;
+	case PRIMSHORT:
+		t->size = 2;
+		t->align = 2;
+		break;
+	case PRIMINT:
+		t->size = 4;
+		t->align = 4;
+		break;
+	case PRIMLONG:
+		t->size = 8;
+		t->align = 8;
+		break;
+	case PRIMLLONG:
+		t->size = 8;
+		t->align = 8;
+		break;
+	default:
+		errorf("internal error mkprimtype\n");
+	}
 	return t;
 }
 
@@ -249,6 +285,18 @@ newnamety(char *n, CTy *t)
 	nt->name = n;
 	nt->type = t;
 	return nt;
+}
+
+static StructMember *
+newstructmember(char *n, CTy *t)
+{
+	StructMember *sm;
+
+	sm = zmalloc(sizeof(StructMember));
+	sm->name = n;
+	sm->offset = -1;
+	sm->type = t;
+	return sm;
 }
 
 static Node *
@@ -339,8 +387,7 @@ mkunop(SrcPos *p, int op, Node *o)
 	n->Unop.op = op;
 	switch(op) {
 	case '&':
-		n->type = newtype(CPTR);
-		n->type->Ptr.subty = o->type;
+		n->type = mkptr(o->type);
 		break;
 	case '*':
 		if(!isptr(o->type))
@@ -464,86 +511,44 @@ static CTy *
 structmemberty(CTy *t, char *n)
 {
 	int     i;
-	NameTy *nt;
+	StructMember *sm;
 	
 	for(i = 0; i < t->Struct.members->len; i++) {
-		nt = vecget(t->Struct.members, i);
-		if(strcmp(n, nt->name) == 0)
-			return nt->type;
+		sm = vecget(t->Struct.members, i);
+		if(strcmp(n, sm->name) == 0)
+			return sm->type;
 	}
 	return 0;
 }
 
-static int
-structsz(CTy *t)
+static void
+fillstructsz(CTy *t)
 {
 	int     i;
 	int     sz;
 	int     align;
-	NameTy *nt;
+	StructMember *sm;
 	
 	sz = 0;
+	if(t->t != CSTRUCT)
+		errorf("internal error");
+	if(t->Struct.isunion)
+		errorf("unimplemented calcstructsz\n");
+	if(t->Struct.unspecified) {
+		t->size = -1;
+		t->align = -1;
+		return;
+	}
 	for(i = 0; i < t->Struct.members->len; i++) {
-		nt = vecget(t->Struct.members, i);
-		sz += tysize(nt->type);
-		align = tyalign(nt->type);
-		sz = sz + align - (sz % align);
+		sm = vecget(t->Struct.members, i);
+		align = sm->type->align;
+		if(sz % align)
+			sz = sz + align - (sz % align);
+		sm->offset = sz;
+		sz += sm->type->size;
 	}
-	return sz;
-}
-
-int
-tysize(CTy *t)
-{
-	switch(t->t) {
-	case CSTRUCT:
-		return structsz(t);
-	case CPTR:
-		return 8;
-	case CPRIM:
-		switch(t->Prim.type){
-		case PRIMCHAR:
-			return 1;
-		case PRIMSHORT:
-			return 2;
-		case PRIMINT:
-			return 4;
-		case PRIMLONG:
-			return 8;
-		case PRIMLLONG:
-			return 8;
-		default:
-			errorf("unimplemented primsize\n");
-		}
-	}
-	errorf("unimplemented tysize\n");
-	return -1;
-}
-
-int
-tyalign(CTy *t)
-{
-	switch(t->t) {
-	case CPTR:
-		return 8;
-	case CPRIM:
-		switch(t->Prim.type){
-		case PRIMCHAR:
-			return 1;
-		case PRIMSHORT:
-			return 2;
-		case PRIMINT:
-			return 4;
-		case PRIMLONG:
-			return 8;
-		case PRIMLLONG:
-			return 8;
-		default:
-			errorf("unimplemented primalign\n");
-		}
-	}
-	errorf("unimplemented tyalign\n");
-	return -1;
+	t->size = sz;
+	t->align = 8; /* TODO: what struct alignment? */
 }
 
 int
@@ -795,10 +800,11 @@ mksym(SrcPos *p, int sclass, char *name, CTy *t)
 	case SCAUTO:
 		if(isglobal())
 			errorposf(p, "automatic storage outside of function");
-		sz = tysize(t);
+		sz = t->size;
 		if(sz < 8)
 			sz = 8;
-		sz = sz + 8 - (sz % 8);
+		if(sz % 8)
+			sz = sz + 8 - (sz % 8); /* TODO: stack alignment requirements? */
 		localoffset -= sz;
 		s->offset = localoffset;
 		break;
@@ -1117,8 +1123,7 @@ declarator(CTy *basety, char **name, Node **init)
 	case '*':
 		next();
 		subt = declarator(basety, name, init);
-		t = newtype(CPTR);
-		t->Ptr.subty = subt;
+		t = mkptr(subt);
 		return t;
 	default:
 		t = directdeclarator(basety, name);
@@ -1223,6 +1228,7 @@ pstruct()
 		new->Struct.unspecified = 1;
 		if(!define(tags, new->Struct.name, new))
 			errorf("internal error pstruct\n");
+		fillstructsz(new);
 		return new;
 	}
 	expect('{');
@@ -1232,7 +1238,7 @@ pstruct()
 			if(tok->k == ',')
 				next();
 			t = declarator(basety, &name, 0);
-			vecappend(new->Struct.members, newnamety(name, t));
+			vecappend(new->Struct.members, newstructmember(name, t));
 		} while (tok->k == ',');
 		if(tok->k == ':') {
 			next();
@@ -1246,6 +1252,7 @@ pstruct()
 	/* TODO overwrite if unspecified in current scope */
 	if(!define(tags, new->Struct.name, new))
 		errorposf(&tok->pos, "redefinition of tag %s", new->Struct.name);
+	fillstructsz(new);
 	return new;
 }
 
