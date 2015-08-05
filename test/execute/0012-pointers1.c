@@ -6,7 +6,6 @@ main()
 	int  x;
 	int *p;
 
-
 	g = 1;
 	x = 1;
 	p = &x;
