@@ -454,10 +454,30 @@ isitype(CTy *t)
 	return 0;
 }
 
+static int
+structsz(CTy *t)
+{
+	int     i;
+	int     sz;
+	int     align;
+	NameTy *nt;
+	
+	sz = 0;
+	for(i = 0; i < t->Struct.members->len; i++) {
+		nt = vecget(t->Struct.members, i);
+		sz += tysize(nt->type);
+		align = tyalign(nt->type);
+		sz = sz + align - (sz % align);
+	}
+	return sz;
+}
+
 int
 tysize(CTy *t)
 {
 	switch(t->t) {
+	case CSTRUCT:
+		return structsz(t);
 	case CPTR:
 		return 8;
 	case CPRIM:
@@ -477,6 +497,32 @@ tysize(CTy *t)
 		}
 	}
 	errorf("unimplemented tysize\n");
+	return -1;
+}
+
+int
+tyalign(CTy *t)
+{
+	switch(t->t) {
+	case CPTR:
+		return 8;
+	case CPRIM:
+		switch(t->Prim.type){
+		case PRIMCHAR:
+			return 1;
+		case PRIMSHORT:
+			return 2;
+		case PRIMINT:
+			return 4;
+		case PRIMLONG:
+			return 8;
+		case PRIMLLONG:
+			return 8;
+		default:
+			errorf("unimplemented primalign\n");
+		}
+	}
+	errorf("unimplemented tyalign\n");
 	return -1;
 }
 
@@ -672,7 +718,7 @@ params(CTy *fty)
 		t = declarator(t, &name, 0);
 		if(sclass != SCNONE)
 			errorposf(pos, "storage class not allowed in parameter decl");
-		listappend(fty->Func.params, newnamety(name, t));
+		vecappend(fty->Func.params, newnamety(name, t));
 		if(tok->k != ',')
 			break;
 		next();
@@ -684,10 +730,10 @@ params(CTy *fty)
 }
 
 static void
-definetype(char *name, Sym *sym)
+definetype(char *name, CTy *t)
 {
 	/* Handle valid redefines */
-	if(!define(types, name, sym)) {
+	if(!define(types, name, t)) {
 		/* TODO: 
 		 Check if types are compatible.
 		 errorpos(pos, "redefinition of type %s", name);
@@ -704,7 +750,6 @@ definesym(char *name, Sym *sym)
 		/* TODO: 
 		 Check if types are compatible.
 		 errorpos(pos, "redefinition of type %s", name);
-		
 		*/
 	}
 }
@@ -733,7 +778,7 @@ mksym(SrcPos *p, int sclass, char *name, CTy *t)
 		sz = tysize(t);
 		if(sz < 8)
 			sz = 8;
-		sz = sz + (sz % 8);
+		sz = sz + 8 - (sz % 8);
 		localoffset -= sz;
 		s->offset = localoffset;
 		break;
@@ -753,7 +798,6 @@ decl()
 	CTy     *basety;
 	CTy     *type;
 	SrcPos  *pos;
-	ListEnt *e;
 	Node    *init;
 	Node    *fbody;
 	NameTy  *nt;
@@ -784,7 +828,7 @@ decl()
 		sym = mksym(pos, sclass, name, type);
 		vecappend(syms, sym);
 		if(sclass == SCTYPEDEF)
-			definetype(name, sym);
+			definetype(name, type);
 		else
 			definesym(name, sym);
 		if(isglobal() && tok->k == '{') {
@@ -798,8 +842,8 @@ decl()
 			pushscope();
 			labels = map();
 			gotos = vec();
-			for(e = type->Func.params->head; e != 0; e = e->next) {
-				nt = e->v;
+			for(i = 0; i < type->Func.params->len; i++) {
+				nt = vecget(type->Func.params, i);
 				if(nt->name)
 					definesym(nt->name, mksym(pos, SCAUTO, nt->name, type));
 			}
@@ -1112,7 +1156,7 @@ declaratortail(CTy *basety)
 		case '(':
 			t = newtype(CFUNC);
 			t->Func.rtype = basety;
-			t->Func.params = listnew();
+			t->Func.params = vec();
 			next();
 			params(t);
 			if(tok->k != ')')
@@ -1128,44 +1172,58 @@ declaratortail(CTy *basety)
 static CTy *
 pstruct() 
 {
-	int   shoulddefine;
 	int   sclass;
-	char *tagname;
+	int   hastagname;
 	char *name;
 	CTy  *basety;
-	/* CTy *t; */
+	CTy  *new;
+	CTy  *t;
 
-	tagname = 0;
-	shoulddefine = 0;
+	hastagname = 0;
 	if(tok->k != TOKUNION && tok->k != TOKSTRUCT)
 		errorposf(&tok->pos, "expected union or struct");
+	new = newtype(CSTRUCT);
+	new->Struct.isunion = tok->k == TOKUNION;
+	new->Struct.members = vec();
 	next();
 	if(tok->k == TOKIDENT) {
-		tagname = tok->v;
+		hastagname = 1;
+		new->Struct.name = tok->v;
 		next();
 	}
-	if(tok->k == '{') {
-		shoulddefine = 1;
-		expect('{');
-		while(tok->k != '}') {
-			basety = declspecs(&sclass);
-			do {
-				if(tok->k == ',')
-					next();
-				/* t = */ declarator(basety, &name, 0);
-			} while (tok->k == ',');
-			if(tok->k == ':') {
-				next();
-				constexpr();
-			}
-			expect(';');
+	if(!hastagname && tok->k != '{')
+		errorposf(&tok->pos, "expected struct or union declaration");
+	if(hastagname && tok->k != '{') {
+		t = lookup(tags, new->Struct.name);
+		if(t) {
+			if(t->t != CSTRUCT || t->Struct.isunion != new->Struct.isunion)
+				errorposf(&tok->pos, "%s already declared with a differet tag kind", new->Struct.name);
+			return t;
 		}
-		expect('}');
+		new->Struct.unspecified = 1;
+		return new;
 	}
-	if(tagname && shoulddefine)
-		if(!define(tags, tagname, "TODO"))
-			errorposf(&tok->pos, "redefinition of tag %s", tagname);
-	return newtype(CSTRUCT);
+	expect('{');
+	while(tok->k != '}') {
+		basety = declspecs(&sclass);
+		do {
+			if(tok->k == ',')
+				next();
+			t = declarator(basety, &name, 0);
+			vecappend(new->Struct.members, newnamety(name, t));
+		} while (tok->k == ',');
+		if(tok->k == ':') {
+			next();
+			constexpr();
+		}
+		expect(';');
+	}
+	expect('}');
+	if(!hastagname)
+		return new;
+	if(!define(tags, new->Struct.name, new))
+		errorposf(&tok->pos, "redefinition of tag %s", new->Struct.name);
+	return new;
 }
 
 static CTy *

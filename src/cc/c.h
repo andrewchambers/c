@@ -116,12 +116,14 @@ struct CTy {
 	union {
 		struct {
 			CTy  *rtype;
-			List *params;
+			Vec *params;
 			int isvararg;
 		} Func;
 		struct {
-			int isunion;
-			List *members;
+			int   isunion;
+			int   unspecified;
+			char *name;
+			Vec  *members;
 		} Struct;
 		struct {
 			CTy *subty;
@@ -327,6 +329,7 @@ int isitype(CTy *);
 int isarithtype(CTy *);
 int isptr(CTy *);
 int tysize(CTy *);
+int tyalign(CTy *);
 int sametype(CTy *, CTy *);
 /* parser functions */
 void  parseinit(void);
