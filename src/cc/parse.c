@@ -454,6 +454,26 @@ isitype(CTy *t)
 	return 0;
 }
 
+int
+isstruct(CTy *t)
+{
+	return t->t == CSTRUCT;
+}
+
+static CTy *
+structmemberty(CTy *t, char *n)
+{
+	int     i;
+	NameTy *nt;
+	
+	for(i = 0; i < t->Struct.members->len; i++) {
+		nt = vecget(t->Struct.members, i);
+		if(strcmp(n, nt->name) == 0)
+			return nt->type;
+	}
+	return 0;
+}
+
 static int
 structsz(CTy *t)
 {
@@ -1201,6 +1221,8 @@ pstruct()
 			return t;
 		}
 		new->Struct.unspecified = 1;
+		if(!define(tags, new->Struct.name, new))
+			errorf("internal error pstruct\n");
 		return new;
 	}
 	expect('{');
@@ -1221,6 +1243,7 @@ pstruct()
 	expect('}');
 	if(!hastagname)
 		return new;
+	/* TODO overwrite if unspecified in current scope */
 	if(!define(tags, new->Struct.name, new))
 		errorposf(&tok->pos, "redefinition of tag %s", new->Struct.name);
 	return new;
@@ -2029,19 +2052,33 @@ postexpr(void)
 			n1 = n3;
 			break;
 		case '.':
+			if(!isstruct(n1->type))
+				errorposf(&tok->pos, "expected a struct");
+			if(n1->type->Struct.unspecified)
+				errorposf(&tok->pos, "struct is not realized");
 			n2 = mknode(NSEL, &tok->pos);
 			next();
 			n2->Sel.sel = tok->v;
 			n2->Sel.operand = n1;
+			n2->type = structmemberty(n1->type, tok->v);
+			if(!n2->type)
+				errorposf(&tok->pos, "struct has no member %s", tok->v);
 			expect(TOKIDENT);
 			n1 = n2;
 			break;
 		case TOKARROW:
+			if(!isptr(n1->type) && isstruct(n1->type->Ptr.subty))
+				errorposf(&tok->pos, "expected a struct pointer");
+			if(n1->type->Ptr.subty->Struct.unspecified)
+				errorposf(&tok->pos, "struct is not realized");
 			n2 = mknode(NSEL, &tok->pos);
 			next();
 			n2->Sel.sel = tok->v;
 			n2->Sel.operand = n1;
 			n2->Sel.arrow = 1;
+			n2->type = structmemberty(n1->type->Ptr.subty, tok->v);
+			if(!n2->type)
+				errorposf(&tok->pos, "struct pointer has no member %s", tok->v);
 			expect(TOKIDENT);
 			n1 = n2;
 			break;
