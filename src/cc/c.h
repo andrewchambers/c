@@ -333,6 +333,7 @@ int isitype(CTy *);
 int isarithtype(CTy *);
 int isptr(CTy *);
 int isstruct(CTy *);
+int isarray(CTy *);
 int sametype(CTy *, CTy *);
 StructMember *getstructmember(CTy *t, char *n);
 /* parser functions */

@@ -1213,21 +1213,24 @@ declaratortail(CTy *basety)
 				if(c->t != NNUM)
 					errorposf(&tok->pos, "currently only constant sized arrays supported");
 				newt->Arr.dim = c->Num.v;
+				newt->size = newt->Arr.dim * newt->Arr.subty->size;
+				newt->align = newt->Arr.subty->align;
 			}
 			t = newt;
 			break;
 		case '(':
-			t = newtype(CFUNC);
-			t->Func.rtype = basety;
-			t->Func.params = vec();
+			newt = newtype(CFUNC);
+			newt->Func.rtype = basety;
+			newt->Func.params = vec();
 			next();
-			params(t);
+			params(newt);
 			if(tok->k != ')')
 				errorposf(&tok->pos, "expected valid parameter or )");
 			next();
-			return t;
+			t = newt;
+			break;
 		default:
-			return basety;
+			return t;
 		}
 	}
 }

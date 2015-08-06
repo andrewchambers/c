@@ -92,6 +92,9 @@ load(CTy *t)
 	if(isstruct(t)) {
 		return;
 	}
+	if(isarray(t)) {
+		return;
+	}
 	errorf("unimplemented load %d\n", t->t);
 }
 
@@ -132,6 +135,7 @@ ereturn(Node *r)
 static void
 addr(Node *n)
 {
+	int sz;
 	Sym *sym;
 	StructMember *sm;
 	
@@ -140,10 +144,7 @@ addr(Node *n)
 		expr(n->Unop.operand);
 		break;
 	case NSEL:
-		if(n->Sel.arrow)
-			expr(n->Sel.operand);
-		else
-			addr(n->Sel.operand);
+		expr(n->Sel.operand);
 		sm = getstructmember(n->Sel.operand->type, n->Sel.name);
 		if(!sm)
 			errorf("internal error");
@@ -161,8 +162,19 @@ addr(Node *n)
 			break;
 		}
 		break;
+	case NIDX:
+		expr(n->Idx.idx);
+		sz = n->type->size;
+		if(sz != 1) {
+			out("imul $%d, %%rax\n", sz);
+		}
+		out("pushq %%rax\n");
+		expr(n->Idx.operand);
+		out("popq %%rcx\n");
+		out("addq %%rcx, %%rax\n");
+		break;
 	default:
-		errorf("unimplemented emitlval\n");
+		errorf("unimplemented addr\n");
 	}
 }
 
@@ -426,6 +438,23 @@ sel(Node *n)
 }
 
 static void
+idx(Node *n)
+{
+	int sz;
+
+	expr(n->Idx.idx);
+	sz = n->type->size;
+	if(sz != 1) {
+		out("imul $%d, %%rax\n", sz);
+	}
+	out("push %%rax\n");
+	expr(n->Idx.operand);
+	out("pop %%rcx\n");
+	out("addq %%rcx, %%rax\n");
+	load(n->type);
+}
+
+static void
 expr(Node *n)
 {
 	switch(n->t){
@@ -443,6 +472,9 @@ expr(Node *n)
 		break;
 	case NBINOP:
 		binop(n);
+		break;
+	case NIDX:
+		idx(n);
 		break;
 	case NSEL:
 		sel(n);
