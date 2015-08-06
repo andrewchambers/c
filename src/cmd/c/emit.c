@@ -78,32 +78,6 @@ decl(Node *n)
 }
 
 static void
-loadstruct(CTy *t)
-{
-	int sz;
-	int offset;
-	
-	if(!isstruct(t))
-		errorf("internal error\n");
-	sz = t->size;
-	out("sub $%d, %%rsp\n", sz);
-	offset = 0;
-	while(sz >= 8) {
-		out("movq %d(%%rax), %%rcx\n", offset);
-		out("movq %%rcx, %d(%%rsp)\n", sz);
-		offset += 8;
-		sz -= 8;
-	}
-	while(sz) {
-		out("movb %d(%%rax), %%rcx\n", offset);
-		out("movb %%rcx, %d(%%rsp)\n", offset);
-		offset += 1;
-		sz -= 1;
-	}
-	stackoffset += t->size;
-}
-
-static void
 load(CTy *t)
 {
 	if(isitype(t) || isptr(t)) {
@@ -126,16 +100,9 @@ load(CTy *t)
 		return;
 	}
 	if(isstruct(t)) {
-		loadstruct(t);
 		return;
 	}
 	errorf("unimplemented load %d\n", t->t);
-}
-
-static void
-storestruct(CTy *t)
-{
-	errorf("unimplemented storestruct");
 }
 
 static void
@@ -158,10 +125,6 @@ store(CTy *t)
 		default:
 			errorf("internal error\n");
 		}
-		return;
-	}
-	if(isstruct(t)) {
-		storestruct(t);
 		return;
 	}
 	errorf("unimplemented store\n");
@@ -471,12 +434,10 @@ sel(Node *n)
 	expr(n->Sel.operand);
 	t = n->Sel.operand->type;
 	offset = getstructmember(t, n->Sel.name)->offset;
-	out("movq %%rsp, %%rax\n");
 	if(offset != 0) {
 		out("add $%d, %%rax\n", offset);
 	}
 	load(n->type);
-	resetstack();
 }
 
 static void
