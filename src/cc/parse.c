@@ -521,6 +521,20 @@ structmemberty(CTy *t, char *n)
 	return 0;
 }
 
+StructMember *
+getstructmember(CTy *t, char *n)
+{
+	int     i;
+	StructMember *sm;
+	
+	for(i = 0; i < t->Struct.members->len; i++) {
+		sm = vecget(t->Struct.members, i);
+		if(strcmp(n, sm->name) == 0)
+			return sm;
+	}
+	return 0;
+}
+
 static void
 fillstructsz(CTy *t)
 {
@@ -2065,7 +2079,7 @@ postexpr(void)
 				errorposf(&tok->pos, "struct is not realized");
 			n2 = mknode(NSEL, &tok->pos);
 			next();
-			n2->Sel.sel = tok->v;
+			n2->Sel.name = tok->v;
 			n2->Sel.operand = n1;
 			n2->type = structmemberty(n1->type, tok->v);
 			if(!n2->type)
@@ -2080,7 +2094,7 @@ postexpr(void)
 				errorposf(&tok->pos, "struct is not realized");
 			n2 = mknode(NSEL, &tok->pos);
 			next();
-			n2->Sel.sel = tok->v;
+			n2->Sel.name = tok->v;
 			n2->Sel.operand = n1;
 			n2->Sel.arrow = 1;
 			n2->type = structmemberty(n1->type->Ptr.subty, tok->v);

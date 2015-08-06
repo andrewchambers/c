@@ -280,8 +280,8 @@ struct Node {
 			Node *operand;
 		} Idx;
 		struct {
-			int arrow;
-			char *sel;
+			int   arrow;
+			char *name;
 			Node *operand;
 		} Sel;
 		struct {
@@ -331,7 +331,9 @@ int isftype(CTy *);
 int isitype(CTy *);
 int isarithtype(CTy *);
 int isptr(CTy *);
+int isstruct(CTy *);
 int sametype(CTy *, CTy *);
+StructMember *getstructmember(CTy *t, char *n);
 /* parser functions */
 void  parseinit(void);
 Node *parsenext(void);

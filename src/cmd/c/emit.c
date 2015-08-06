@@ -8,6 +8,14 @@ static void emitexpr(Node *);
 static void emitstmt(Node *);
 
 static FILE *o;
+static int stackoffset;
+
+void
+emitinit(FILE *out)
+{
+	stackoffset = 0;
+	o = out;
+}
 
 static void
 out(char *fmt, ...)
@@ -18,6 +26,14 @@ out(char *fmt, ...)
 	if(vfprintf(o, fmt, va) < 0)
 		errorf("Error printing\n");
 	va_end(va);
+}
+
+static void
+resetstack()
+{
+	if(stackoffset)
+		out("add $%d, %%rsp\n", stackoffset);
+	stackoffset = 0;
 }
 
 static void
@@ -62,45 +78,93 @@ emitdecl(Node *n)
 }
 
 static void
-emitloadreg(int sz)
+emitloadstruct(CTy *t)
 {
-	switch(sz) {
-	case 8:
-		out("movq (%%rax), %%rax\n");
-		break;
-	case 4:
-		out("movslq (%%rax), %%rax\n");
-		break;
-	case 2:
-		out("movswq (%%rax), %%rax\n");
-		break;
-	case 1:
-		out("movsbq (%%rax), %%rax\n");
-		break;
-	default:
-		errorf("internal error emitloadreg\n");
+	int sz;
+	int offset;
+	
+	if(!isstruct(t))
+		errorf("internal error\n");
+	sz = t->size;
+	out("sub $%d, %%rsp\n", sz);
+	offset = 0;
+	while(sz >= 8) {
+		out("movq %d(%%rax), %%rcx\n", offset);
+		out("movq %%rcx, %d(%%rsp)\n", sz);
+		offset += 8;
+		sz -= 8;
 	}
+	while(sz) {
+		out("movb %d(%%rax), %%rcx\n", offset);
+		out("movb %%rcx, %d(%%rsp)\n", offset);
+		offset += 1;
+		sz -= 1;
+	}
+	stackoffset += t->size;
 }
 
 static void
-emitstorereg(int sz)
+emitload(CTy *t)
 {
-	switch(sz) {
-	case 8:
-		out("movq %%rbx, (%%rax)\n");
-		break;
-	case 4:
-		out("movl %%ebx, (%%rax)\n");
-		break;
-	case 2:
-		out("movw %%bx, (%%rax)\n");
-		break;
-	case 1:
-		out("movb %%bl, (%%rax)\n");
-		break;
-	default:
-		errorf("internal emitstorereg\n");
+	if(isitype(t) || isptr(t)) {
+		switch(t->size) {
+		case 8:
+			out("movq (%%rax), %%rax\n");
+			break;
+		case 4:
+			out("movslq (%%rax), %%rax\n");
+			break;
+		case 2:
+			out("movswq (%%rax), %%rax\n");
+			break;
+		case 1:
+			out("movsbq (%%rax), %%rax\n");
+			break;
+		default:
+			errorf("internal error\n");
+		}
+		return;
 	}
+	if(isstruct(t)) {
+		emitloadstruct(t);
+		return;
+	}
+	errorf("unimplemented load %d\n", t->t);
+}
+
+static void
+emitstorestruct(CTy *t)
+{
+	errorf("unimplemented emitstorestruct");
+}
+
+static void
+emitstore(CTy *t)
+{
+	if(isitype(t) || isptr(t)) {
+		switch(t->size) {
+		case 8:
+			out("movq %%rbx, (%%rax)\n");
+			break;
+		case 4:
+			out("movl %%ebx, (%%rax)\n");
+			break;
+		case 2:
+			out("movw %%bx, (%%rax)\n");
+			break;
+		case 1:
+			out("movb %%bl, (%%rax)\n");
+			break;
+		default:
+			errorf("internal error\n");
+		}
+		return;
+	}
+	if(isstruct(t)) {
+		emitstorestruct(t);
+		return;
+	}
+	errorf("unimplemented store\n");
 }
 
 static void
@@ -111,47 +175,28 @@ emitreturn(Node *r)
 	out("ret\n");
 }
 
-static void
-emitassign(Node *l, Node *r)
-{
-	Sym *sym;
-
-	emitexpr(r);
-	out("movq %%rax, %%rbx\n");
-	switch(l->t) {
-	case NUNOP:
-		if(l->Unop.op != '*')
-			errorf("internal error");
-		out("pushq %%rbx\n");
-		emitexpr(l->Unop.operand);
-		out("popq %%rbx\n");
-		emitstorereg(8);
-		break;
-	case NIDENT:
-		sym = l->Ident.sym;
-		switch(sym->sclass) {
-		case SCSTATIC:
-		case SCGLOBAL:
-			out("leaq %s(%%rip), %%rax\n", sym->label);
-			emitstorereg(8);
-			break;
-		case SCAUTO:
-			out("leaq %d(%%rbp), %%rax\n", sym->offset);
-			emitstorereg(8);
-			break;
-		}
-		break;
-	default:
-		errorf("unimplemented emitassign\n");
-	}
-}
 
 static void
 emitaddr(Node *n)
 {
 	Sym *sym;
+	StructMember *sm;
 	
 	switch(n->t) {
+	case NUNOP:
+		emitexpr(n->Unop.operand);
+		break;
+	case NSEL:
+		if(n->Sel.arrow) {
+			errorf("unimplemented emitlval\n");
+		} else {
+			emitaddr(n->Sel.operand);
+		}
+		sm = getstructmember(n->Sel.operand->type, n->Sel.name);
+		if(!sm)
+			errorf("internal error");
+		out("addq $%d, %%rax\n", sm->offset);
+		break;
 	case NIDENT:
 		sym = n->Ident.sym;
 		switch(sym->sclass) {
@@ -165,8 +210,20 @@ emitaddr(Node *n)
 		}
 		break;
 	default:
-		errorf("unimplemented emitaddr\n");
+		errorf("unimplemented emitlval\n");
 	}
+}
+
+static void
+emitassign(Node *l, Node *r)
+{
+	emitexpr(r);
+	out("pushq %%rax\n");
+	emitaddr(l);
+	out("popq %%rbx\n");
+	if(!isptr(l->type) && !isitype(l->type))
+		errorf("unimplemented emitassign\n");
+	emitstore(l->type);
 }
 
 static void
@@ -259,7 +316,7 @@ emitunop(Node *n)
 	switch(n->Unop.op) {
 	case '*':
 		emitexpr(n->Unop.operand);
-		emitloadreg(8);
+		emitload(n->type);
 		break;
 	case '&':
 		emitaddr(n->Unop.operand);
@@ -287,23 +344,8 @@ emitunop(Node *n)
 static void
 emitident(Node *n)
 {
-	int  sz;
-	Sym *sym;
-
-	sym = n->Ident.sym;
-	switch(sym->sclass) {
-	case SCSTATIC:
-	case SCGLOBAL:
-		out("leaq %s(%%rip), %%rax\n", sym->label);
-		break;
-	case SCAUTO:
-		out("leaq %d(%%rbp), %%rax\n", sym->offset);
-		break;
-	default:
-		errorf("unimplemented ident\n");
-	}
-	sz = 8; /* TODO: tysize(n->type); */
-	emitloadreg(sz);
+	emitaddr(n);
+	emitload(n->type);
 }
 
 static void
@@ -391,8 +433,11 @@ emitblock(Node *n)
 	int  i;
 
 	v = n->Block.stmts;
-	for(i = 0; i < v->len ; i++)
+	for(i = 0; i < v->len ; i++) {
 		emitstmt(vecget(v, i));
+		if(stackoffset)
+			errorf("internal error, unbalanced stack.\n");		
+	}
 }
 
 static void
@@ -416,6 +461,25 @@ emitcast(Node *n)
 }
 
 static void
+emitsel(Node *n)
+{
+	CTy *t;
+	int offset;
+
+	if(n->Sel.arrow)
+		errorf("unimplemented emitsel\n");
+	emitexpr(n->Sel.operand);
+	t = n->Sel.operand->type;
+	offset = getstructmember(t, n->Sel.name)->offset;
+	out("movq %%rsp, %%rax\n");
+	if(offset != 0) {
+		out("add $%d, %%rax\n", offset);
+	}
+	emitload(n->type);
+	resetstack();
+}
+
+static void
 emitexpr(Node *n)
 {
 	switch(n->t){
@@ -433,6 +497,9 @@ emitexpr(Node *n)
 		break;
 	case NBINOP:
 		emitbinop(n);
+		break;
+	case NSEL:
+		emitsel(n);
 		break;
 	default:
 		errorf("unimplemented emit expr %d\n", n->t);
@@ -501,12 +568,6 @@ emitglobal(Node *n)
 	default:
 		errorf("unimplemented emit global\n");
 	}
-}
-
-void
-emitinit(FILE *out)
-{
-	o = out;
 }
 
 void
