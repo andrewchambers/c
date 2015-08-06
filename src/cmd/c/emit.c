@@ -4,8 +4,8 @@
 #include "ds/ds.h"
 #include "cc/c.h"
 
-static void emitexpr(Node *);
-static void emitstmt(Node *);
+static void expr(Node *);
+static void stmt(Node *);
 
 static FILE *o;
 static int stackoffset;
@@ -37,7 +37,7 @@ resetstack()
 }
 
 static void
-emitfunc(Node *f)
+func(Node *f)
 {
 	Vec *v;
 	int i;
@@ -51,13 +51,13 @@ emitfunc(Node *f)
 		out("add $%d, %%rsp\n", f->Func.localsz);
 	v = f->Func.body->Block.stmts;
 	for(i = 0; i < v->len; i++)
-		emitstmt(vecget(v, i));
+		stmt(vecget(v, i));
 	out("leave\n");
 	out("ret\n");
 }
 
 static void
-emitdecl(Node *n)
+decl(Node *n)
 {
 	int  i;
 	Sym *sym;
@@ -78,7 +78,7 @@ emitdecl(Node *n)
 }
 
 static void
-emitloadstruct(CTy *t)
+loadstruct(CTy *t)
 {
 	int sz;
 	int offset;
@@ -104,7 +104,7 @@ emitloadstruct(CTy *t)
 }
 
 static void
-emitload(CTy *t)
+load(CTy *t)
 {
 	if(isitype(t) || isptr(t)) {
 		switch(t->size) {
@@ -126,20 +126,20 @@ emitload(CTy *t)
 		return;
 	}
 	if(isstruct(t)) {
-		emitloadstruct(t);
+		loadstruct(t);
 		return;
 	}
 	errorf("unimplemented load %d\n", t->t);
 }
 
 static void
-emitstorestruct(CTy *t)
+storestruct(CTy *t)
 {
-	errorf("unimplemented emitstorestruct");
+	errorf("unimplemented storestruct");
 }
 
 static void
-emitstore(CTy *t)
+store(CTy *t)
 {
 	if(isitype(t) || isptr(t)) {
 		switch(t->size) {
@@ -161,36 +161,36 @@ emitstore(CTy *t)
 		return;
 	}
 	if(isstruct(t)) {
-		emitstorestruct(t);
+		storestruct(t);
 		return;
 	}
 	errorf("unimplemented store\n");
 }
 
 static void
-emitreturn(Node *r)
+ereturn(Node *r)
 {
-	emitexpr(r->Return.expr);
+	expr(r->Return.expr);
 	out("leave\n");
 	out("ret\n");
 }
 
 
 static void
-emitaddr(Node *n)
+addr(Node *n)
 {
 	Sym *sym;
 	StructMember *sm;
 	
 	switch(n->t) {
 	case NUNOP:
-		emitexpr(n->Unop.operand);
+		expr(n->Unop.operand);
 		break;
 	case NSEL:
 		if(n->Sel.arrow) {
 			errorf("unimplemented emitlval\n");
 		} else {
-			emitaddr(n->Sel.operand);
+			addr(n->Sel.operand);
 		}
 		sm = getstructmember(n->Sel.operand->type, n->Sel.name);
 		if(!sm)
@@ -215,19 +215,19 @@ emitaddr(Node *n)
 }
 
 static void
-emitassign(Node *l, Node *r)
+assign(Node *l, Node *r)
 {
-	emitexpr(r);
+	expr(r);
 	out("pushq %%rax\n");
-	emitaddr(l);
+	addr(l);
 	out("popq %%rbx\n");
 	if(!isptr(l->type) && !isitype(l->type))
 		errorf("unimplemented emitassign\n");
-	emitstore(l->type);
+	store(l->type);
 }
 
 static void
-emitbinop(Node *n)
+binop(Node *n)
 {
 	int   op;
 	char *lset;
@@ -236,12 +236,12 @@ emitbinop(Node *n)
 	
 	op = n->Binop.op;
 	if(op == '=') {
-		emitassign(n->Binop.l, n->Binop.r);
+		assign(n->Binop.l, n->Binop.r);
 		return;
 	}
-	emitexpr(n->Binop.l);
+	expr(n->Binop.l);
 	out("pushq %%rax\n");
-	emitexpr(n->Binop.r);
+	expr(n->Binop.r);
 	out("movq %%rax, %%rcx\n");
 	out("popq %%rax\n");
 	switch(op) {
@@ -311,29 +311,29 @@ emitbinop(Node *n)
 }
 
 static void
-emitunop(Node *n)
+unop(Node *n)
 {
 	switch(n->Unop.op) {
 	case '*':
-		emitexpr(n->Unop.operand);
-		emitload(n->type);
+		expr(n->Unop.operand);
+		load(n->type);
 		break;
 	case '&':
-		emitaddr(n->Unop.operand);
+		addr(n->Unop.operand);
 		break;
 	case '~':
-		emitexpr(n->Unop.operand);
+		expr(n->Unop.operand);
 		out("notq %%rax\n");
 		break;
 	case '!':
-		emitexpr(n->Unop.operand);
+		expr(n->Unop.operand);
 		out("xorq %%rcx, %%rcx\n");
 		out("testq %%rax, %%rax\n");
 		out("setnz %%cl\n");
 		out("movq %%rcx, %%rax\n");
 		break;
 	case '-':
-		emitexpr(n->Unop.operand);
+		expr(n->Unop.operand);
 		out("neg %%rax\n");
 		break;
 	default:
@@ -342,60 +342,60 @@ emitunop(Node *n)
 }
 
 static void
-emitident(Node *n)
+ident(Node *n)
 {
-	emitaddr(n);
-	emitload(n->type);
+	addr(n);
+	load(n->type);
 }
 
 static void
-emitif(Node *n)
+eif(Node *n)
 {
-	emitexpr(n->If.expr);
+	expr(n->If.expr);
 	out("test %%rax, %%rax\n");
 	out("jz %s\n", n->If.lelse);
-	emitstmt(n->If.iftrue);
+	stmt(n->If.iftrue);
 	out("%s:\n", n->If.lelse);
 	if(n->If.iffalse)
-		emitstmt(n->If.iffalse);
+		stmt(n->If.iffalse);
 }
 
 static void
-emitfor(Node *n)
+efor(Node *n)
 {
 	if(n->For.init)
-		emitexpr(n->For.init);
+		expr(n->For.init);
 	out("%s:\n", n->For.lstart);
 	if(n->For.cond)
-		emitexpr(n->For.cond);
+		expr(n->For.cond);
 	out("test %%rax, %%rax\n");
 	out("jz %s\n", n->For.lend);
-	emitstmt(n->For.stmt);
+	stmt(n->For.stmt);
 	if(n->For.step)
-		emitexpr(n->For.step);
+		expr(n->For.step);
 	out("jmp %s\n", n->For.lstart);
 	out("%s:\n", n->For.lend);
 }
 
 static void
-emitwhile(Node *n)
+ewhile(Node *n)
 {
 	out("%s:\n", n->While.lstart);
-	emitexpr(n->While.expr);
+	expr(n->While.expr);
 	out("test %%rax, %%rax\n");
 	out("jz %s\n", n->While.lend);
-	emitstmt(n->While.stmt);
+	stmt(n->While.stmt);
 	out("jmp %s\n", n->While.lstart);
 	out("%s:\n", n->While.lend);
 }
 
 static void
-emitdowhile(Node *n)
+dowhile(Node *n)
 {
 	out("%s:\n", n->DoWhile.lstart);
-	emitstmt(n->DoWhile.stmt);
+	stmt(n->DoWhile.stmt);
 	out("%s:\n", n->DoWhile.lcond);
-	emitexpr(n->DoWhile.expr);
+	expr(n->DoWhile.expr);
 	out("test %%rax, %%rax\n");
 	out("jz %s\n", n->DoWhile.lend);
 	out("jmp %s\n", n->DoWhile.lstart);
@@ -403,12 +403,12 @@ emitdowhile(Node *n)
 }
 
 static void
-emitswitch(Node *n)
+eswitch(Node *n)
 {
 	int   i;
 	Node *c;
 
-	emitexpr(n->Switch.expr);
+	expr(n->Switch.expr);
 	for(i = 0; i < n->Switch.cases->len; i++) {
 		c = vecget(n->Switch.cases, i);
 		if(c->Case.expr->t != NNUM)
@@ -422,31 +422,31 @@ emitswitch(Node *n)
 	} else {
 		out("jmp %s\n", n->Switch.lend);
 	}
-	emitstmt(n->Switch.stmt);
+	stmt(n->Switch.stmt);
 	out("%s:\n", n->Switch.lend);
 }
 
 static void
-emitblock(Node *n)
+block(Node *n)
 {
 	Vec *v;
 	int  i;
 
 	v = n->Block.stmts;
 	for(i = 0; i < v->len ; i++) {
-		emitstmt(vecget(v, i));
+		stmt(vecget(v, i));
 		if(stackoffset)
 			errorf("internal error, unbalanced stack.\n");		
 	}
 }
 
 static void
-emitcast(Node *n)
+cast(Node *n)
 {
 	CTy *from;
 	CTy *to;
 	
-	emitexpr(n->Cast.operand);
+	expr(n->Cast.operand);
 	from = n->Cast.operand->type;
 	to = n->type;
 	if(isptr(from) && isptr(to))
@@ -461,45 +461,45 @@ emitcast(Node *n)
 }
 
 static void
-emitsel(Node *n)
+sel(Node *n)
 {
 	CTy *t;
 	int offset;
 
 	if(n->Sel.arrow)
 		errorf("unimplemented emitsel\n");
-	emitexpr(n->Sel.operand);
+	expr(n->Sel.operand);
 	t = n->Sel.operand->type;
 	offset = getstructmember(t, n->Sel.name)->offset;
 	out("movq %%rsp, %%rax\n");
 	if(offset != 0) {
 		out("add $%d, %%rax\n", offset);
 	}
-	emitload(n->type);
+	load(n->type);
 	resetstack();
 }
 
 static void
-emitexpr(Node *n)
+expr(Node *n)
 {
 	switch(n->t){
 	case NCAST:
-		emitcast(n);
+		cast(n);
 		break;
 	case NNUM:
 		out("movq $%s, %%rax\n", n->Num.v);
 		break;
 	case NIDENT:
-		emitident(n);
+		ident(n);
 		break;
 	case NUNOP:
-		emitunop(n);
+		unop(n);
 		break;
 	case NBINOP:
-		emitbinop(n);
+		binop(n);
 		break;
 	case NSEL:
-		emitsel(n);
+		sel(n);
 		break;
 	default:
 		errorf("unimplemented emit expr %d\n", n->t);
@@ -507,48 +507,48 @@ emitexpr(Node *n)
 }
 
 static void
-emitstmt(Node *n)
+stmt(Node *n)
 {
 	switch(n->t){
 	case NDECL:
-		emitdecl(n);
+		decl(n);
 		out(".text\n");
 		break;
 	case NRETURN:
-		emitreturn(n);
+		ereturn(n);
 		break;
 	case NIF:
-		emitif(n);
+		eif(n);
 		break;
 	case NWHILE:
-		emitwhile(n);
+		ewhile(n);
 		break;
 	case NFOR:
-		emitfor(n);
+		efor(n);
 		break;
 	case NDOWHILE:
-		emitdowhile(n);
+		dowhile(n);
 		break;
 	case NBLOCK:
-		emitblock(n);
+		block(n);
 		break;
 	case NSWITCH:
-		emitswitch(n);
+		eswitch(n);
 		break;
 	case NGOTO:
 		out("jmp %s\n", n->Goto.l);
 		break;
 	case NCASE:
 		out("%s:\n", n->Case.l);
-		emitstmt(n->Case.stmt);
+		stmt(n->Case.stmt);
 		break;
 	case NLABELED:
 		out("%s:\n", n->Labeled.l);
-		emitstmt(n->Labeled.stmt);
+		stmt(n->Labeled.stmt);
 		break;
 	case NEXPRSTMT:
 		if(n->ExprStmt.expr)
-			emitexpr(n->ExprStmt.expr);
+			expr(n->ExprStmt.expr);
 		break;
 	default:
 		errorf("unimplemented emit stmt %d\n", n->t);
@@ -556,14 +556,14 @@ emitstmt(Node *n)
 }
 
 static void
-emitglobal(Node *n)
+global(Node *n)
 {
 	switch(n->t){
 	case NFUNC:
-		emitfunc(n);
+		func(n);
 		break;
 	case NDECL:
-		emitdecl(n);
+		decl(n);
 		break;
 	default:
 		errorf("unimplemented emit global\n");
@@ -579,6 +579,6 @@ emit(void)
 		n = parsenext();
 		if(!n)
 			return;
-		emitglobal(n);
+		global(n);
 	}
 }
