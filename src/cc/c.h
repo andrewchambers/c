@@ -80,6 +80,7 @@ enum {
 	CVOID,
 	CPRIM,
 	CSTRUCT,
+	CARR,
 	CPTR,
 	CFUNC,
 };
@@ -133,6 +134,7 @@ struct CTy {
 		} Ptr;
 		struct {
 			CTy *subty;
+			int  dim;
 		} Arr;
 		struct {
 			int issigned;
@@ -262,8 +264,7 @@ struct Node {
 			List *inits;
 		} Init;
 		struct {
-			/* TODO: parse to int */
-			char *v;
+			long long v;
 		} Num;
 		struct {
 			char *v;

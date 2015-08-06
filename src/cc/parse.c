@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include "mem/mem.h"
@@ -505,6 +506,12 @@ int
 isstruct(CTy *t)
 {
 	return t->t == CSTRUCT;
+}
+
+int
+isarray(CTy *t)
+{
+	return t->t == CARR;
 }
 
 static CTy *
@@ -1186,15 +1193,28 @@ directdeclarator(CTy *basety, char **name)
 static CTy *
 declaratortail(CTy *basety)
 {
-	CTy *t;
-
+	CTy  *t;
+	CTy  *newt;
+	Node *c;
+	
+	t = basety;
 	for(;;) {
+		c = 0;
 		switch (tok->k) {
 		case '[':
+			newt = newtype(CARR);
+			newt->Arr.subty = t;
+			newt->Arr.dim = -1;
 			next();
 			if(tok->k != ']')
-				constexpr();
+				c = constexpr();
 			expect(']');
+			if(c) {
+				if(c->t != NNUM)
+					errorposf(&tok->pos, "currently only constant sized arrays supported");
+				newt->Arr.dim = c->Num.v;
+			}
+			t = newt;
 			break;
 		case '(':
 			t = newtype(CFUNC);
@@ -2074,6 +2094,12 @@ postexpr(void)
 			n2 = expr();
 			expect(']');
 			n3 = mknode(NIDX, &t->pos);
+			if(isptr(n1->type))
+				n3->type = n1->type->Ptr.subty;
+			else if (isarray(n1->type))
+				n3->type = n1->type->Arr.subty;
+			else
+				errorposf(&t->pos, "can only index an array or pointer");
 			n3->Idx.idx = n2;
 			n3->Idx.operand = n1;
 			n1 = n3;
@@ -2159,7 +2185,7 @@ primaryexpr(void)
 		return n;
 	case TOKNUM:
 		n = mknode(NNUM, &tok->pos);
-		n->Num.v = tok->v;
+		n->Num.v = atoll(tok->v);
 		n->type = mkprimtype(PRIMINT, 1);
 		next();
 		return n;
