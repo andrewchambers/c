@@ -8,12 +8,10 @@ static void expr(Node *);
 static void stmt(Node *);
 
 static FILE *o;
-static int stackoffset;
 
 void
 emitinit(FILE *out)
 {
-	stackoffset = 0;
 	o = out;
 }
 
@@ -26,14 +24,6 @@ out(char *fmt, ...)
 	if(vfprintf(o, fmt, va) < 0)
 		errorf("Error printing\n");
 	va_end(va);
-}
-
-static void
-resetstack()
-{
-	if(stackoffset)
-		out("add $%d, %%rsp\n", stackoffset);
-	stackoffset = 0;
 }
 
 static void
@@ -150,11 +140,10 @@ addr(Node *n)
 		expr(n->Unop.operand);
 		break;
 	case NSEL:
-		if(n->Sel.arrow) {
-			errorf("unimplemented emitlval\n");
-		} else {
+		if(n->Sel.arrow)
+			expr(n->Sel.operand);
+		else
 			addr(n->Sel.operand);
-		}
 		sm = getstructmember(n->Sel.operand->type, n->Sel.name);
 		if(!sm)
 			errorf("internal error");
@@ -398,8 +387,6 @@ block(Node *n)
 	v = n->Block.stmts;
 	for(i = 0; i < v->len ; i++) {
 		stmt(vecget(v, i));
-		if(stackoffset)
-			errorf("internal error, unbalanced stack.\n");		
 	}
 }
 
@@ -429,8 +416,6 @@ sel(Node *n)
 	CTy *t;
 	int offset;
 
-	if(n->Sel.arrow)
-		errorf("unimplemented emitsel\n");
 	expr(n->Sel.operand);
 	t = n->Sel.operand->type;
 	offset = getstructmember(t, n->Sel.name)->offset;

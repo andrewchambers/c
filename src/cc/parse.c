@@ -527,6 +527,10 @@ getstructmember(CTy *t, char *n)
 	int     i;
 	StructMember *sm;
 	
+	if(isptr(t))
+		t = t->Ptr.subty;
+	if(!isstruct(t))
+		errorf("internal error\n");
 	for(i = 0; i < t->Struct.members->len; i++) {
 		sm = vecget(t->Struct.members, i);
 		if(strcmp(n, sm->name) == 0)
@@ -1261,8 +1265,10 @@ pstruct()
 		expect(';');
 	}
 	expect('}');
-	if(!hastagname)
+	if(!hastagname) {
+		fillstructsz(new);
 		return new;
+	}
 	/* TODO overwrite if unspecified in current scope */
 	if(!define(tags, new->Struct.name, new))
 		errorposf(&tok->pos, "redefinition of tag %s", new->Struct.name);
