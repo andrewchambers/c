@@ -313,17 +313,6 @@ mknode(int type, SrcPos *p)
 }
 
 static Node *
-mkdecl(SrcPos *p, int sclass, Vec *syms)
-{
-	Node *n;
-
-	n = mknode(NDECL, p);
-	n->Decl.sclass = sclass;
-	n->Decl.syms = syms;
-	return n;
-}
-
-static Node *
 mkblock(SrcPos *p, Vec *v)
 {
 	Node *n;
@@ -830,14 +819,15 @@ mksym(SrcPos *p, int sclass, char *name, CTy *t)
 static Node *
 decl()
 {
-	int      sclass;
-	char    *name;
-	CTy     *type;
-	CTy     *basety;
-	SrcPos  *pos;
-	Node    *init;
-	Sym     *sym;
-	Vec     *syms;
+	Node   *n;
+	Node   *init;
+	char   *name;
+	CTy    *type;
+	CTy    *basety;
+	SrcPos *pos;
+	Sym    *sym;
+	Vec    *syms;
+	int     sclass;
 
 	pos = &tok->pos;
 	syms  = vec();
@@ -876,7 +866,10 @@ decl()
 			break;
 	}
 	expect(';');
-	return mkdecl(pos, sclass, syms);
+	n = mknode(NDECL, pos);
+	n->Decl.sclass = sclass;
+	n->Decl.syms = syms;
+	return n;
 }
 
 static Node *
