@@ -40,6 +40,7 @@ static Node *primaryexpr(void);
 static Node *declorstmt(void);
 static Node *decl(void);
 static Node *declinit(void);
+static Node *fbody(SrcPos *, char *, CTy *);
 static CTy  *declspecs(int *);
 static CTy  *pstruct(void);
 static CTy  *penum(void);
@@ -319,19 +320,6 @@ mkdecl(SrcPos *p, int sclass, Vec *syms)
 	n = mknode(NDECL, p);
 	n->Decl.sclass = sclass;
 	n->Decl.syms = syms;
-	return n;
-}
-
-static Node *
-mkfunc(SrcPos *p, CTy *t, char *name, Node *body, int localsz)
-{
-	Node *n;
-
-	n = mknode(NFUNC, p);
-	n->type = t;
-	n->Func.body = body;
-	n->Func.name = name;
-	n->Func.localsz = localsz;
 	return n;
 }
 
@@ -843,18 +831,13 @@ static Node *
 decl()
 {
 	int      sclass;
-	int      i;
 	char    *name;
-	char    *l;
-	CTy     *basety;
 	CTy     *type;
+	CTy     *basety;
 	SrcPos  *pos;
 	Node    *init;
-	Node    *fbody;
-	NameTy  *nt;
 	Sym     *sym;
 	Vec     *syms;
-	Node    *gotofixup;
 
 	pos = &tok->pos;
 	syms  = vec();
@@ -883,31 +866,9 @@ decl()
 		else
 			definesym(name, sym);
 		if(isglobal() && tok->k == '{') {
-			localoffset = 0;
-			if(type->t != CFUNC) 
-				errorposf(pos, "expected a function");
 			if(init)
 				errorposf(pos, "function declaration has an initializer");
-			if(!name)
-				errorposf(pos, "function declaration requires a name");
-			pushscope();
-			labels = map();
-			gotos = vec();
-			for(i = 0; i < type->Func.params->len; i++) {
-				nt = vecget(type->Func.params, i);
-				if(nt->name)
-					definesym(nt->name, mksym(pos, SCAUTO, nt->name, type));
-			}
-			fbody = block();
-			popscope();
-			for(i = 0 ; i < gotos->len ; i++) {
-				gotofixup = vecget(gotos, i);
-				l = mapget(labels, gotofixup->Goto.name);
-				if(!l)
-					errorposf(&gotofixup->pos, "goto target does not exist");
-				gotofixup->Goto.l = l;
-			}
-			return mkfunc(pos, type, name, fbody, localoffset);
+			return fbody(pos, name, type);
 		}
 		if(tok->k == ',')
 			next();
@@ -916,6 +877,45 @@ decl()
 	}
 	expect(';');
 	return mkdecl(pos, sclass, syms);
+}
+
+static Node *
+fbody(SrcPos *pos, char *name, CTy *type)
+{
+	Node   *n;
+	Node   *body;
+	Node   *gotofixup;
+	int     i;
+	char   *l;
+	NameTy *nt;
+
+
+	localoffset = 0;
+	if(type->t != CFUNC)
+		errorposf(pos, "expected a function");
+	pushscope();
+	labels = map();
+	gotos = vec();
+	for(i = 0; i < type->Func.params->len; i++) {
+		nt = vecget(type->Func.params, i);
+		if(nt->name)
+			definesym(nt->name, mksym(pos, SCAUTO, nt->name, type));
+	}
+	body = block();
+	popscope();
+	for(i = 0 ; i < gotos->len ; i++) {
+		gotofixup = vecget(gotos, i);
+		l = mapget(labels, gotofixup->Goto.name);
+		if(!l)
+			errorposf(&gotofixup->pos, "goto target does not exist");
+		gotofixup->Goto.l = l;
+	}
+	n = mknode(NFUNC, pos);
+	n->type = type;
+	n->Func.body = body;
+	n->Func.name = name;
+	n->Func.localsz = localoffset;
+	return n;
 }
 
 static int
