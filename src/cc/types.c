@@ -89,6 +89,19 @@ isitype(CTy *t)
 }
 
 int
+isarithtype(CTy *t)
+{
+	return isftype(t) || isitype(t);
+}
+
+int
+isptr(CTy *t)
+{
+	return t->t == CPTR;
+}
+
+
+int
 isstruct(CTy *t)
 {
 	return t->t == CSTRUCT;
@@ -155,18 +168,6 @@ fillstructsz(CTy *t)
 	}
 	t->size = sz;
 	t->align = 8; /* TODO: what struct alignment? */
-}
-
-int
-isarithtype(CTy *t)
-{
-	return isftype(t) || isitype(t);
-}
-
-int
-isptr(CTy *t)
-{
-	return t->t == CPTR;
 }
 
 int
