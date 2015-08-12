@@ -1345,7 +1345,7 @@ declinit(void)
 		return assignexpr();
 	expect('{');
 	n = mknode(NINIT, &tok->pos);
-	n->Init.inits = listnew();
+	n->Init.inits = vec();
 	while(1) {
 		if(tok->k == '}')
 			break;
@@ -1356,17 +1356,17 @@ declinit(void)
 			expect(']');
 			expect('=');
 			/* TODO */
-			listappend(n->Init.inits, declinit());
+			vecappend(n->Init.inits, declinit());
 			break;
 		case '.':
 			next();
 			expect(TOKIDENT);
 			expect('=');
 			/* TODO */
-			listappend(n->Init.inits, declinit());
+			vecappend(n->Init.inits, declinit());
 			break;
 		default:
-			listappend(n->Init.inits, declinit());
+			vecappend(n->Init.inits, declinit());
 			break;
 		}
 		if(tok->k != ',')
@@ -1853,11 +1853,11 @@ postexpr(void)
 		case '(':
 			n2 = mknode(NCALL, &tok->pos);
 			n2->Call.funclike = n1;
-			n2->Call.args = listnew();
+			n2->Call.args = vec();
 			next();
 			if(tok->k != ')') {
 				for(;;) {
-					listappend(n2->Call.args, assignexpr());
+					vecappend(n2->Call.args, assignexpr());
 					if(tok->k != ',') {
 						break;
 					}

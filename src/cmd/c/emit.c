@@ -95,6 +95,9 @@ load(CTy *t)
 	if(isarray(t)) {
 		return;
 	}
+	if(isfunc(t)) {
+		return;
+	}
 	errorf("unimplemented load %d\n", t->t);
 }
 
@@ -454,6 +457,38 @@ idx(Node *n)
 	load(n->type);
 }
 
+char *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+
+static void
+call(Node *n)
+{
+	int i, nargs, nintargs, cleanup;
+	Vec *args;
+	Node *arg;
+
+	args = n->Call.args;
+	i = nargs = args->len;
+	/* Push args in reverse order */
+	while(i-- != 0) {
+		arg = vecget(args, i);
+		if(!isitype(arg->type) || isptr(arg->type))
+			errorf("unimplemented arg type.");
+		expr(arg);
+		out("pushq %%rax\n");
+	}
+	nintargs = nargs;
+	if(nintargs > 6)
+		nintargs = 6;
+	for(i = 0; i < nintargs; i++)
+		out("popq %%%s\n", intargregs[i]);
+	expr(n->Call.funclike);
+	out("call *%%rax\n");
+	cleanup = 8 * (nargs - nintargs);
+	if(cleanup)
+		out("add $%d, %%rsp\n", cleanup);
+}
+
+
 static void
 expr(Node *n)
 {
@@ -478,6 +513,9 @@ expr(Node *n)
 		break;
 	case NSEL:
 		sel(n);
+		break;
+	case NCALL:
+		call(n);
 		break;
 	default:
 		errorf("unimplemented emit expr %d\n", n->t);

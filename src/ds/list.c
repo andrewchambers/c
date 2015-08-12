@@ -2,7 +2,7 @@
 #include "mem/mem.h"
 
 List *
-listnew()
+list()
 {
 	List *l;
 

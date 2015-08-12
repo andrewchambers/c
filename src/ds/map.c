@@ -13,7 +13,7 @@ Map *map()
 	Map *m;
 
 	m = zmalloc(sizeof(Map));
-	m->l = listnew();
+	m->l = list();
 	return m;
 }
 

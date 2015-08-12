@@ -262,7 +262,7 @@ struct Node {
 			Node *operand;
 		} Cast;
 		struct {
-			List *inits;
+			Vec *inits;
 		} Init;
 		struct {
 			long long v;
@@ -291,7 +291,7 @@ struct Node {
 		} ExprStmt;
 		struct {
 			Node *funclike;
-			List *args;
+			Vec  *args;
 		} Call;
 		struct {
 			CTy *t;
@@ -335,6 +335,7 @@ int isftype(CTy *);
 int isitype(CTy *);
 int isarithtype(CTy *);
 int isptr(CTy *);
+int isfunc(CTy *);
 int isstruct(CTy *);
 int isarray(CTy *);
 int sametype(CTy *, CTy *);

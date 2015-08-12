@@ -11,7 +11,7 @@ struct List {
 	ListEnt *head;
 };
 
-List *listnew();
+List *list();
 void listappend(List *, void *);
 void listprepend(List *, void *);
 

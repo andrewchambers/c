@@ -100,6 +100,11 @@ isptr(CTy *t)
 	return t->t == CPTR;
 }
 
+int
+isfunc(CTy *t)
+{
+	return t->t == CFUNC;
+}
 
 int
 isstruct(CTy *t)
