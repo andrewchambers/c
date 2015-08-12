@@ -26,10 +26,13 @@ out(char *fmt, ...)
 	va_end(va);
 }
 
+char *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+
 static void
 func(Node *f)
 {
 	Vec *v;
+	Sym *sym;
 	int i;
 	
 	out(".text\n");
@@ -39,6 +42,16 @@ func(Node *f)
 	out("movq %%rsp, %%rbp\n");
 	if (f->Func.localsz)
 		out("add $%d, %%rsp\n", f->Func.localsz);
+	v = f->Func.params;
+	for(i = 0; i < v->len; i++) {
+		sym = vecget(v, i);
+		if(i < 6) {
+			out("movq %%%s, %d(%%rbp)\n", intargregs[i], sym->offset);
+		} else {
+			out("movq %s(%%rbp), %%rax\n", 16 + 8 * (i - 6));
+			out("movq %%rax, %d(%%rbp)\n", sym->offset);
+		}
+	}
 	v = f->Func.body->Block.stmts;
 	for(i = 0; i < v->len; i++)
 		stmt(vecget(v, i));
@@ -457,8 +470,6 @@ idx(Node *n)
 	load(n->type);
 }
 
-char *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
-
 static void
 call(Node *n)
 {
@@ -471,7 +482,7 @@ call(Node *n)
 	/* Push args in reverse order */
 	while(i-- != 0) {
 		arg = vecget(args, i);
-		if(!isitype(arg->type) || isptr(arg->type))
+		if(!isitype(arg->type) && !isptr(arg->type))
 			errorf("unimplemented arg type.");
 		expr(arg);
 		out("pushq %%rax\n");

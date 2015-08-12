@@ -119,9 +119,9 @@ struct CTy {
 	int align;
 	union {
 		struct {
-			CTy  *rtype;
+			CTy *rtype;
 			Vec *params;
-			int isvararg;
+			int  isvararg;
 		} Func;
 		struct {
 			int   isunion;
@@ -192,6 +192,7 @@ struct Node {
 			int   localsz;
 			char *name;
 			Node *body;
+			Vec  *params; /* list of *Sym */
 		} Func;
 		struct {
 			int sclass;

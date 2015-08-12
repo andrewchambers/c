@@ -618,8 +618,10 @@ fbody(SrcPos *pos, char *name, CTy *type)
 	int     i;
 	char   *l;
 	NameTy *nt;
+	Vec    *params;
+	Sym    *sym;
 
-
+	params = vec();
 	localoffset = 0;
 	if(type->t != CFUNC)
 		errorposf(pos, "expected a function");
@@ -628,8 +630,11 @@ fbody(SrcPos *pos, char *name, CTy *type)
 	gotos = vec();
 	for(i = 0; i < type->Func.params->len; i++) {
 		nt = vecget(type->Func.params, i);
-		if(nt->name)
-			definesym(nt->name, mksym(pos, SCAUTO, nt->name, nt->type));
+		if(nt->name) {
+			sym = mksym(pos, SCAUTO, nt->name, nt->type);
+			definesym(nt->name, sym);
+			vecappend(params, sym);
+		}
 	}
 	body = block();
 	popscope();
@@ -645,6 +650,7 @@ fbody(SrcPos *pos, char *name, CTy *type)
 	n->Func.body = body;
 	n->Func.name = name;
 	n->Func.localsz = localoffset;
+	n->Func.params = params;
 	return n;
 }
 
