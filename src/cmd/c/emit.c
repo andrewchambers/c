@@ -462,8 +462,8 @@ char *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 static void
 call(Node *n)
 {
-	int i, nargs, nintargs, cleanup;
-	Vec *args;
+	int   i, nargs, nintargs, cleanup;
+	Vec  *args;
 	Node *arg;
 
 	args = n->Call.args;
