@@ -503,6 +503,18 @@ call(Node *n)
 		out("add $%d, %%rsp\n", cleanup);
 }
 
+static void
+str(Node *n)
+{
+	char *l;
+
+	l = newlabel();
+	out(".data\n");
+	out("%s:\n", l);
+	out(".string %s\n", n->Str.v);
+	out(".text\n");
+	out("leaq %s(%%rip), %%rax\n", l);
+}
 
 static void
 expr(Node *n)
@@ -510,6 +522,9 @@ expr(Node *n)
 	switch(n->t){
 	case NCAST:
 		cast(n);
+		break;
+	case NSTR:
+		str(n);
 		break;
 	case NNUM:
 		out("movq $%lld, %%rax\n", n->Num.v);

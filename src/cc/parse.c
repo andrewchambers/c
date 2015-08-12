@@ -1911,6 +1911,7 @@ primaryexpr(void)
 	case TOKSTR:
 		n = mknode(NSTR, &tok->pos);
 		n->Str.v = tok->v;
+		n->type = mkptr(mkprimtype(PRIMCHAR, 1));
 		next();
 		return n;
 	case '(':
