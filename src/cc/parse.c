@@ -60,8 +60,7 @@ Tok *nexttok;
 #define MAXSCOPES 1024
 static int nscopes;
 static Map *tags[MAXSCOPES];
-static Map *types[MAXSCOPES];
-static Map *vars[MAXSCOPES];
+static Map *syms[MAXSCOPES];
 
 #define MAXLABELDEPTH 2048
 static int   switchdepth;
@@ -172,17 +171,15 @@ popscope(void)
 	nscopes -= 1;
 	if(nscopes < 0)
 		errorf("bug: scope underflow\n");
-	vars[nscopes] = 0;
+	syms[nscopes] = 0;
 	tags[nscopes] = 0;
-	types[nscopes] = 0;
 }
 
 static void
 pushscope(void)
 {
-	vars[nscopes] = map();
+	syms[nscopes] = map();
 	tags[nscopes] = map();
-	types[nscopes] = map();
 	nscopes += 1;
 	if(nscopes > MAXSCOPES)
 		errorf("scope depth exceeded maximum\n");
@@ -219,6 +216,18 @@ lookup(Map *scope[], char *k)
 			return v;
 	}
 	return 0;
+}
+
+static void
+definesym(char *name, Sym *sym)
+{
+	/* Handle valid redefines */
+	if(!define(syms, name, sym)) {
+		/* TODO:
+		 Check if types are compatible.
+		*/
+		 errorposf(sym->pos, "redefinition of symbol %s", name);
+	}
 }
 
 static CTy *
@@ -337,10 +346,11 @@ mkbinop(SrcPos *p, int op, Node *l, Node *r)
 {
 	Node *n;
 	CTy  *t;
-	
+
 	switch(op) {
 	case '=':
 		r = mkcast(p, r, l->type);
+		t = l->type;
 		break;
 	default:
 		l = ipromote(l);
@@ -398,7 +408,7 @@ static Node *
 ipromote(Node *n)
 {
 	if(!isitype(n->type))
-		return 0;
+		errorposf(&n->pos, "internal error - ipromote expects itype got %d", n->type->t);
 	switch(n->type->Prim.type) {
 	case PRIMCHAR:
 	case PRIMSHORT:
@@ -515,31 +525,6 @@ params(CTy *fty)
 	}
 }
 
-static void
-definetype(char *name, CTy *t)
-{
-	/* Handle valid redefines */
-	if(!define(types, name, t)) {
-		/* TODO: 
-		 Check if types are compatible.
-		 errorpos(pos, "redefinition of type %s", name);
-		
-		*/
-	}
-}
-
-static void
-definesym(char *name, Sym *sym)
-{
-   	/* Handle valid redefines */
-	if(!define(vars, name, sym)) {
-		/* TODO: 
-		 Check if types are compatible.
-		 errorpos(pos, "redefinition of type %s", name);
-		*/
-	}
-}
-
 static Sym *
 mksym(SrcPos *p, int sclass, char *name, CTy *t)
 {
@@ -608,10 +593,7 @@ decl()
 			errorposf(pos, "decl needs to specify a name");
 		sym = mksym(pos, sclass, name, type);
 		vecappend(syms, sym);
-		if(sclass == SCTYPEDEF)
-			definetype(name, type);
-		else
-			definesym(name, sym);
+		definesym(name, sym);
 		if(isglobal() && tok->k == '{') {
 			if(init)
 				errorposf(pos, "function declaration has an initializer");
@@ -647,7 +629,7 @@ fbody(SrcPos *pos, char *name, CTy *type)
 	for(i = 0; i < type->Func.params->len; i++) {
 		nt = vecget(type->Func.params, i);
 		if(nt->name)
-			definesym(nt->name, mksym(pos, SCAUTO, nt->name, type));
+			definesym(nt->name, mksym(pos, SCAUTO, nt->name, nt->type));
 	}
 	body = block();
 	popscope();
@@ -810,8 +792,8 @@ declspecs(int *sclass)
 			next();
 			break;
 		case TOKIDENT:
-			sym = lookup(types, tok->v);
-			if(sym)
+			sym = lookup(syms, tok->v);
+			if(sym && sym->sclass == SCTYPEDEF)
 				t = sym->type;
 			if(t && !bits) {
 				bits |= BITIDENT;
@@ -1057,8 +1039,9 @@ penum()
 	while(1) {
 		if(tok->k == '}')
 			break;
-		if(!define(vars, tok->v, "TODO"))
+		/* if(!definesym(tok->v, "TODO"))
 			errorposf(&tok->pos, "redefinition of symbol %s", tok->v);
+		*/
 		expect(TOKIDENT);
 		if(tok->k == '=') {
 			next();
@@ -1238,6 +1221,17 @@ pgoto()
 }
 
 static int
+istypename(char *n)
+{
+	Sym *sym;
+
+	sym = lookup(syms, nexttok->v);
+	if(sym && sym->sclass == SCTYPEDEF)
+		return 1;
+	return 0;
+}
+
+static int
 istypestart(Tok *t)
 {
 	switch(t->k) {
@@ -1253,8 +1247,7 @@ istypestart(Tok *t)
 	case TOKUNSIGNED:
 		return 1;
 	case TOKIDENT:	
-		if(lookup(types, nexttok->v))
-			return 1;
+		return istypename(t->v);
 	}
 	return 0;
 }
@@ -1272,8 +1265,7 @@ isdeclstart(Tok *t)
 	case TOKVOLATILE:
 		return 1;
 	case TOKIDENT:
-		if(lookup(types, t->v))
-			return 1;
+		return istypename(t->v);
 	}
 	return 0;
 }
@@ -1702,7 +1694,7 @@ addexpr(void)
 	Node *l, *r;
 
 	l = mulexpr();
-	while(tok->k == '+' || tok->k == '-') {
+	while(tok->k == '+' || tok->k == '-'	) {
 		t = tok;
 		next();
 		r = mulexpr();
@@ -1854,6 +1846,12 @@ postexpr(void)
 			n2 = mknode(NCALL, &tok->pos);
 			n2->Call.funclike = n1;
 			n2->Call.args = vec();
+			if(isfunc(n1->type))
+				n2->type = n1->type->Func.rtype;
+			else if (isfuncptr(n1->type))
+				n2->type = n1->type->Ptr.subty->Func.rtype;
+			else
+				errorposf(&tok->pos, "cannot call non function");
 			next();
 			if(tok->k != ')') {
 				for(;;) {
@@ -1890,7 +1888,7 @@ primaryexpr(void)
 	
 	switch (tok->k) {
 	case TOKIDENT:
-		sym = lookup(vars, tok->v);
+		sym = lookup(syms, tok->v);
 		if(!sym)
 			errorposf(&tok->pos, "undefined symbol %s", tok->v);
 		n = mknode(NIDENT, &tok->pos);

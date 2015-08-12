@@ -107,6 +107,12 @@ isfunc(CTy *t)
 }
 
 int
+isfuncptr(CTy *t)
+{
+	return isptr(t) && isfunc(t->Ptr.subty);
+}
+
+int
 isstruct(CTy *t)
 {
 	return t->t == CSTRUCT;
