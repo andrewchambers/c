@@ -51,7 +51,7 @@ func(Node *f)
 		if(i < 6) {
 			out("movq %%%s, %d(%%rbp)\n", intargregs[i], sym->offset);
 		} else {
-			out("movq %s(%%rbp), %%rbx\n", 16 + 8 * (i - 6));
+			out("movq %d(%%rbp), %%rbx\n", 16 + 8 * (i - 6));
 			out("leaq %d(%%rbp), %%rax\n", sym->offset);
 			store(sym->type);
 		}
