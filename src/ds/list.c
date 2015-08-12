@@ -13,8 +13,7 @@ listnew()
 void
 listappend(List *l, void *v)
 {
-	ListEnt *e;
-	ListEnt *ne;
+	ListEnt *e, *ne;
 
 	ne = zmalloc(sizeof(ListEnt));
 	ne->v = v;

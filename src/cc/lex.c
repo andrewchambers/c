@@ -257,7 +257,7 @@ ungetch(Lexer *l, int c) /* avoid name conflict */
 Tok *
 lex(Lexer *l) 
 {
-	int c,c2;
+	int c, c2;
 	
 	mark(l);
 	c = nextc(l);

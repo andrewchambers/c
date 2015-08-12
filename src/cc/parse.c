@@ -394,246 +394,6 @@ mkcast(SrcPos *p, Node *o, CTy *to)
 	return n;
 }
 
-static int
-convrank(CTy *t)
-{
-	if(t->t != CPRIM)
-		errorf("internal error\n");
-	switch(t->Prim.type){
-	case PRIMCHAR:
-		return 0;
-	case PRIMSHORT:
-		return 1;
-	case PRIMINT:
-		return 2;
-	case PRIMLONG:
-		return 3;
-	case PRIMLLONG:
-		return 4;
-	case PRIMFLOAT:
-		return 5;
-	case PRIMDOUBLE:
-		return 6;
-	case PRIMLDOUBLE:
-		return 7;
-	}
-	errorf("internal error\n");
-	return -1;
-}
-
-static int 
-compatiblestruct(CTy *l, CTy *r)
-{
-	/* TODO */
-	return 0;
-}
-
-int 
-sametype(CTy *l, CTy *r)
-{
-	/* TODO */
-	switch(l->t) {
-	case CVOID:
-		if(r->t != CVOID)
-			return 0;
-		return 1;
-	case CPRIM:
-		if(r->t != CPRIM)
-			return 0;
-		if(l->Prim.issigned != r->Prim.issigned)
-			return 0;
-		if(l->Prim.type != r->Prim.type)
-			return 0;
-		return 1;
-	}
-	return 0;
-}
-
-int
-isftype(CTy *t)
-{
-	if(t->t != CPRIM)
-		return 0;
-	switch(t->Prim.type){
-	case PRIMFLOAT:
-	case PRIMDOUBLE:
-	case PRIMLDOUBLE:
-		return 1;
-	}
-	return 0;
-}
-
-int
-isitype(CTy *t)
-{
-	if(t->t != CPRIM)
-		return 0;
-	switch(t->Prim.type){
-	case PRIMCHAR:
-	case PRIMSHORT:
-	case PRIMINT:
-	case PRIMLONG:
-	case PRIMLLONG:
-		return 1;
-	}
-	return 0;
-}
-
-int
-isstruct(CTy *t)
-{
-	return t->t == CSTRUCT;
-}
-
-int
-isarray(CTy *t)
-{
-	return t->t == CARR;
-}
-
-static CTy *
-structmemberty(CTy *t, char *n)
-{
-	int     i;
-	StructMember *sm;
-	
-	for(i = 0; i < t->Struct.members->len; i++) {
-		sm = vecget(t->Struct.members, i);
-		if(strcmp(n, sm->name) == 0)
-			return sm->type;
-	}
-	return 0;
-}
-
-StructMember *
-getstructmember(CTy *t, char *n)
-{
-	int     i;
-	StructMember *sm;
-	
-	if(isptr(t))
-		t = t->Ptr.subty;
-	if(!isstruct(t))
-		errorf("internal error\n");
-	for(i = 0; i < t->Struct.members->len; i++) {
-		sm = vecget(t->Struct.members, i);
-		if(strcmp(n, sm->name) == 0)
-			return sm;
-	}
-	return 0;
-}
-
-static void
-fillstructsz(CTy *t)
-{
-	int     i;
-	int     sz;
-	int     align;
-	StructMember *sm;
-	
-	sz = 0;
-	if(t->t != CSTRUCT)
-		errorf("internal error");
-	if(t->Struct.isunion)
-		errorf("unimplemented calcstructsz\n");
-	if(t->Struct.unspecified) {
-		t->size = -1;
-		t->align = -1;
-		return;
-	}
-	for(i = 0; i < t->Struct.members->len; i++) {
-		sm = vecget(t->Struct.members, i);
-		align = sm->type->align;
-		if(sz % align)
-			sz = sz + align - (sz % align);
-		sm->offset = sz;
-		sz += sm->type->size;
-	}
-	t->size = sz;
-	t->align = 8; /* TODO: what struct alignment? */
-}
-
-int
-isarithtype(CTy *t)
-{
-	return isftype(t) || isitype(t);
-}
-
-int
-isptr(CTy *t)
-{
-	return t->t == CPTR;
-}
-
-static int
-isassignable(CTy *to, CTy *from)
-{
-	if((isarithtype(to) || isptr(to)) &&
-		(isarithtype(from) || isptr(from)))
-		return 1;
-	if(compatiblestruct(to, from))
-		return 1;
-	return 0;
-}
-
-static unsigned long long int
-getmaxval(CTy *l)
-{
-	switch(l->Prim.type) {
-	case PRIMCHAR:
-		if(l->Prim.issigned)
-			return 0x7f;
-		else
-			return 0xff;
-	case PRIMSHORT:
-		if(l->Prim.issigned)
-			return 0x7fff;
-		else
-			return  0xffff;
-	case PRIMINT:
-	case PRIMLONG:
-		if(l->Prim.issigned)
-			return 0x7fffffff;
-		else
-			return 0xffffffff;
-	case PRIMLLONG:
-		if(l->Prim.issigned)
-			return 0x7fffffffffffffff;
-		else
-			return 0xffffffffffffffff;
-	}
-	errorf("internal error\n");
-	return 0;
-}
-
-static signed long long int
-getminval(CTy *l)
-{
-	if(!l->Prim.issigned)
-		return 0;
-	switch(l->Prim.type) {
-	case PRIMCHAR:
-		return 0xff;
-	case PRIMSHORT:
-		return 0xffff;
-	case PRIMINT:
-	case PRIMLONG:
-		return 0xffffffffl;
-	case PRIMLLONG:
-		return 0xffffffffffffffff;
-	}
-	errorf("internal error\n");
-	return 0;
-}
-
-static int
-canrepresent(CTy *l, CTy *r)
-{
-	if(!isitype(l) || !isitype(r))
-		errorf("internal error");
-	return getmaxval(l) <= getmaxval(r) && getminval(l) >= getminval(r);
-}
-
 static Node *
 ipromote(Node *n)
 {
@@ -653,8 +413,7 @@ ipromote(Node *n)
 static CTy *
 usualarithconv(Node **a, Node **b)
 {   
-	Node **large;
-	Node **small;
+	Node **large, **small;
 	CTy   *t;
 
 	if(!isarithtype((*a)->type) || !isarithtype((*b)->type))
@@ -819,11 +578,9 @@ mksym(SrcPos *p, int sclass, char *name, CTy *t)
 static Node *
 decl()
 {
-	Node   *n;
-	Node   *init;
+	Node   *n, *init;
 	char   *name;
-	CTy    *type;
-	CTy    *basety;
+	CTy    *type, *basety;
 	SrcPos *pos;
 	Sym    *sym;
 	Vec    *syms;
@@ -875,9 +632,7 @@ decl()
 static Node *
 fbody(SrcPos *pos, char *name, CTy *type)
 {
-	Node   *n;
-	Node   *body;
-	Node   *gotofixup;
+	Node   *n, *body, *gotofixup;
 	int     i;
 	char   *l;
 	NameTy *nt;
@@ -1132,8 +887,7 @@ declspecs(int *sclass)
 static CTy *
 declarator(CTy *basety, char **name, Node **init) 
 {
-	CTy *t;
-	CTy *subt;
+	CTy *t, *subt;
 
 	while (tok->k == TOKCONST || tok->k == TOKVOLATILE)
 		next();
@@ -1186,8 +940,7 @@ directdeclarator(CTy *basety, char **name)
 static CTy *
 declaratortail(CTy *basety)
 {
-	CTy  *t;
-	CTy  *newt;
+	CTy  *t, *newt;
 	Node *c;
 	
 	t = basety;
@@ -1231,12 +984,9 @@ declaratortail(CTy *basety)
 static CTy *
 pstruct() 
 {
-	int   sclass;
-	int   hastagname;
 	char *name;
-	CTy  *basety;
-	CTy  *new;
-	CTy  *t;
+	CTy  *basety, *new, *t;
+	int   sclass, hastagname;
 
 	hastagname = 0;
 	if(tok->k != TOKUNION && tok->k != TOKSTRUCT)
@@ -1327,10 +1077,7 @@ static Node *
 pif(void)
 {
 	SrcPos *p;
-	Node   *n;
-	Node   *e;
-	Node   *t;
-	Node   *f;
+	Node   *n, *e, *t, *f;
 	
 	p = &tok->pos;
 	expect(TOKIF);
@@ -1356,13 +1103,8 @@ static Node *
 pfor(void)
 {
 	SrcPos *p;
-	Node   *n;
-	Node   *i;
-	Node   *c;
-	Node   *s;
-	Node   *st;
-	char   *lcont;
-	char   *lbreak;
+	Node   *n, *i, *c, *s, *st;
+	char   *lcont, *lbreak;
 
 	i = 0;
 	c = 0;
@@ -1405,11 +1147,8 @@ static Node *
 pwhile(void)
 {
 	SrcPos *p;
-	Node   *n;
-	Node   *e;
-	Node   *s;
-	char   *lcont;
-	char   *lbreak;
+	Node   *n, *e, *s;
+	char   *lcont, *lbreak;
 	
 	lcont = newlabel();
 	lbreak = newlabel();
@@ -1433,12 +1172,8 @@ static Node *
 dowhile(void)
 {
 	SrcPos *p;
-	Node *n;
-	Node *e;
-	Node *s;
-	char *lstart;
-	char *lcont;
-	char *lbreak;
+	Node   *n, *e, *s;
+	char   *lstart, *lcont, *lbreak;
 	
 	lstart = newlabel();
 	lcont = newlabel();
@@ -1466,10 +1201,8 @@ static Node *
 pswitch(void)
 {
 	SrcPos *p;
-	Node *n;
-	Node *e;
-	Node *s;
-	char *lbreak;
+	Node   *n, *e, *s;
+	char   *lbreak;
 	
 	lbreak = newlabel();
 	p = &tok->pos;
@@ -1712,8 +1445,7 @@ static Node *
 pdefault(void)
 {
 	SrcPos *pos;
-	Node   *n;
-	Node   *s;
+	Node   *n, *s;
 	char   *l;
 
 	pos = &tok->pos;
@@ -1808,8 +1540,7 @@ static Node *
 assignexpr(void)
 {
 	Tok  *t;
-	Node *l;
-	Node *r;
+	Node *l, *r;
 
 	l = condexpr();
 	if(isassignop(tok->k)) {
@@ -1839,8 +1570,7 @@ static Node *
 logorexpr(void)
 {
 	Tok  *t;
-	Node *l;
-	Node *r;
+	Node *l, *r;
 
 	l = logandexpr();
 	while(tok->k == TOKLOR) {
@@ -1856,8 +1586,7 @@ static Node *
 logandexpr(void)
 {
 	Tok  *t;
-	Node *l;
-	Node *r;
+	Node *l, *r;
 
 	l = orexpr();
 	while(tok->k == TOKLAND) {
@@ -1873,8 +1602,7 @@ static Node *
 orexpr(void)
 {
 	Tok  *t;
-	Node *l;
-	Node *r;
+	Node *l, *r;
 
 	l = xorexpr();
 	while(tok->k == '|') {
@@ -1890,8 +1618,7 @@ static Node *
 xorexpr(void)
 {
 	Tok  *t;
-	Node *l;
-	Node *r;
+	Node *l, *r;
 
 	l = andexpr();
 	while(tok->k == '^') {
@@ -1907,8 +1634,7 @@ static Node *
 andexpr(void) 
 {
 	Tok  *t;
-	Node *l;
-	Node *r;
+	Node *l, *r;
 
 	l = eqlexpr();
 	while(tok->k == '&') {
@@ -1924,8 +1650,7 @@ static Node *
 eqlexpr(void)
 {
 	Tok  *t;
-	Node *l;
-	Node *r;
+	Node *l, *r;
 
 	l = relexpr();
 	while(tok->k == TOKEQL || tok->k == TOKNEQ) {
@@ -1941,8 +1666,7 @@ static Node *
 relexpr(void)
 {
 	Tok  *t;
-	Node *l;
-	Node *r;
+	Node *l, *r;
 
 	l = shiftexpr();
 	while(tok->k == '>' || tok->k == '<' 
@@ -1959,8 +1683,7 @@ static Node *
 shiftexpr(void)
 {
 	Tok  *t;
-	Node *l;
-	Node *r;
+	Node *l, *r;
 
 	l = addexpr();
 	while(tok->k == TOKSHL || tok->k == TOKSHR) {
@@ -1976,8 +1699,7 @@ static Node *
 addexpr(void)
 {
 	Tok  *t;
-	Node *l;
-	Node *r;
+	Node *l, *r;
 
 	l = mulexpr();
 	while(tok->k == '+' || tok->k == '-') {
@@ -1993,8 +1715,7 @@ static Node *
 mulexpr(void)
 {
 	Tok  *t;
-	Node *l;
-	Node *r;
+	Node *l, *r;
 	
 	l = castexpr();
 	while(tok->k == '*' || tok->k == '/' || tok->k == '%') {
@@ -2076,9 +1797,7 @@ postexpr(void)
 {
 	int   done;
 	Tok  *t;
-	Node *n1;
-	Node *n2;
-	Node *n3;
+	Node *n1, *n2, *n3;
 
 	n1 = primaryexpr();
 	done = 0;

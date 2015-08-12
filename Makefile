@@ -6,7 +6,8 @@ HFILES = src/cc/c.h src/ds/ds.h src/mem/mem.h
 CCO    = src/cc/cpp.o \
          src/cc/lex.o \
          src/cc/parse.o \
-         src/cc/util.o 
+         src/cc/types.o \
+         src/cc/error.o
 MEMO   = src/mem/mem.o
 DSO    = src/ds/list.o \
          src/ds/map.o \

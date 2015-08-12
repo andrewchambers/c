@@ -58,3 +58,4 @@ vecappend(Vec *v, void *x)
 	v->d[v->len] = x;
 	v->len++;
 }
+

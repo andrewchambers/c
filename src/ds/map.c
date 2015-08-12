@@ -31,8 +31,8 @@ mapset(Map *m, char *k, void *v)
 void *
 mapget(Map *m, char *k)
 {
-	ListEnt *e;
 	MapEnt *me;
+	ListEnt *e;
 
 	for(e = m->l->head; e != 0; e = e->next) {
 		me = e->v;

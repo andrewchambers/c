@@ -152,6 +152,7 @@ typedef struct {
 	int     offset; /* SCAUTO only. */
 } Sym;
 
+/* node types */
 enum {
 	NFUNC,
 	NLABELED,
@@ -322,12 +323,14 @@ struct Tok {
 /* helper functions */
 void errorf(char *, ...);
 void errorposf(SrcPos *, char *, ...);
-/* cpp functions */
+
+/* lex.c cpp.c */
 void  cppinit(char *);
 char *tokktostr(int);
 Tok  *lex(Lexer *);
 Tok  *pp(void);
-/* type functions */
+
+/* types.c */
 int isftype(CTy *);
 int isitype(CTy *);
 int isarithtype(CTy *);
@@ -335,11 +338,19 @@ int isptr(CTy *);
 int isstruct(CTy *);
 int isarray(CTy *);
 int sametype(CTy *, CTy *);
-StructMember *getstructmember(CTy *t, char *n);
-/* parser functions */
+int convrank(CTy *);
+int canrepresent(CTy *, CTy *);
+unsigned long long int getmaxval(CTy *);
+signed long long int getminval(CTy *);
+StructMember *getstructmember(CTy *, char *);
+CTy *structmemberty(CTy *, char *);
+void fillstructsz(CTy *);
+
+/* parse.c */
 void  parseinit(void);
 Node *parsenext(void);
 char *newlabel();
+
 /* backend functions */
 void  emitinit(FILE *);
 void  emit(void);
