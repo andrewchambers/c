@@ -6,6 +6,7 @@
 
 static void expr(Node *);
 static void stmt(Node *);
+static void store(CTy *t);
 
 static FILE *o;
 
@@ -45,11 +46,14 @@ func(Node *f)
 	v = f->Func.params;
 	for(i = 0; i < v->len; i++) {
 		sym = vecget(v, i);
+		if(!isitype(sym->type) && !isptr(sym->type))
+			errorposf(&f->pos, "internal error - unimplemented arg type");
 		if(i < 6) {
 			out("movq %%%s, %d(%%rbp)\n", intargregs[i], sym->offset);
 		} else {
-			out("movq %s(%%rbp), %%rax\n", 16 + 8 * (i - 6));
-			out("movq %%rax, %d(%%rbp)\n", sym->offset);
+			out("movq %s(%%rbp), %%rbx\n", 16 + 8 * (i - 6));
+			out("leaq %d(%%rbp), %%rax\n", sym->offset);
+			store(sym->type);
 		}
 	}
 	v = f->Func.body->Block.stmts;
