@@ -55,6 +55,7 @@ enum {
 	TOKAUTO,
 	TOKENUM,
 	TOKELLIPSIS,
+	TOKHASHHASH,
 	TOKEOF, /* EOF needs to be the last. */
 };
 
@@ -314,10 +315,9 @@ struct Lexer {
 
 typedef struct Tok Tok;
 struct Tok {
-	int   k;
-	char *v;
-	/* Set if the tok was preceeded by an unescaped newline */
-	int newline;
+	int    k;
+	char  *v;
+	int    beforenl;
 	SrcPos pos;
 };
 

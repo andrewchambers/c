@@ -3,6 +3,9 @@
 #include <ds/ds.h>
 #include "c.h"
 
+static void ungetch(Lexer *l, int c);
+static int  nextc(Lexer *l);
+
 char *
 tokktostr(int t) 
 {
@@ -62,6 +65,8 @@ tokktostr(int t)
 	case TOKARROW:      return "->";
 	case TOKANDASS:     return "&=";
 	case TOKADDASS:     return "+=";
+	case TOKHASHHASH:   return "##";
+	case '#':           return "#";
 	case '[':           return "[";
 	case '+':           return "+";
 	case '%':           return "%";
@@ -85,6 +90,7 @@ tokktostr(int t)
 	case '=':           return "=";
 	case '~':           return "~";
 	case '^':           return "^";
+	case '\\':          return "\\";
 	}
 	errorf("unknown token %d\n", t);
 	return 0;
@@ -144,8 +150,9 @@ identkind(char *s) {
 /* makes a token, copies v */
 static Tok *
 mktok(Lexer *l, int kind) {
-	Tok* r;
-	
+	Tok *r;
+	int  c;
+
 	l->tokval[l->nchars] = 0;
 	if(kind == TOKIDENT)
 		kind = identkind(l->tokval);
@@ -164,6 +171,10 @@ mktok(Lexer *l, int kind) {
 		r->v = tokktostr(kind);
 		break;
 	}
+	c = nextc(l);
+	if(c == '\n')
+		r->beforenl = 1;
+	ungetch(l, c);
 	return r;
 }
 
@@ -289,6 +300,8 @@ lex(Lexer *l)
 				return mktok(l, TOKSTR);
 			}
 		}
+	} else if (c == '\\') {
+		return mktok(l, c);
 	} else if (c == '\'') {
 		accept(l, c);
 		for(;;) {
@@ -399,6 +412,7 @@ lex(Lexer *l)
 		else if(c == '|' && c2 == '|') return mktok(l, TOKLOR);
 		else if(c == '|' && c2 == '|') return mktok(l, TOKLOR);
 		else if(c == '&' && c2 == '&') return mktok(l, TOKLAND);
+		else if(c == '#' && c2 == '#') return mktok(l, TOKHASHHASH);
 		else {
 			/* TODO, detect invalid operators */
 			ungetch(l, c2);
