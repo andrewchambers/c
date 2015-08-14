@@ -1,4 +1,5 @@
 *.o
 test/*/*.bin
 test/*/*.s
+test/*/*.stderr
 bin/*
