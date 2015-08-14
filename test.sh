@@ -14,7 +14,7 @@ done
 for T in test/error/*.c
 do
 	PATTERNS=`grep "^PATTERN:" $T | sed s/PATTERN://g`
-	if bin/c $T 2> $T.stderr
+	if bin/c $T > /dev/null 2> $T.stderr
 	then
 		echo $T FAIL
 		exit 1
