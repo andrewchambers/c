@@ -1,7 +1,6 @@
-#include <stdio.h>
-#include <string.h>
-#include "mem/mem.h"
-#include "ds/ds.h"
+#include <u.h>
+#include <gc/gc.h>
+#include <ds/ds.h>
 #include "c.h"
 
 #define MAXINCLUDE 1024
@@ -15,8 +14,8 @@ pushlex(char *path)
 	Lexer *l;
 
 	if(nlexers == MAXINCLUDE)
-		errorf("include depth limit reached!");
-	l = zmalloc(sizeof(Lexer));
+		panic("include depth limit reached!");
+	l = gcmalloc(sizeof(Lexer));
 	l->pos.file = path;
 	l->prevpos.file = path;
 	l->markpos.file = path;

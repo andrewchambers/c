@@ -1,6 +1,5 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include "mem/mem.h"
+#include <u.h>
+#include <gc/gc.h>
 #include "ds.h"
 
 Vec *
@@ -8,30 +7,26 @@ vec()
 {
 	Vec *v;
 
-	v = zmalloc(sizeof(Vec));
+	v = gcmalloc(sizeof(Vec));
 	v->len = 0;
 	v->cap = 16;
-	v->d = zmalloc(sizeof(void*) * v->cap);
+	v->d = gcmalloc(sizeof(void*) * v->cap);
 	return v;
 }
 
 void *
 vecget(Vec *v, int idx)
 {
-	if(idx >= v->len) {
-		fprintf(stderr, "vec get out of bounds\n");
-		abort();
-	}
+	if(idx >= v->len)
+		panic("vec get out of bounds");
 	return v->d[idx];
 }
 
 void 
 vecset(Vec *v, int idx, void *x)
 {
-	if(idx >= v->len) {
-		fprintf(stderr, "vec set out of bounds\n");
-		abort();
-	}
+	if(idx >= v->len)
+		panic("vec set out of bounds");
 	v->d[idx] = x;
 }
 
@@ -43,7 +38,7 @@ vecresize(Vec *v, int cap)
 
 	if(v->cap >= cap)
 		return;
-	nd = zmalloc(cap*sizeof(void*));
+	nd = gcmalloc(cap*sizeof(void*));
 	for(i = 0; i < v->len; i++)
 		nd[i] = v->d[i];
 	v->d = nd;

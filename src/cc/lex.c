@@ -1,7 +1,6 @@
-#include <stdio.h>
-#include <string.h>
-#include "mem/mem.h"
-#include "ds/ds.h"
+#include <u.h>
+#include <gc/gc.h>
+#include <ds/ds.h>
 #include "c.h"
 
 char *
@@ -150,7 +149,7 @@ mktok(Lexer *l, int kind) {
 	l->tokval[l->nchars] = 0;
 	if(kind == TOKIDENT)
 		kind = identkind(l->tokval);
-	r = zmalloc(sizeof(Tok));
+	r = gcmalloc(sizeof(Tok));
 	r->pos.line = l->markpos.line;
 	r->pos.col = l->markpos.col;
 	r->pos.file = l->markpos.file;
@@ -159,7 +158,7 @@ mktok(Lexer *l, int kind) {
 	case TOKSTR:
 	case TOKNUM:
 	case TOKIDENT:
-		r->v = zstrdup(l->tokval);
+		r->v = gcstrdup(l->tokval);
 		break;
 	default:
 		r->v = tokktostr(kind);

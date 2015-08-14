@@ -1,6 +1,6 @@
-#include "mem/mem.h"
+#include <u.h>
+#include <gc/gc.h>
 #include "ds.h"
-#include <string.h>
 
 StrSet *
 strsetadd(StrSet *ss, char *v)
@@ -9,7 +9,7 @@ strsetadd(StrSet *ss, char *v)
 
 	if(strsethas(ss,v))
 		return ss;
-	r = zmalloc(sizeof(StrSet));
+	r = gcmalloc(sizeof(StrSet));
 	r->v = v;
 	r->next = ss;
 	return ss;

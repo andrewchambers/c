@@ -1,8 +1,6 @@
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include "ds/ds.h"
-#include "cc/c.h"
+#include <u.h>
+#include <ds/ds.h>
+#include <cc/c.h>
 
 static void expr(Node *);
 static void stmt(Node *);

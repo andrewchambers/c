@@ -1,8 +1,6 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include "mem/mem.h"
-#include "ds/ds.h"
+#include <u.h>
+#include <gc/gc.h>
+#include <ds/ds.h>
 #include "c.h"
 
 static Node *stmt(void);
@@ -86,7 +84,7 @@ newlabel(void)
 	if(n < 0)
 		errorf("internal error\n");
 	n += 1;
-	s = zmalloc(n);
+	s = gcmalloc(n);
 	snprintf(s, n, ".L%d", labelcount);
 	labelcount++;
 	return s;
@@ -235,7 +233,7 @@ newtype(int type)
 {
 	CTy *t;
 
-	t = zmalloc(sizeof(CTy));
+	t = gcmalloc(sizeof(CTy));
 	t->t = type;
 	return t;
 }
@@ -292,7 +290,7 @@ newnamety(char *n, CTy *t)
 {
 	NameTy *nt;
 	
-	nt = zmalloc(sizeof(NameTy));
+	nt = gcmalloc(sizeof(NameTy));
 	nt->name = n;
 	nt->type = t;
 	return nt;
@@ -303,7 +301,7 @@ newstructmember(char *n, CTy *t)
 {
 	StructMember *sm;
 
-	sm = zmalloc(sizeof(StructMember));
+	sm = gcmalloc(sizeof(StructMember));
 	sm->name = n;
 	sm->offset = -1;
 	sm->type = t;
@@ -315,7 +313,7 @@ mknode(int type, SrcPos *p)
 {
 	Node *n;
 
-	n = zmalloc(sizeof(Node));
+	n = gcmalloc(sizeof(Node));
 	n->pos = *p;
 	n->t = type;
 	return n;
@@ -531,7 +529,7 @@ mksym(SrcPos *p, int sclass, char *name, CTy *t)
 	Sym *s;
 	int  sz;
 
-	s = zmalloc(sizeof(Sym));
+	s = gcmalloc(sizeof(Sym));
 	s->pos = p;
 	s->sclass = sclass;
 	s->name = name;

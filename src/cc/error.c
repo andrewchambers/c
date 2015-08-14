@@ -1,8 +1,5 @@
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "ds/ds.h"
+#include <u.h>
+#include <ds/ds.h>
 #include "c.h"
 
 static void

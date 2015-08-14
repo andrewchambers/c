@@ -1,13 +1,12 @@
-#include <stdio.h>
-#include <string.h>
-#include "ds/ds.h"
+#include <u.h>
+#include <ds/ds.h>
 #include "c.h"
 
 int
 convrank(CTy *t)
 {
 	if(t->t != CPRIM)
-		errorf("internal error\n");
+		panic("internal error");
 	switch(t->Prim.type){
 	case PRIMCHAR:
 		return 0;
@@ -26,7 +25,7 @@ convrank(CTy *t)
 	case PRIMLDOUBLE:
 		return 7;
 	}
-	errorf("internal error\n");
+	panic("internal error");
 	return -1;
 }
 
@@ -133,7 +132,7 @@ getstructmember(CTy *t, char *n)
 	if(isptr(t))
 		t = t->Ptr.subty;
 	if(!isstruct(t))
-		errorf("internal error\n");
+		panic("internal error");
 	for(i = 0; i < t->Struct.members->len; i++) {
 		sm = vecget(t->Struct.members, i);
 		if(strcmp(n, sm->name) == 0)
@@ -161,9 +160,9 @@ fillstructsz(CTy *t)
 	
 	sz = 0;
 	if(t->t != CSTRUCT)
-		errorf("internal error");
+		panic("internal error");
 	if(t->Struct.isunion)
-		errorf("unimplemented calcstructsz\n");
+		panic("unimplemented calcstructsz");
 	if(t->Struct.unspecified) {
 		t->size = -1;
 		t->align = -1;
@@ -218,7 +217,7 @@ getmaxval(CTy *l)
 		else
 			return 0xffffffffffffffff;
 	}
-	errorf("internal error\n");
+	panic("internal error");
 	return 0;
 }
 
@@ -238,7 +237,7 @@ getminval(CTy *l)
 	case PRIMLLONG:
 		return 0xffffffffffffffff;
 	}
-	errorf("internal error\n");
+	panic("internal error");
 	return 0;
 }
 
@@ -246,7 +245,7 @@ int
 canrepresent(CTy *l, CTy *r)
 {
 	if(!isitype(l) || !isitype(r))
-		errorf("internal error");
+		panic("internal error");
 	return getmaxval(l) <= getmaxval(r) && getminval(l) >= getminval(r);
 }
 
