@@ -404,6 +404,6 @@ lex(Lexer *l)
 			ungetch(l, c2);
 			return mktok(l, c);
 		}
-		errorf("internal error\n");
+		panic("internal error\n");
 	}
 }

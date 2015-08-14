@@ -82,7 +82,7 @@ newlabel(void)
 
 	n = snprintf(0, 0, ".L%d", labelcount);
 	if(n < 0)
-		errorf("internal error\n");
+		panic("internal error\n");
 	n += 1;
 	s = gcmalloc(n);
 	snprintf(s, n, ".L%d", labelcount);
@@ -102,7 +102,7 @@ popswitch(void)
 {
 	switchdepth -= 1;
 	if(switchdepth < 0)
-		errorf("internal error\n");
+		panic("internal error\n");
 }
 
 static Node *
@@ -128,7 +128,7 @@ popcontbrk(void)
 	brkdepth -= 1;
 	contdepth -= 1;
 	if(brkdepth < 0 || contdepth < 0)
-		errorf("internal error\n");
+		panic("internal error\n");
 }
 
 static char *
@@ -159,7 +159,7 @@ popbrk(void)
 {
 	brkdepth -= 1;
 	if(brkdepth < 0)
-		errorf("internal error\n");
+		panic("internal error\n");
 }
 
 
@@ -280,7 +280,7 @@ mkprimtype(int type, int sig)
 		t->align = 8;
 		break;
 	default:
-		errorf("internal error mkprimtype\n");
+		panic("internal error mkprimtype\n");
 	}
 	return t;
 }
@@ -425,7 +425,7 @@ usualarithconv(Node **a, Node **b)
 	CTy   *t;
 
 	if(!isarithtype((*a)->type) || !isarithtype((*b)->type))
-		errorf("internal error\n");
+		panic("internal error\n");
 	if(convrank((*a)->type) < convrank((*b)->type)) {
 		large = a;
 		small = b;
@@ -553,7 +553,7 @@ mksym(SrcPos *p, int sclass, char *name, CTy *t)
 		s->offset = localoffset;
 		break;
 	default:
-		errorf("internal error");
+		panic("internal error");
 	}
 	return s;
 }
@@ -997,7 +997,7 @@ pstruct()
 		}
 		new->Struct.unspecified = 1;
 		if(!define(tags, new->Struct.name, new))
-			errorf("internal error pstruct\n");
+			panic("internal error pstruct\n");
 		fillstructsz(new);
 		return new;
 	}

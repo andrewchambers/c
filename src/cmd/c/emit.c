@@ -100,7 +100,7 @@ load(CTy *t)
 			out("movsbq (%%rax), %%rax\n");
 			break;
 		default:
-			errorf("internal error\n");
+			panic("internal error\n");
 		}
 		return;
 	}
@@ -134,7 +134,7 @@ store(CTy *t)
 			out("movb %%bl, (%%rax)\n");
 			break;
 		default:
-			errorf("internal error\n");
+			panic("internal error\n");
 		}
 		return;
 	}
@@ -165,7 +165,7 @@ addr(Node *n)
 		expr(n->Sel.operand);
 		sm = getstructmember(n->Sel.operand->type, n->Sel.name);
 		if(!sm)
-			errorf("internal error");
+			panic("internal error");
 		out("addq $%d, %%rax\n", sm->offset);
 		break;
 	case NIDENT:
