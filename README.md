@@ -61,11 +61,18 @@ $ make
 
 ## Style
 
-Follow plan9 conventions.
+Follow plan9 conventions. Headers are not allowed to include
+other headers. src/u.h is the only exception to this rule.
 
 - http://www.lysator.liu.se/c/pikestyle.html
 - http://plan9.bell-labs.com/magic/man2html/6/style
 - http://aiju.de/b/style
+
+## Memory management
+
+The compiler assumes a conservative garbage collector.
+For now, the header is stubbed out, but this isn't a
+problem for now.
 
 ## Useful Links
 
