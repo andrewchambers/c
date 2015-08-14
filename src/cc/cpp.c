@@ -89,18 +89,27 @@ directive()
 	dodirective(v);
 }
 
-Tok *
-pp()
+static Tok *
+ppnoexpand()
 {
 	Tok *t;
-	
+
 	t = lex(lexers[nlexers - 1]);
 	if(t->k == TOKEOF && nlexers == 1)
 		return t;
 	if(t->k == TOKEOF && nlexers > 1) {
 		poplex();
-		return pp();
+		return ppnoexpand();
 	}
+	return t;
+}
+
+Tok *
+pp()
+{
+	Tok *t;
+
+	t = ppnoexpand();
 	if(t->k == '#') {
 		directive();
 		return pp();
