@@ -305,19 +305,23 @@ struct Node {
 
 typedef struct Lexer Lexer;
 struct Lexer {
-	FILE *f;
+	FILE   *f;
 	SrcPos pos;
 	SrcPos prevpos;
 	SrcPos markpos;
-	int  nchars;
-	char tokval[MAXTOKSZ+1];
+	int    nchars;
+	int    ws;
+	int    nl;
+	char   tokval[MAXTOKSZ+1];
 };
 
 typedef struct Tok Tok;
 struct Tok {
 	int    k;
 	char  *v;
-	int    beforenl;
+	int    ws; /* There was whitespace before this token */
+	int    nl; /* There was a newline before this token */
+	int    beforenl; /* next tok is newline */
 	SrcPos pos;
 };
 

@@ -110,7 +110,7 @@ pp()
 	Tok *t;
 
 	t = ppnoexpand();
-	if(t->k == '#') {
+	if(t->k == '#' && t->nl) {
 		directive();
 		return pp();
 	}

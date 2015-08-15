@@ -161,6 +161,10 @@ mktok(Lexer *l, int kind) {
 	r->pos.col = l->markpos.col;
 	r->pos.file = l->markpos.file;
 	r->k = kind;
+	r->ws = l->ws;
+	r->nl = l->nl;
+	l->ws = 0;
+	l->nl = 0;
 	switch(kind){
 	case TOKSTR:
 	case TOKNUM:
@@ -274,11 +278,16 @@ lex(Lexer *l)
 	if(c == EOF) {
 		return mktok(l, TOKEOF);
 	} else if(wsc(c)) {
+		l->ws = 1;
+		if(c == '\n')
+			l->nl = 1;
 		do {
 			c = nextc(l);
 			if(c == EOF) {
 				return mktok(l, TOKEOF);
 			}
+			if(c == '\n')
+				l->nl = 1;
 		} while(wsc(c));
 		ungetch(l, c);
 		return lex(l);
@@ -364,12 +373,15 @@ lex(Lexer *l)
 	} else {
 		c2 = nextc(l);
 		if(c == '/' && c2 == '*') {
+			l->ws = 1;
 			for(;;) {
 				do {
 					c = nextc(l);
 					if(c == EOF) {
 						return mktok(l, TOKEOF);
 					}
+					if(c == '\n')
+						l->nl = 1;
 				} while(c != '*');
 				c = nextc(l);
 				if(c == EOF) {
@@ -378,6 +390,8 @@ lex(Lexer *l)
 				if(c == '/') {
 					return lex(l);
 				}
+				if(c == '\n')
+					l->nl = 1;
 			}
 		} else if(c == '/' && c2 == '/') {
 			do {
@@ -386,6 +400,7 @@ lex(Lexer *l)
 					return mktok(l, TOKEOF);
 				}
 			} while(c != '\n');
+			ungetch(l, c);
 			return lex(l);
 		} else if(c == '.' && c2 == '.') {
 			/* TODO, errorpos? */
