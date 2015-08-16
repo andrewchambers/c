@@ -191,7 +191,7 @@ isassignable(CTy *to, CTy *from)
 	return 0;
 }
 
-unsigned long long int
+uint64
 getmaxval(CTy *l)
 {
 	switch(l->Prim.type) {
@@ -221,7 +221,7 @@ getmaxval(CTy *l)
 	return 0;
 }
 
-signed long long int
+int64
 getminval(CTy *l)
 {
 	if(!l->Prim.issigned)

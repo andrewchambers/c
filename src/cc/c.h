@@ -56,7 +56,7 @@ enum {
 	TOKENUM,
 	TOKELLIPSIS,
 	TOKHASHHASH,
-	TOKEOF, /* EOF needs to be the last. */
+	TOKEOF /* EOF needs to be the last. */
 };
 
 /* Storage classes */
@@ -67,7 +67,7 @@ enum {
 	SCREGISTER,
 	SCGLOBAL,
 	SCTYPEDEF,
-	SCAUTO,
+	SCAUTO
 };
 
 typedef struct SrcPos SrcPos;
@@ -83,7 +83,7 @@ enum {
 	CSTRUCT,
 	CARR,
 	CPTR,
-	CFUNC,
+	CFUNC
 };
 
 enum {
@@ -95,7 +95,7 @@ enum {
 	PRIMLLONG,
 	PRIMFLOAT,
 	PRIMDOUBLE,
-	PRIMLDOUBLE,
+	PRIMLDOUBLE
 };
 
 typedef struct StructMember StructMember;
@@ -179,7 +179,7 @@ enum {
 	NSIZEOF,
 	NIF,
 	NDECL,
-	NEXPRSTMT,
+	NEXPRSTMT
 };
 
 typedef struct Node Node;
@@ -267,7 +267,7 @@ struct Node {
 			Vec *inits;
 		} Init;
 		struct {
-			long long v;
+			int64 v;
 		} Num;
 		struct {
 			char *v;
@@ -347,8 +347,8 @@ int isarray(CTy *);
 int sametype(CTy *, CTy *);
 int convrank(CTy *);
 int canrepresent(CTy *, CTy *);
-unsigned long long int getmaxval(CTy *);
-signed long long int getminval(CTy *);
+uint64 getmaxval(CTy *);
+int64 getminval(CTy *);
 StructMember *getstructmember(CTy *, char *);
 CTy *structmemberty(CTy *, char *);
 void fillstructsz(CTy *);
