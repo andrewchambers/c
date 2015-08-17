@@ -5,7 +5,7 @@
 void
 usage(void)
 {
-	puts("Usage: c file.c");
+	puts("Usage: 6c file.c");
 	exit(1);
 }
 

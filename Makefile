@@ -14,24 +14,31 @@ DSO    = src/ds/list.o \
          src/ds/vec.o \
          src/ds/strset.o
 LIBO   = src/u.o $(CCO) $(GCO) $(DSO)
-CO     = src/cmd/c/emit.o \
-         src/cmd/c/main.o 
 CPPO   = src/cmd/cpp/main.o 
+_6CO   = src/cmd/6c/emit.o \
+         src/cmd/6c/main.o 
+_6AO   = src/cmd/6a/main.o 
 
-all:  bin/c bin/cpp
+all:  bin/6c \
+      bin/6a \
+      bin/cpp
 
 .PHONY: all clean
 
 %.o: %.c $(HFILES)
 	$(CC) $(CFLAGS) -Isrc/ -o $@ -c $<
 
-bin/c: $(CO) $(LIBO)
+bin/6c: $(_6CO) $(LIBO)
 	@ mkdir -p bin
-	$(CC) $(CO) $(LIBO) -o $@
+	$(CC) $(_6CO) $(LIBO) -o $@
+
+bin/6a: $(_6AO) $(LIBO)
+	@ mkdir -p bin
+	$(CC) $(_6AO) $(LIBO) -o $@
 
 bin/cpp:  $(CPPO) $(LIBO)
 	@ mkdir -p bin
 	$(CC) $(CPPO) $(LIBO) -o $@
 
 clean:
-	rm -rf $(LIBO) $(CPPO) $(CO) bin 
+	rm -rf $(LIBO) $(CPPO) $(_6CO) $(_6AO) bin 
