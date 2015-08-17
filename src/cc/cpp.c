@@ -8,6 +8,9 @@
 int    nlexers;
 Lexer *lexers[MAXINCLUDE];
 
+static Tok *ppnoexpand();
+static int64 ifexpr();
+
 static void
 pushlex(char *path)
 {
@@ -36,57 +39,120 @@ poplex()
 }
 
 static void
-doinclude(Vec *v)
+include()
 {
-	Tok  *t;
-	char *dir;
-
-	t = vecget(v, 0);
-	if(v->len != 2)
-		errorposf(&t->pos, "include directive expects one param");
-	t = vecget(v, 1);
-	if(t->k != TOKSTR)
-		errorposf(&t->pos, "include expects a string");
-	dir = t->v;
-	dir += 1;
-	dir[strlen(dir) - 1] = 0;
-	pushlex(dir);
+	panic("unimplemented");
 }
 
 static void
-dodirective(Vec *v)
+define()
 {
-	Tok  *t;
-	char *dir;
+	panic("unimplemented");
+}
 
-	t = vecget(v, 0);
-	dir = t->v;
-	if(strcmp(dir, "include") == 0) {
-		doinclude(v);
-	} else {
-		errorposf(&t->pos, "invalid directive %s", dir);
-	}
+static void
+pif()
+{
+	ifexpr();
+	panic("unimplemented");
+}
+
+static void
+elseif()
+{
+	panic("unimplemented");
+}
+
+
+static void
+pelse()
+{
+	panic("unimplemented");
+}
+
+static void
+endif()
+{
+	panic("unimplemented");
+}
+
+static int64
+ifexpr()
+{
+	return 0;
 }
 
 static void
 directive()
 {
-	Tok *t;
-	Vec *v;
+	Tok  *t;
+	char *dir;
 
-	v = vec();
-	while(1) {
-	start:
-		t = pp();
-		if(t->k == TOKEOF)
-			break;
-		if(t->k == '\\' && t->beforenl)
-			goto start;
-		vecappend(v, t);
-		if(t->beforenl)
-			break;
+	t = ppnoexpand();
+	dir = t->v;
+	if(strcmp(dir, "include") == 0)
+		include();
+	else if(strcmp(dir, "define")  == 0)
+		define();
+	else if(strcmp(dir, "if")  == 0)
+		pif();
+	else if(strcmp(dir, "elseif")  == 0)
+		elseif();
+	else if(strcmp(dir, "else")  == 0)
+		pelse();
+	else if(strcmp(dir, "endif")  == 0)
+		endif();
+	else
+		errorposf(&t->pos, "invalid directive %s", dir);
+}
+
+static struct {char *kw; int t;} keywordlut[] = {
+	{"auto", TOKAUTO},
+	{"break", TOKBREAK},
+	{"case", TOKCASE},
+	{"char", TOKCHAR},
+	{"const", TOKCONST},
+	{"continue", TOKCONTINUE},
+	{"default", TOKDEFAULT},
+	{"do", TOKDO},
+	{"double", TOKDOUBLE},
+	{"else", TOKELSE},
+	{"enum", TOKENUM},
+	{"extern", TOKEXTERN},
+	{"float", TOKFLOAT},
+	{"for", TOKFOR},
+	{"goto", TOKGOTO},
+	{"if", TOKIF},
+	{"int", TOKINT},
+	{"long", TOKLONG},
+	{"register", TOKREGISTER},
+	{"return", TOKRETURN},
+	{"short", TOKSHORT},
+	{"signed", TOKSIGNED},
+	{"sizeof", TOKSIZEOF},
+	{"static", TOKSTATIC},
+	{"struct", TOKSTRUCT},
+	{"switch", TOKSWITCH},
+	{"typedef", TOKTYPEDEF},
+	{"union", TOKUNION},
+	{"unsigned", TOKUNSIGNED},
+	{"void", TOKVOID},
+	{"volatile", TOKVOLATILE},
+	{"while", TOKWHILE},
+	{0, 0}
+};
+
+static int
+identkind(char *s) {
+	int i;
+
+	i = 0;
+	while(keywordlut[i].kw) {
+		if(strcmp(keywordlut[i].kw, s) == 0)
+			return keywordlut[i].t;
+		i++;
 	}
-	dodirective(v);
+	return TOKIDENT;
 }
 
 static Tok *
@@ -101,6 +167,8 @@ ppnoexpand()
 		poplex();
 		return ppnoexpand();
 	}
+	if(t->k == TOKIDENT)
+		t->k = identkind(t->v);
 	return t;
 }
 
