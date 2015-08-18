@@ -1279,15 +1279,15 @@ stmt(void)
 
 	if(tok->k == TOKIDENT && nexttok->k == ':') {
 		t = tok;
+		label = newlabel();
 		next();
 		next();
+		if(mapget(labels, t->v))
+			errorposf(&t->pos, "redefinition of label %s", t->v);
+		mapset(labels, t->v, label);
 		n = mknode(NLABELED, &t->pos);
 		n->Labeled.stmt = stmt();
-		n->Labeled.l = newlabel();
-		label = mapget(labels, t->v);
-		if(label)
-			errorposf(&t->pos, "redefinition of label %s", t->v);
-		mapset(labels, t->v, n->Labeled.l);
+		n->Labeled.l = label;
 		return n;
 	}
 	switch(tok->k) {
