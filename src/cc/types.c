@@ -143,7 +143,7 @@ getstructmember(CTy *t, char *n)
 }
 
 void
-addstructmember(SrcPos *pos,CTy *t, char *name, CTy *membt)
+addstructmember(SrcPos *pos, CTy *t, char *name, CTy *membt)
 {
 	StructMember *sm,*subsm;
 	int align, sz, i;

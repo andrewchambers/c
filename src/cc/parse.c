@@ -955,13 +955,41 @@ declaratortail(CTy *basety)
 	}
 }
 
+static void
+pstructbody(CTy *strct)
+{
+	SrcPos *p;
+	char   *name;
+	int     sclass;
+	CTy    *t, *basety;
+
+	expect('{');
+	while(tok->k != '}') {
+		basety = declspecs(&sclass);
+		while(1) {
+			p = &tok->pos;
+			t = declarator(basety, &name, 0);
+			if(tok->k == ':') {
+				next();
+				constexpr();
+			}
+			addstructmember(p, strct, name, t);
+			if(tok->k == ',') {
+				next();
+				continue;
+			}
+			break;
+		}
+		expect(';');
+	}
+	expect('}');
+}
+
 static CTy *
 pstruct() 
 {
-	SrcPos *p;
-	char *name;
-	CTy  *basety, *new, *t;
-	int   sclass, hastagname;
+	CTy  *new, *t;
+	int   hastagname;
 
 	hastagname = 0;
 	if(tok->k != TOKUNION && tok->k != TOKSTRUCT)
@@ -990,26 +1018,9 @@ pstruct()
 			panic("internal error pstruct\n");
 		return new;
 	}
-	expect('{');
-	while(tok->k != '}') {
-		basety = declspecs(&sclass);
-		do {
-			if(tok->k == ',')
-				next();
-			p = &tok->pos;
-			t = declarator(basety, &name, 0);
-			addstructmember(p, new, name, t);
-		} while (tok->k == ',');
-		if(tok->k == ':') {
-			next();
-			constexpr();
-		}
-		expect(';');
-	}
-	expect('}');
-	if(!hastagname) {
+	pstructbody(new);
+	if(!hastagname)
 		return new;
-	}
 	/* TODO overwrite if unspecified in current scope */
 	if(!define(tags, new->Struct.name, new))
 		errorposf(&tok->pos, "redefinition of tag %s", new->Struct.name);
