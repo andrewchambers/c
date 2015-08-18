@@ -351,7 +351,8 @@ uint64 getmaxval(CTy *);
 int64 getminval(CTy *);
 StructMember *getstructmember(CTy *, char *);
 CTy *structmemberty(CTy *, char *);
-void addstructmember(CTy *t, char *name, CTy *membt);
+void addstructmember(SrcPos *, CTy *, char *, CTy *);
+
 /* parse.c */
 void  parseinit(void);
 Node *parsenext(void);

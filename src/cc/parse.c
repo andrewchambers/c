@@ -958,6 +958,7 @@ declaratortail(CTy *basety)
 static CTy *
 pstruct() 
 {
+	SrcPos *p;
 	char *name;
 	CTy  *basety, *new, *t;
 	int   sclass, hastagname;
@@ -995,8 +996,9 @@ pstruct()
 		do {
 			if(tok->k == ',')
 				next();
+			p = &tok->pos;
 			t = declarator(basety, &name, 0);
-			addstructmember(new, name, t);
+			addstructmember(p, new, name, t);
 		} while (tok->k == ',');
 		if(tok->k == ':') {
 			next();

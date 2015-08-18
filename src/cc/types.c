@@ -143,7 +143,7 @@ getstructmember(CTy *t, char *n)
 }
 
 void
-addstructmember(CTy *t, char *name, CTy *membt)
+addstructmember(SrcPos *pos,CTy *t, char *name, CTy *membt)
 {
 	StructMember *sm,*subsm;
 	int align, sz, i;
@@ -158,14 +158,14 @@ addstructmember(CTy *t, char *name, CTy *membt)
 	if(sm->name == 0 && isstruct(sm->type)) {
 		for(i = 0; i < sm->type->Struct.members->len; i++) {
 			subsm = vecget(sm->type->Struct.members, i);
-			addstructmember(t, subsm->name, subsm->type);
+			addstructmember(pos, t, subsm->name, subsm->type);
 		}
 		return;
 	}
 	for(i = 0; i < t->Struct.members->len; i++) {
 		subsm = vecget(t->Struct.members, i);
 		if(strcmp(sm->name, subsm->name) == 0)
-			errorf("struct already has a member named %s");
+			errorposf(pos ,"struct already has a member named %s", sm->name);
 	}
 	sz = t->size;
 	align = sm->type->align;
