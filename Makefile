@@ -1,5 +1,6 @@
 
-CFLAGS = -g -Wall
+CFLAGS  = -g -Wall
+LDFLAGS = -static
 
 # NOTE if one of these headers does not exist, the wildcard rule fails.
 HFILES = src/u.h src/cc/c.h src/ds/ds.h src/gc/gc.h
@@ -30,15 +31,15 @@ all:  bin/6c \
 
 bin/6c: $(_6CO) $(LIBO)
 	@ mkdir -p bin
-	$(CC) $(_6CO) $(LIBO) -o $@
+	$(CC) $(LDFLAGS) $(_6CO) $(LIBO) -o $@
 
 bin/6a: $(_6AO) $(LIBO)
 	@ mkdir -p bin
-	$(CC) $(_6AO) $(LIBO) -o $@
+	$(CC) $(LDFLAGS) $(_6AO) $(LIBO) -o $@
 
 bin/cpp:  $(CPPO) $(LIBO)
 	@ mkdir -p bin
-	$(CC) $(CPPO) $(LIBO) -o $@
+	$(CC) $(LDFLAGS) $(CPPO) $(LIBO) -o $@
 
 clean:
 	rm -rf $(LIBO) $(CPPO) $(_6CO) $(_6AO) bin 
