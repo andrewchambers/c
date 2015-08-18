@@ -296,18 +296,6 @@ newnamety(char *n, CTy *t)
 	return nt;
 }
 
-static StructMember *
-newstructmember(char *n, CTy *t)
-{
-	StructMember *sm;
-
-	sm = gcmalloc(sizeof(StructMember));
-	sm->name = n;
-	sm->offset = -1;
-	sm->type = t;
-	return sm;
-}
-
 static Node *
 mknode(int type, SrcPos *p)
 {
@@ -980,6 +968,7 @@ pstruct()
 	new = newtype(CSTRUCT);
 	new->Struct.isunion = tok->k == TOKUNION;
 	new->Struct.members = vec();
+	new->align = 8;
 	next();
 	if(tok->k == TOKIDENT) {
 		hastagname = 1;
@@ -998,7 +987,6 @@ pstruct()
 		new->Struct.unspecified = 1;
 		if(!define(tags, new->Struct.name, new))
 			panic("internal error pstruct\n");
-		fillstructsz(new);
 		return new;
 	}
 	expect('{');
@@ -1008,7 +996,7 @@ pstruct()
 			if(tok->k == ',')
 				next();
 			t = declarator(basety, &name, 0);
-			vecappend(new->Struct.members, newstructmember(name, t));
+			addstructmember(new, name, t);
 		} while (tok->k == ',');
 		if(tok->k == ':') {
 			next();
@@ -1018,13 +1006,11 @@ pstruct()
 	}
 	expect('}');
 	if(!hastagname) {
-		fillstructsz(new);
 		return new;
 	}
 	/* TODO overwrite if unspecified in current scope */
 	if(!define(tags, new->Struct.name, new))
 		errorposf(&tok->pos, "redefinition of tag %s", new->Struct.name);
-	fillstructsz(new);
 	return new;
 }
 

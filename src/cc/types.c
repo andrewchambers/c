@@ -1,5 +1,6 @@
 #include <u.h>
 #include <ds/ds.h>
+#include <gc/gc.h>
 #include "c.h"
 
 int
@@ -141,43 +142,50 @@ getstructmember(CTy *t, char *n)
 	return 0;
 }
 
+void
+addstructmember(CTy *t, char *name, CTy *membt)
+{
+	StructMember *sm,*subsm;
+	int align, sz, i;
+
+	sm = gcmalloc(sizeof(StructMember));
+	sm->name = name;
+	sm->type = membt;
+	if(!isstruct(t))
+		panic("internal error");
+	if(t->Struct.isunion)
+		panic("unimplemented addstructmember");
+	if(sm->name == 0 && isstruct(sm->type)) {
+		for(i = 0; i < sm->type->Struct.members->len; i++) {
+			subsm = vecget(sm->type->Struct.members, i);
+			addstructmember(t, subsm->name, subsm->type);
+		}
+		return;
+	}
+	for(i = 0; i < t->Struct.members->len; i++) {
+		subsm = vecget(t->Struct.members, i);
+		if(strcmp(sm->name, subsm->name) == 0)
+			errorf("struct already has a member named %s");
+	}
+	sz = t->size;
+	align = sm->type->align;
+	if(sz % align)
+		sz = sz + align - (sz % align);
+	sm->offset = sz;
+	sz += sm->type->size;
+	t->size = sz;
+	vecappend(t->Struct.members, sm);
+}
+
 CTy *
 structmemberty(CTy *t, char *n)
 {
 	StructMember *sm;
-	
+
 	sm = getstructmember(t, n);
 	if(!sm)
 		return 0;
 	return sm->type;
-}
-
-void
-fillstructsz(CTy *t)
-{
-	int i, sz, align;
-	StructMember *sm;
-	
-	sz = 0;
-	if(t->t != CSTRUCT)
-		panic("internal error");
-	if(t->Struct.isunion)
-		panic("unimplemented calcstructsz");
-	if(t->Struct.unspecified) {
-		t->size = -1;
-		t->align = -1;
-		return;
-	}
-	for(i = 0; i < t->Struct.members->len; i++) {
-		sm = vecget(t->Struct.members, i);
-		align = sm->type->align;
-		if(sz % align)
-			sz = sz + align - (sz % align);
-		sm->offset = sz;
-		sz += sm->type->size;
-	}
-	t->size = sz;
-	t->align = 8; /* TODO: what struct alignment? */
 }
 
 int

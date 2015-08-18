@@ -103,8 +103,8 @@ typedef struct NameTy NameTy;
 typedef struct CTy CTy;
 
 struct StructMember {
-	char *name;
 	int   offset;
+	char *name;
 	CTy  *type;
 };
 
@@ -351,8 +351,7 @@ uint64 getmaxval(CTy *);
 int64 getminval(CTy *);
 StructMember *getstructmember(CTy *, char *);
 CTy *structmemberty(CTy *, char *);
-void fillstructsz(CTy *);
-
+void addstructmember(CTy *t, char *name, CTy *membt);
 /* parse.c */
 void  parseinit(void);
 Node *parsenext(void);
