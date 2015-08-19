@@ -31,7 +31,8 @@ tokktostr(int t)
 	case TOKANDASS:     return "&=";
 	case TOKADDASS:     return "+=";
 	case TOKHASHHASH:   return "##";
-	case '#':           return "#";
+	case TOKDIRSTART:   return "Directive start";
+	case TOKDIREND:     return "Directive end";
 	case '[':           return "[";
 	case '+':           return "+";
 	case '%':           return "%";
@@ -65,7 +66,6 @@ tokktostr(int t)
 static Tok *
 mktok(Lexer *l, int kind) {
 	Tok *r;
-	int  c;
 
 	l->tokval[l->nchars] = 0;
 	r = gcmalloc(sizeof(Tok));
@@ -88,10 +88,6 @@ mktok(Lexer *l, int kind) {
 		r->v = tokktostr(kind);
 		break;
 	}
-	c = nextc(l);
-	if(c == '\n')
-		r->beforenl = 1;
-	ungetch(l, c);
 	return r;
 }
 
@@ -187,12 +183,16 @@ lex(Lexer *l)
 	int c, c2;
 	
 	mark(l);
+	if(l->indirective && l->nl) {
+		l->indirective = 0;
+		return mktok(l, TOKDIREND);
+	}
 	c = nextc(l);
 	if(c == EOF) {
 		return mktok(l, TOKEOF);
 	} else if(wsc(c)) {
 		l->ws = 1;
-		if(c == '\n')
+		if(c == '\n') 
 			l->nl = 1;
 		do {
 			c = nextc(l);
@@ -222,8 +222,6 @@ lex(Lexer *l)
 				return mktok(l, TOKSTR);
 			}
 		}
-	} else if (c == '\\') {
-		return mktok(l, c);
 	} else if (c == '\'') {
 		accept(l, c);
 		for(;;) {
@@ -307,12 +305,14 @@ lex(Lexer *l)
 					l->nl = 1;
 			}
 		} else if(c == '/' && c2 == '/') {
+			l->ws = 1;
 			do {
 				c = nextc(l);
 				if (c == EOF) {
 					return mktok(l, TOKEOF);
 				}
 			} while(c != '\n');
+			l->nl = 1;
 			ungetch(l, c);
 			return lex(l);
 		} else if(c == '.' && c2 == '.') {
@@ -341,9 +341,15 @@ lex(Lexer *l)
 		else if(c == '|' && c2 == '|') return mktok(l, TOKLOR);
 		else if(c == '&' && c2 == '&') return mktok(l, TOKLAND);
 		else if(c == '#' && c2 == '#') return mktok(l, TOKHASHHASH);
+		else if(c == '\\' && c2 == '\n') return lex(l);
 		else {
+
 			/* TODO, detect invalid operators */
 			ungetch(l, c2);
+			if(c == '#' && l->nl) {
+				l->indirective = 1;
+				return mktok(l, TOKDIRSTART);
+			}
 			return mktok(l, c);
 		}
 		panic("internal error\n");
