@@ -1,78 +1,118 @@
-# The smaller, faster C compiler suite.
+# A smaller, faster C compiler suite.
 
-
-## Goals
-
-- Small size.
+- Fast.
+- Consistent.
+- Small.
 - High quality.
 - Low complexity.
-- No external dependencies.
+- No dependencies.
 - No fussy configuration.
+- Painless cross compiling.
 - Just work.
-- Fast.
-
-The inspiration for this compiler came after dealing with building LLVM and GCC in
-many configurations. Each version taking 30 minutes between attempts.
-
-We should aim to compile as much real software as possible, and not prematurely
-focus on optimizations. Building real software asap is an early goal, because all other goals
-will rely on having a real user base to sustain development.
-
-## Plan
-
-### Stage 1.
-
-First, develop the C compiler and C preprocessor to the point it can compile itself, using
-gnu binutils as its assembler/linker. At this stage it will use a tcc/8cc style 
-backend and won't do any optimization at all.
-
-### Stage 2.
-
-Focus on building as much real world BSD+Linux software. The OpenBSD community might
-be the most welcoming and appreciative of the efforts, so building OpenBSD packages should
-be a strong focus. This stage ends when we can build hundreds of open source packages.
-
-During this stage ports to more architectures can be started. The style of ports and
-cross compiling will be inspired by the plan9 compilers. A gcc compatible driver can be added
-as a utility.
-
-### Stage 3.
-
-Replace the assembler with an in tree assembler. This assembler will have to follow
-binutils syntax simply because we want to support inline assembly which is already
-written.
-
-### Stage 4.
-
-Rewrite backend to be a simplified SSA or Three address IR backend. Focus on good
-but small/fast algorithms.
 
 ## Building
+
+Requires an external C compiler and gnu binutils (for now).
 
 ```
 $ make
 ```
 
-## Quotes
+## Testing
+```
+$ bash test.sh
+```
 
-- "Gotta go fast" - Sonic
-- "Mo code Mo problems" - Notorious B.I.G.
-- "One of my most productive days was throwing away 1000 lines of code." - Ken Thompson
+## Plan
 
-## Style
+### Stage 1.
 
-Follow plan9 conventions. Headers are not allowed to include
-other headers. src/u.h is the only exception to this rule.
+Self hosting x86_64.
+
+### Stage 2.
+
+Self hosting arm, something like raspberry pi/android.
+
+### Stage 3.
+
+Build small clean C code bases like 8cc, tcc, sbase.
+
+### Stage 4.
+
+Build musl libc.
+
+### Beyond. 
+
+- Build more programs.
+- Replace gnu as with our own assembler.
+- Replace ld with our own static linker.
+- Build OS kernels.
+
+## Status
+
+Pre stage 1.
+
+See tests for what works.
+
+## Code layout
+
+- Libraries are in src/*
+- Commands are in src/cmd/*
+
+If you are unsure about the purpose of a library, check the header which
+should give a short description.
+
+## Code style
+
+Follow Plan9 style conventions. Headers are not allowed to include
+other headers to eliminate circular dependencies and increase build speed.
+src/u.h is the only exception to this rule.
 
 - http://www.lysator.liu.se/c/pikestyle.html
 - http://plan9.bell-labs.com/magic/man2html/6/style
 - http://aiju.de/b/style
 
-## Memory management
+## Bug fixes and issues.
+
+Try and attach a single source file which exibits your issue. If possible
+reduce the test case by hand until it is as small as possible.
+
+Try and follow the general template changed where needed:
+```
+What are you trying to do:
+
+I am trying to compile foo.c and your compiler has ruined my life by deleting all 
+my files.
+
+What you expected to happen:
+
+The program works in many other C compilers, so should compile with no issue.
+
+What actually hapened:
+
+/ was deleted while the compiler printed "hahaha" many thousands of times.
+
+Here is a small self contained file which reproduces the issue.
+```
+
+In general each bug fix or change should add a test file which triggers the bug.
+
+### Commit messages
+
+General style: 
+
+```
+Fix issue #3 post increment.
+
+Post increment had a bug where it decremented instead of incremented.
+```
+
+Commits can be squashed to increase clarity.
+
+### Memory management
 
 The compiler assumes a conservative garbage collector.
-For now, the header is stubbed out, but this isn't a
-problem for now.
+For now, the header is stubbed out. This simplifies the code.
 
 ## Useful Links
 
@@ -84,3 +124,4 @@ problem for now.
 - https://github.com/rui314/8cc
 - http://harmful.cat-v.org/software/
 - http://suckless.org/philosophy
+
