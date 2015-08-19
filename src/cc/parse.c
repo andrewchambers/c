@@ -46,11 +46,12 @@ static CTy  *typename(void);
 static CTy  *declarator(CTy *, char **, Node **);
 static CTy  *directdeclarator(CTy *, char **);
 static CTy  *declaratortail(CTy *);
-static void  expect(int);
-
 static Node *ipromote(Node *);
 static CTy  *usualarithconv(Node **, Node **);
 static Node *mkcast(SrcPos *, Node *, CTy *);
+static void  expect(int);
+static int   islval(Node *);
+static int   isassignop(int);
 
 Tok *tok;
 Tok *nexttok;
@@ -187,6 +188,24 @@ static int
 isglobal(void)
 {
 	return nscopes == 1;
+}
+
+static int
+islval(Node *n)
+{
+	switch(n->t) {
+	case NUNOP:
+		if(n->Unop.op == '*')
+			return 1;
+		return 0;
+	case NIDENT:
+		return 1;
+	case NIDX:
+		return 1;
+	case NSEL:
+		return 1;
+	}
+	return 0;
 }
 
 static int
@@ -332,6 +351,8 @@ mkincdec(SrcPos *p, int op, int post, Node *operand)
 {
 	Node *n;
 
+	if(!islval(operand))
+		errorposf(&operand->pos, "++ and -- expects an lvalue");
 	n = mknode(NINCDEC, p);
 	n->Incdec.op = op;
 	n->Incdec.post = post;
@@ -345,17 +366,16 @@ mkbinop(SrcPos *p, int op, Node *l, Node *r)
 {
 	Node *n;
 	CTy  *t;
-
-	switch(op) {
-	case '=':
+	
+	if(isassignop(op)) {
+		if(!islval(l))
+			errorposf(&l->pos, "assign expects an lvalue");
 		r = mkcast(p, r, l->type);
 		t = l->type;
-		break;
-	default:
+	} else {
 		l = ipromote(l);
 		r = ipromote(r);
 		t = usualarithconv(&l, &r);
-		break;
 	}
 	n = mknode(NBINOP, p);
 	n->Binop.op = op;
