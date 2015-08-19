@@ -327,7 +327,7 @@ struct Tok {
 	SrcPos pos;
 };
 
-/* helper functions */
+/* error.c */
 void errorf(char *, ...);
 void errorposf(SrcPos *, char *, ...);
 
