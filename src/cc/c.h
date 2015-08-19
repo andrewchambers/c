@@ -58,6 +58,8 @@ enum {
 	TOKENUM,
 	TOKELLIPSIS,
 	TOKHASHHASH,
+	TOKDIRSTART,
+	TOKDIREND,
 	TOKEOF /* EOF needs to be the last. */
 };
 
@@ -324,6 +326,7 @@ struct Lexer {
 	SrcPos prevpos;
 	SrcPos markpos;
 	int    nchars;
+	int    indirective;
 	int    ws;
 	int    nl;
 	char   tokval[MAXTOKSZ+1];
@@ -335,7 +338,6 @@ struct Tok {
 	char  *v;
 	int    ws; /* There was whitespace before this token */
 	int    nl; /* There was a newline before this token */
-	int    beforenl; /* next tok is newline */
 	SrcPos pos;
 };
 

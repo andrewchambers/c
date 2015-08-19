@@ -49,6 +49,7 @@ _dumpty(CTy *ty)
 		fprintf(stderr, "(ptr ");
 		_dumpty(ty->Ptr.subty);
 		fprintf(stderr, ")");
+		break;
 	case CFUNC:
 		fprintf(stderr, "(func");
 		fprintf(stderr, " (");
