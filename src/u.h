@@ -1,7 +1,8 @@
-/* <u.h> is named after the plan9 u.h.
-   This is the only header in the compiler suite
+/* Provides the core types and core functions like panic */
+
+/* This is the only header in the code base
    which is allowed to include other headers.
-   Keep the list small for performance reasons. */
+   Keep the list small. */
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>

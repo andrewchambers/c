@@ -1,4 +1,4 @@
-/* Data structures */
+/* Provides generic data structures. */
 
 typedef struct ListEnt ListEnt;
 struct ListEnt {
@@ -39,7 +39,7 @@ typedef struct Vec Vec;
 struct Vec {
 	int   cap;
 	int   len;
-	void **d;
+	void  **d;
 };
 
 Vec  *vec();

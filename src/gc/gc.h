@@ -1,4 +1,4 @@
-/* A simple conservative garbage collector. */
+/* Provides a simple conservative garbage collector. */
 
 void  gc();
 void *gcmalloc(int);

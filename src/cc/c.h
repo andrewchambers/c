@@ -1,3 +1,5 @@
+/* Provides the preprocessor, compiler frontend. It also
+   contains the interface the backends implement. */
 
 /* Token types */
 enum {
