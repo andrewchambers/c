@@ -999,7 +999,7 @@ pstructbody(CTy *strct)
 	expect('{');
 	while(tok->k != '}') {
 		basety = declspecs(&sclass);
-		while(1) {
+		for(;;) {
 			p = &tok->pos;
 			t = declarator(basety, &name, 0);
 			if(tok->k == ':') {
@@ -1007,11 +1007,9 @@ pstructbody(CTy *strct)
 				constexpr();
 			}
 			addstructmember(p, strct, name, t);
-			if(tok->k == ',') {
-				next();
-				continue;
-			}
-			break;
+			if(tok->k != ',')
+				break;
+			next();
 		}
 		expect(';');
 	}
@@ -1072,9 +1070,7 @@ penum()
 		next();
 	}
 	expect('{');
-	while(1) {
-		if(tok->k == '}')
-			break;
+	for(;;) {
 		/* if(!definesym(tok->v, "TODO"))
 			errorposf(&tok->pos, "redefinition of symbol %s", tok->v);
 		*/
@@ -1083,8 +1079,9 @@ penum()
 			next();
 			constexpr();
 		}
-		if(tok->k == ',')
-			next();
+		if(tok->k != ',')
+			break;
+		next();
 	}
 	expect('}');
 	t = newtype(CPRIM);
@@ -1374,7 +1371,7 @@ declinit(void)
 	expect('{');
 	n = mknode(NINIT, &tok->pos);
 	n->Init.inits = vec();
-	while(1) {
+	for(;;) {
 		if(tok->k == '}')
 			break;
 		switch(tok->k){
