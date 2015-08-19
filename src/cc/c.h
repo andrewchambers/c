@@ -339,6 +339,9 @@ struct Tok {
 	SrcPos pos;
 };
 
+/* dbg.c */
+void dumpty(CTy *);
+
 /* error.c */
 void errorf(char *, ...);
 void errorposf(SrcPos *, char *, ...);
