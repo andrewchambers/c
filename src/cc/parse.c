@@ -394,11 +394,13 @@ mkunop(SrcPos *p, int op, Node *o)
 	n->Unop.op = op;
 	switch(op) {
 	case '&':
+		if(!islval(o))
+			errorposf(&o->pos, "& expects an lvalue");
 		n->type = mkptr(o->type);
 		break;
 	case '*':
 		if(!isptr(o->type))
-			errorposf(p, "cannot deref non pointer");
+			errorposf(&o->pos, "cannot deref non pointer");
 		n->type = o->type->Ptr.subty;
 		break;
 	default:
