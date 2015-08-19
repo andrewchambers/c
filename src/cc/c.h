@@ -176,6 +176,7 @@ enum {
 	NNUM,
 	NSTR,
 	NIDX,
+	NINCDEC,
 	NSEL,
 	NCALL,
 	NSIZEOF,
@@ -262,6 +263,11 @@ struct Node {
 			int   op;
 			Node *operand;
 		} Unop;
+		struct {
+			int   op;
+			int   post;
+			Node *operand;
+		} Incdec;
 		struct {
 			Node *operand;
 		} Cast;

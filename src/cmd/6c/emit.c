@@ -318,8 +318,33 @@ unop(Node *n)
 		expr(n->Unop.operand);
 		out("neg %%rax\n");
 		break;
+	case TOKINC:
 	default:
 		errorf("unimplemented unop %d\n", n->Unop.op);
+	}
+}
+
+static void
+incdec(Node *n)
+{
+	if(!isitype(n->type))
+		panic("unimplemented incdec");
+	addr(n->Incdec.operand);
+	out("pushq %%rax\n");
+	load(n->type);
+	if(n->Incdec.op == TOKINC)
+		out("inc %%rax\n");
+	else
+		out("dec %%rax\n");
+	out("movq %%rax, %%rbx\n");
+	out("popq %%rax\n");
+	store(n->type);
+	out("movq %%rbx, %%rax\n");
+	if(n->Incdec.post == 1) {
+		if(n->Incdec.op == TOKINC)
+			out("dec %%rax\n");
+		else
+			out("inc %%rax\n");
 	}
 }
 
@@ -544,6 +569,9 @@ expr(Node *n)
 		break;
 	case NCALL:
 		call(n);
+		break;
+	case NINCDEC:
+		incdec(n);
 		break;
 	default:
 		errorf("unimplemented emit expr %d\n", n->t);

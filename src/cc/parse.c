@@ -328,6 +328,19 @@ mkcomma(SrcPos *p, Vec *v)
 }
 
 static Node *
+mkincdec(SrcPos *p, int op, int post, Node *operand)
+{
+	Node *n;
+
+	n = mknode(NINCDEC, p);
+	n->Incdec.op = op;
+	n->Incdec.post = post;
+	n->Incdec.operand = operand;
+	n->type = operand->type;
+	return n;
+}
+
+static Node *
 mkbinop(SrcPos *p, int op, Node *l, Node *r)
 {
 	Node *n;
@@ -1763,7 +1776,8 @@ unaryexpr(void)
 	case TOKDEC:
 		t = tok;
 		next();
-		return mkunop(&tok->pos, t->k, unaryexpr());
+		n = unaryexpr();
+		return mkincdec(&t->pos, t->k, 0, n);
 	case '*':
 	case '&':
 	case '-':
@@ -1869,11 +1883,11 @@ postexpr(void)
 			n1 = n2;
 			break;
 		case TOKINC:
-			n1 = mkunop(&tok->pos, TOKINC, n1);
+			n1 = mkincdec(&tok->pos, TOKINC, 1, n1);
 			next();
 			break;
 		case TOKDEC:
-			n1 = mkunop(&tok->pos, TOKINC, n1);
+			n1 = mkincdec(&tok->pos, TOKDEC, 1, n1);
 			next();
 			break;
 		default:
