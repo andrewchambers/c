@@ -484,7 +484,9 @@ cast(Node *n)
 		return;
 	if(isitype(from) && isitype(to))
 		return;
-	errorf("unimplemented cast\n");
+	if(isfunc(from) && isptr(to))
+		return;
+	errorf("unimplemented cast %d %d\n", from->t, to->t);
 }
 
 static void
