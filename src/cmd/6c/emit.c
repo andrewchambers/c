@@ -197,35 +197,12 @@ addr(Node *n)
 }
 
 static void
-assign(Node *l, Node *r)
+obinop(int op, CTy *t)
 {
-	expr(r);
-	out("pushq %%rax\n");
-	addr(l);
-	out("popq %%rbx\n");
-	if(!isptr(l->type) && !isitype(l->type))
-		errorf("unimplemented emitassign\n");
-	store(l->type);
-}
-
-static void
-binop(Node *n)
-{
-	int   op;
 	char *lset;
 	char *lafter;
 	char *opc;
-	
-	op = n->Binop.op;
-	if(op == '=') {
-		assign(n->Binop.l, n->Binop.r);
-		return;
-	}
-	expr(n->Binop.l);
-	out("pushq %%rax\n");
-	expr(n->Binop.r);
-	out("movq %%rax, %%rcx\n");
-	out("popq %%rax\n");
+
 	switch(op) {
 	case '+':
 		out("addq %%rcx, %%rax\n");
@@ -288,8 +265,53 @@ binop(Node *n)
 		out("%s:\n", lafter);
 		break;
 	default:
-		errorf("unimplemented binop\n");
+		errorf("unimplemented binop %d\n", op);
 	}
+}
+
+static void
+assign(Node *n)
+{
+	Node *l, *r;
+	int op;
+
+	op = n->Assign.op;
+	l = n->Assign.l;
+	r = n->Assign.r;
+	if(op == '=') {
+		expr(r);
+		out("pushq %%rax\n");
+		addr(l);
+		out("popq %%rbx\n");
+		if(!isptr(l->type) && !isitype(l->type))
+			errorf("unimplemented assign\n");
+		store(l->type);
+		out("movq %%rbx, %%rax\n");
+		return;
+	}
+	addr(l);
+	out("pushq %%rax\n");
+	load(l->type);
+	out("pushq %%rax\n");
+	expr(r);
+	out("movq %%rax, %%rcx\n");
+	out("popq %%rax\n");
+	obinop(op, n->type);
+	out("movq %%rax, %%rbx\n");
+	out("popq %%rax\n");
+	store(l->type);
+	out("movq %%rbx, %%rax\n");
+}
+
+static void
+binop(Node *n)
+{
+	expr(n->Binop.l);
+	out("pushq %%rax\n");
+	expr(n->Binop.r);
+	out("movq %%rax, %%rcx\n");
+	out("popq %%rax\n");
+	obinop(n->Binop.op, n->type);
 }
 
 static void
@@ -557,6 +579,9 @@ expr(Node *n)
 		break;
 	case NUNOP:
 		unop(n);
+		break;
+	case NASSIGN:
+		assign(n);
 		break;
 	case NBINOP:
 		binop(n);

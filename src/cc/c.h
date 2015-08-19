@@ -157,6 +157,7 @@ typedef struct {
 
 /* node types */
 enum {
+	NASSIGN,
 	NFUNC,
 	NLABELED,
 	NWHILE,
@@ -259,6 +260,11 @@ struct Node {
 			Node *l;
 			Node *r;
 		} Binop;
+		struct {
+			int op;
+			Node *l;
+			Node *r;
+		} Assign;
 		struct {
 			int   op;
 			Node *operand;

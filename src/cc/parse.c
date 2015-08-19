@@ -367,20 +367,43 @@ mkbinop(SrcPos *p, int op, Node *l, Node *r)
 	Node *n;
 	CTy  *t;
 	
-	if(isassignop(op)) {
-		if(!islval(l))
-			errorposf(&l->pos, "assign expects an lvalue");
-		r = mkcast(p, r, l->type);
-		t = l->type;
-	} else {
-		l = ipromote(l);
-		r = ipromote(r);
-		t = usualarithconv(&l, &r);
-	}
+	l = ipromote(l);
+	r = ipromote(r);
+	t = usualarithconv(&l, &r);
 	n = mknode(NBINOP, p);
 	n->Binop.op = op;
 	n->Binop.l = l;
 	n->Binop.r = r;
+	n->type = t;
+	return n;
+}
+
+static Node *
+mkassign(SrcPos *p, int op, Node *l, Node *r)
+{
+	Node *n;
+	CTy  *t;
+
+	if(!islval(l))
+		errorposf(&l->pos, "assign expects an lvalue");
+	r = mkcast(p, r, l->type);
+	t = l->type;
+	n = mknode(NASSIGN, p);
+	switch(op) {
+	case '=':
+		n->Assign.op = '=';
+		break;
+	case TOKADDASS:
+		n->Assign.op = '+';
+		break;
+	case TOKSUBASS:
+		n->Assign.op = '-';
+		break;
+	default:
+		panic("mkassign");
+	}
+	n->Assign.l = l;
+	n->Assign.r = r;
 	n->type = t;
 	return n;
 }
@@ -1574,7 +1597,7 @@ assignexpr(void)
 		t = tok;
 		next();
 		r = assignexpr();
-		l = mkbinop(&t->pos, t->k, l, r);
+		l = mkassign(&t->pos, t->k, l, r);
 	}
 	return l;
 }
