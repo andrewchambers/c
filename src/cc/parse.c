@@ -399,6 +399,15 @@ mkassign(SrcPos *p, int op, Node *l, Node *r)
 	case TOKSUBASS:
 		n->Assign.op = '-';
 		break;
+	case TOKORASS:
+		n->Assign.op = '|';
+		break;
+	case TOKANDASS:
+		n->Assign.op = '&';
+		break;
+	case TOKMULASS:
+		n->Assign.op = '*';
+		break;
 	default:
 		panic("mkassign");
 	}
