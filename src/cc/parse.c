@@ -957,13 +957,17 @@ declarator(CTy *basety, char **name, Node **init)
 static CTy *
 directdeclarator(CTy *basety, char **name) 
 {
+	CTy *ty;
+
 	*name = 0;
 	switch(tok->k) {
 	case '(':
 		expect('(');
-		basety = declarator(basety, name, 0);
+		ty = gcmalloc(sizeof(CTy));
+		basety = declarator(ty, name, 0);
 		expect(')');
-		return declaratortail(basety);
+		*ty = *declaratortail(basety);
+		return ty;
 	case TOKIDENT:
 		if(name)
 			*name = tok->v;
