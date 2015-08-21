@@ -63,21 +63,35 @@ foldbinop(Node *n)
 }
 
 static Const *
+foldaddr(Node *n)
+{
+	Sym *sym;
+
+	if(n->Unop.operand->t != NIDENT)
+		return 0;
+	sym = n->Unop.operand->Ident.sym;
+	if(sym->sclass != SCGLOBAL && sym->sclass != SCSTATIC)
+		return 0;
+	return mkconst(sym->label, 0);
+}
+
+static Const *
 foldunop(Node *n)
 {
 	Const *c;
 
-	c = foldexpr(n->Unop.operand);
-	if(!c)
-		return 0;
-
-	if(isitype(n->type)) {
-		switch(n->Binop.op) {
-		case '-':
-			return mkconst(0, -c->v);
-		default:
-			panic("unimplemented fold unop %d", n->Binop.op);
-		}
+	switch(n->Unop.op) {
+	case '&':
+		return foldaddr(n);
+	case '-':
+		c = foldexpr(n->Unop.operand);
+		if(!c)
+			return 0;
+		if(c->p)
+			return 0;
+		return mkconst(0, -c->v);
+	default:
+		panic("unimplemented fold unop %d", n->Binop.op);
 	}
 	panic("unimplemented fold unop");
 	return 0;
