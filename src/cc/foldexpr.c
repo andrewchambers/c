@@ -20,18 +20,37 @@ foldbinop(Node *n)
 	Const *l, *r;
 
 	l = foldexpr(n->Binop.l);
-	r = foldexpr(n->Binop.l);
+	r = foldexpr(n->Binop.r);
 	if(!l || !r)
 		return 0;
 	if(isitype(n->type)) {
 		switch(n->Binop.op) {
 		case '+':
+			if(l->p && r->p)
+				return 0;
+			if(l->p)
+				mkconst(l->p, l->v + r->v);
+			if(r->p)
+				mkconst(r->p, l->v + r->v);
 			return mkconst(0, l->v + r->v);
 		case '-':
+			if(l->p || r->p) {
+				if(l->p && !r->p)
+					return mkconst(l->p, l->v - r->v);
+				if(!l->p && r->p)
+					return 0;
+				if(strcmp(l->p, r->p) == 0)
+					return mkconst(0, l->v - r->v);
+				return 0;
+			}
 			return mkconst(0, l->v - r->v);
 		case '*':
+			if(l->p || r->p)
+				return 0;
 			return mkconst(0, l->v * r->v);
 		case '/':
+			if(l->p || r->p)
+				return 0;
 			if(r->v == 0)
 				return 0;
 			return mkconst(0, l->v / r->v);
