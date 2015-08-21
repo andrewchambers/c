@@ -440,9 +440,7 @@ eswitch(Node *n)
 	expr(n->Switch.expr);
 	for(i = 0; i < n->Switch.cases->len; i++) {
 		c = vecget(n->Switch.cases, i);
-		if(c->Case.expr->t != NNUM)
-			errorposf(&c->pos, "unimplemented");
-		out("mov $%lld, %%rcx\n", c->Case.expr->Num.v);
+		out("mov $%lld, %%rcx\n", c->Case.cond);
 		out("cmp %%rax, %%rcx\n");
 		out("je %s\n", c->Case.l);
 	}

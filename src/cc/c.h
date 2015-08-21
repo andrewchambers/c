@@ -240,9 +240,9 @@ struct Node {
 			Vec  *cases;
 		} Switch;
 		struct {
-			char *l;
-			Node *expr;
-			Node *stmt;
+			char  *l;
+			int64 cond;
+			Node  *stmt;
 		} Case;
 		struct {
 			char *l;
@@ -341,6 +341,12 @@ struct Tok {
 	SrcPos pos;
 };
 
+typedef struct Const Const;
+struct Const {
+	char  *p; /* p is null, or the label of a symbol */
+	int64  v;
+};
+
 /* dbg.c */
 void dumpty(CTy *);
 
@@ -376,6 +382,9 @@ void addstructmember(SrcPos *, CTy *, char *, CTy *);
 void  parseinit(void);
 Node *parsenext(void);
 char *newlabel();
+
+/* foldexpr.c */
+Const *foldexpr(Node *);
 
 /* backend functions */
 void  emitinit(FILE *);

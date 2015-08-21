@@ -3,55 +3,56 @@
 #include <ds/ds.h>
 #include "c.h"
 
-static Node *stmt(void);
-static Node *pif(void);
-static Node *pfor(void);
-static Node *dowhile(void);
-static Node *pwhile(void);
-static Node *block(void);
-static Node *preturn(void);
-static Node *pswitch(void);
-static Node *pdefault(void);
-static Node *pcase(void);
-static Node *pcontinue(void);
-static Node *pbreak(void);
-static Node *stmt(void);
-static Node *exprstmt(void);
-static Node *expr(void);
-static Node *assignexpr(void);
-static Node *constexpr(void);
-static Node *condexpr(void);
-static Node *logorexpr(void);
-static Node *logandexpr(void);
-static Node *orexpr(void);
-static Node *xorexpr(void);
-static Node *andexpr(void);
-static Node *eqlexpr(void);
-static Node *relexpr(void);
-static Node *shiftexpr(void);
-static Node *addexpr(void);
-static Node *mulexpr(void);
-static Node *castexpr(void);
-static Node *unaryexpr(void);
-static Node *postexpr(void);
-static Node *primaryexpr(void);
-static Node *declorstmt(void);
-static Node *decl(void);
-static Node *declinit(void);
-static Node *fbody(SrcPos *, char *, CTy *);
-static CTy  *declspecs(int *);
-static CTy  *pstruct(void);
-static CTy  *penum(void);
-static CTy  *typename(void);
-static CTy  *declarator(CTy *, char **, Node **);
-static CTy  *directdeclarator(CTy *, char **);
-static CTy  *declaratortail(CTy *);
-static Node *ipromote(Node *);
-static CTy  *usualarithconv(Node **, Node **);
-static Node *mkcast(SrcPos *, Node *, CTy *);
-static void  expect(int);
-static int   islval(Node *);
-static int   isassignop(int);
+static Const *constexpr(void);
+static Node  *stmt(void);
+static Node  *pif(void);
+static Node  *pfor(void);
+static Node  *dowhile(void);
+static Node  *pwhile(void);
+static Node  *block(void);
+static Node  *preturn(void);
+static Node  *pswitch(void);
+static Node  *pdefault(void);
+static Node  *pcase(void);
+static Node  *pcontinue(void);
+static Node  *pbreak(void);
+static Node  *stmt(void);
+static Node  *exprstmt(void);
+static Node  *expr(void);
+static Node  *assignexpr(void);
+static Node  *condexpr(void);
+static Node  *logorexpr(void);
+static Node  *logandexpr(void);
+static Node  *orexpr(void);
+static Node  *xorexpr(void);
+static Node  *andexpr(void);
+static Node  *eqlexpr(void);
+static Node  *relexpr(void);
+static Node  *shiftexpr(void);
+static Node  *addexpr(void);
+static Node  *mulexpr(void);
+static Node  *castexpr(void);
+static Node  *unaryexpr(void);
+static Node  *postexpr(void);
+static Node  *primaryexpr(void);
+static Node  *declorstmt(void);
+static Node  *decl(void);
+static Node  *declinit(void);
+static Node  *fbody(SrcPos *, char *, CTy *);
+static CTy   *declspecs(int *);
+static CTy   *pstruct(void);
+static CTy   *penum(void);
+static CTy   *typename(void);
+static CTy   *declarator(CTy *, char **, Node **);
+static CTy   *directdeclarator(CTy *, char **);
+static CTy   *declaratortail(CTy *);
+static Node  *ipromote(Node *);
+static CTy   *usualarithconv(Node **, Node **);
+static Node  *mkcast(SrcPos *, Node *, CTy *);
+static void   expect(int);
+static int    islval(Node *);
+static int    isassignop(int);
+
 
 Tok *tok;
 Tok *nexttok;
@@ -985,8 +986,9 @@ directdeclarator(CTy *basety, char **name)
 static CTy *
 declaratortail(CTy *basety)
 {
-	CTy  *t, *newt;
-	Node *c;
+	SrcPos *p;
+	CTy    *t, *newt;
+	Const  *c;
 	
 	t = basety;
 	for(;;) {
@@ -997,16 +999,16 @@ declaratortail(CTy *basety)
 			newt->Arr.subty = t;
 			newt->Arr.dim = -1;
 			next();
-			if(tok->k != ']')
+			if(tok->k != ']') {
+				p = &tok->pos;
 				c = constexpr();
-			expect(']');
-			if(c) {
-				if(c->t != NNUM)
-					errorposf(&tok->pos, "currently only constant sized arrays supported");
-				newt->Arr.dim = c->Num.v;
+				if(c->p)
+					errorposf(p, "pointer derived constant in array size");
+				newt->Arr.dim = c->v;
 				newt->size = newt->Arr.dim * newt->Arr.subty->size;
-				newt->align = newt->Arr.subty->align;
 			}
+			newt->align = newt->Arr.subty->align;
+			expect(']');
 			t = newt;
 			break;
 		case '(':
@@ -1531,12 +1533,16 @@ pcase(void)
 	SrcPos *pos;
 	Node   *n;
 	Node   *s;
+	Const  *c;
 
 	pos = &tok->pos;
 	s = curswitch();
 	expect(TOKCASE);
 	n = mknode(NCASE, pos);
-	n->Case.expr = constexpr();
+	c = constexpr();
+	if(c->p)
+		errorposf(pos, "case cannot have pointer derived constant");
+	n->Case.cond = c->v;
 	expect(':');
 	n->Case.l = newlabel();
 	n->Case.stmt = stmt();
@@ -1615,10 +1621,17 @@ assignexpr(void)
 	return l;
 }
 
-static Node *
+static Const *
 constexpr(void)
 {
-	return condexpr();
+	Const *c;
+	Node  *n;
+
+	n = condexpr();
+	c = foldexpr(n);
+	if(!c)
+		errorposf(&n->pos, "not a constant expression");
+	return c;
 }
 
 /* Aka Ternary operator. */

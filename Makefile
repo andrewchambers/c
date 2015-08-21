@@ -9,6 +9,7 @@ CCO    = src/cc/cpp.o \
          src/cc/lex.o \
          src/cc/parse.o \
          src/cc/types.o \
+         src/cc/foldexpr.o \
          src/cc/error.o
 GCO    = src/gc/gc.o
 DSO    = src/ds/list.o \
