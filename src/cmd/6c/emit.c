@@ -30,17 +30,19 @@ char *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 static void
 calclocaloffsets(Node *f)
 {
-	int i, sz;
+	int i, tsz, curoffset;
 	Sym *s;
 
-	sz = 0;
+	curoffset = 0;
 	for(i = 0; i < f->Func.locals->len; i++) {
 		s = vecget(f->Func.locals, i);
-		if(sz % s->type->align)
-			sz = sz + (sz - (sz % s->type->align));
-		s->stkloc.offset = sz;
-		sz += s->type->size;
+		tsz = s->type->size;
+		if(tsz < 8)
+			tsz = 8;
+		curoffset += tsz;
+		s->stkloc.offset = -curoffset;
 	}
+	f->Func.localsz = curoffset;
 }
 
 static void
@@ -57,7 +59,7 @@ func(Node *f)
 	out("pushq %%rbp\n");
 	out("movq %%rsp, %%rbp\n");
 	if (f->Func.localsz)
-		out("add $%d, %%rsp\n", f->Func.localsz);
+		out("sub $%d, %%rsp\n", f->Func.localsz);
 	v = f->Func.params;
 	for(i = 0; i < v->len; i++) {
 		sym = vecget(v, i);
