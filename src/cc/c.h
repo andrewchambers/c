@@ -126,6 +126,7 @@ struct CTy {
 		struct {
 			CTy *rtype;
 			Vec *params;
+			Vec *localsyms;
 			int  isvararg;
 		} Func;
 		struct {
@@ -154,7 +155,11 @@ typedef struct {
 	CTy    *type;
 	char   *name;
 	char   *label;  /* SCGLOBAL, SCSTATIC. */
-	int     offset; /* SCAUTO only. */
+	/* SCAUTO only. */
+	union { /* For backend use */
+		int   offset;
+		char *label; /* For backends which want a text label. */
+	} stkloc;
 } Sym;
 
 /* node types */
@@ -200,6 +205,7 @@ struct Node {
 			char *name;
 			Node *body;
 			Vec  *params; /* list of *Sym */
+			Vec  *locals; /* list of *Sym */
 		} Func;
 		struct {
 			int sclass;

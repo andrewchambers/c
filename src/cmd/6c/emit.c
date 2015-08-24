@@ -28,12 +28,29 @@ out(char *fmt, ...)
 char *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
 static void
+calclocaloffsets(Node *f)
+{
+	int i, sz;
+	Sym *s;
+
+	sz = 0;
+	for(i = 0; i < f->Func.locals->len; i++) {
+		s = vecget(f->Func.locals, i);
+		if(sz % s->type->align)
+			sz = sz + (sz - (sz % s->type->align));
+		s->stkloc.offset = sz;
+		sz += s->type->size;
+	}
+}
+
+static void
 func(Node *f)
 {
 	Vec *v;
 	Sym *sym;
 	int i;
 	
+	calclocaloffsets(f);
 	out(".text\n");
 	out(".globl %s\n", f->Func.name);
 	out("%s:\n", f->Func.name);
@@ -47,10 +64,10 @@ func(Node *f)
 		if(!isitype(sym->type) && !isptr(sym->type))
 			errorposf(&f->pos, "internal error - unimplemented arg type");
 		if(i < 6) {
-			out("movq %%%s, %d(%%rbp)\n", intargregs[i], sym->offset);
+			out("movq %%%s, %d(%%rbp)\n", intargregs[i], sym->stkloc.offset);
 		} else {
 			out("movq %d(%%rbp), %%rbx\n", 16 + 8 * (i - 6));
-			out("leaq %d(%%rbp), %%rax\n", sym->offset);
+			out("leaq %d(%%rbp), %%rax\n", sym->stkloc.offset);
 			store(sym->type);
 		}
 	}
@@ -176,7 +193,7 @@ addr(Node *n)
 			out("leaq %s(%%rip), %%rax\n", sym->label);
 			break;
 		case SCAUTO:
-			out("leaq %d(%%rbp), %%rax\n", sym->offset);
+			out("leaq %d(%%rbp), %%rax\n", sym->stkloc.offset);
 			break;
 		}
 		break;

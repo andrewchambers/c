@@ -38,7 +38,7 @@ static Node  *primaryexpr(void);
 static Node  *declorstmt(void);
 static Node  *decl(void);
 static Node  *declinit(void);
-static Node  *fbody(SrcPos *, char *, CTy *);
+static void   fbody(void);
 static CTy   *declspecs(int *);
 static CTy   *pstruct(void);
 static CTy   *penum(void);
@@ -70,10 +70,10 @@ static char *breaks[MAXLABELDEPTH];
 static char *conts[MAXLABELDEPTH];
 static Node *switches[MAXLABELDEPTH];
 
-Map *labels;
-Vec *gotos;
+Node *curfunc;
+Map  *labels;
+Vec  *gotos;
 
-int localoffset;
 int labelcount;
 
 char *
@@ -245,6 +245,11 @@ definesym(char *name, Sym *sym)
 		 Check if types are compatible.
 		*/
 		 errorposf(sym->pos, "redefinition of symbol %s", name);
+	}
+	switch(sym->sclass) {
+	case SCAUTO:
+		vecappend(curfunc->Func.locals, sym);
+		break;
 	}
 }
 
@@ -583,7 +588,6 @@ static Sym *
 mksym(SrcPos *p, int sclass, char *name, CTy *t)
 {
 	Sym *s;
-	int  sz;
 
 	s = gcmalloc(sizeof(Sym));
 	s->pos = p;
@@ -600,13 +604,6 @@ mksym(SrcPos *p, int sclass, char *name, CTy *t)
 	case SCAUTO:
 		if(isglobal())
 			errorposf(p, "automatic storage outside of function");
-		sz = t->size;
-		if(sz < 8)
-			sz = 8;
-		if(sz % 8)
-			sz = sz + 8 - (sz % 8); /* TODO: stack alignment requirements? */
-		localoffset -= sz;
-		s->offset = localoffset;
 		break;
 	default:
 		panic("internal error");
@@ -651,7 +648,17 @@ decl()
 		if(isglobal() && tok->k == '{') {
 			if(init)
 				errorposf(pos, "function declaration has an initializer");
-			return fbody(pos, name, type);
+			if(type->t != CFUNC)
+				errorposf(pos, "expected a function");
+			curfunc = mknode(NFUNC, pos);
+			curfunc->type = type;
+			curfunc->Func.name = name;
+			curfunc->Func.params = vec();
+			curfunc->Func.locals = vec();
+			fbody();
+			n = curfunc;
+			curfunc = 0;
+			return n;
 		}
 		if(tok->k == ',')
 			next();
@@ -665,32 +672,27 @@ decl()
 	return n;
 }
 
-static Node *
-fbody(SrcPos *pos, char *name, CTy *type)
+static void
+fbody(void)
 {
-	Node   *n, *body, *gotofixup;
+	Node   *gotofixup;
 	int     i;
 	char   *l;
 	NameTy *nt;
-	Vec    *params;
 	Sym    *sym;
 
-	params = vec();
-	localoffset = 0;
-	if(type->t != CFUNC)
-		errorposf(pos, "expected a function");
 	pushscope();
 	labels = map();
 	gotos = vec();
-	for(i = 0; i < type->Func.params->len; i++) {
-		nt = vecget(type->Func.params, i);
+	for(i = 0; i < curfunc->type->Func.params->len; i++) {
+		nt = vecget(curfunc->type->Func.params, i);
 		if(nt->name) {
-			sym = mksym(pos, SCAUTO, nt->name, nt->type);
+			sym = mksym(&curfunc->pos, SCAUTO, nt->name, nt->type);
 			definesym(nt->name, sym);
-			vecappend(params, sym);
+			vecappend(curfunc->Func.params, sym);
 		}
 	}
-	body = block();
+	curfunc->Func.body = block();
 	popscope();
 	for(i = 0 ; i < gotos->len ; i++) {
 		gotofixup = vecget(gotos, i);
@@ -699,13 +701,6 @@ fbody(SrcPos *pos, char *name, CTy *type)
 			errorposf(&gotofixup->pos, "goto target does not exist");
 		gotofixup->Goto.l = l;
 	}
-	n = mknode(NFUNC, pos);
-	n->type = type;
-	n->Func.body = body;
-	n->Func.name = name;
-	n->Func.localsz = localoffset;
-	n->Func.params = params;
-	return n;
 }
 
 static int
