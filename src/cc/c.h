@@ -347,30 +347,6 @@ struct Const {
 	int64  v;
 };
 
-enum {
-	DCONST,
-	DARR,
-	DSTR,
-};
-
-typedef struct InitData InitData;
-struct InitData {
-	int   t;
-	CTy  *type;
-	char *label;
-	union {
-		struct DataArr {
-			Vec *ents; /* TODO: holes */
-		};
-		struct DataString {
-			char *v;
-		};
-		struct DataConst {
-			Const *v;
-		};
-	};
-};
-
 /* dbg.c */
 void dumpty(CTy *);
 
