@@ -17,6 +17,7 @@ DSO    = src/ds/list.o \
          src/ds/vec.o \
          src/ds/strset.o
 LIBO   = src/u.o $(CCO) $(GCO) $(DSO)
+LIBA   = lib/libcompiler.a
 CPPO   = src/cmd/cpp/main.o 
 _6CO   = src/cmd/6c/emit.o \
          src/cmd/6c/main.o 
@@ -31,17 +32,21 @@ all:  bin/6c \
 %.o: %.c $(HFILES)
 	$(CC) $(CFLAGS) -Isrc/ -o $@ -c $<
 
-bin/6c: $(_6CO) $(LIBO)
+bin/6c: $(_6CO) $(LIBA)
 	@ mkdir -p bin
-	$(CC) $(LDFLAGS) $(_6CO) $(LIBO) -o $@
+	$(CC) $(LDFLAGS) $(_6CO) $(LIBA) -o $@
 
-bin/6a: $(_6AO) $(LIBO)
+bin/6a: $(_6AO) $(LIBA)
 	@ mkdir -p bin
-	$(CC) $(LDFLAGS) $(_6AO) $(LIBO) -o $@
+	$(CC) $(LDFLAGS) $(_6AO) $(LIBA) -o $@
 
-bin/cpp:  $(CPPO) $(LIBO)
+bin/cpp:  $(CPPO) $(LIBA)
 	@ mkdir -p bin
-	$(CC) $(LDFLAGS) $(CPPO) $(LIBO) -o $@
+	$(CC) $(LDFLAGS) $(CPPO) $(LIBA) -o $@
+
+$(LIBA): $(LIBO)
+	@ mkdir -p lib
+	ar rcs $(LIBA) $(LIBO) 
 
 clean:
-	rm -rf $(LIBO) $(CPPO) $(_6CO) $(_6AO) bin 
+	rm -rf $(LIBA) $(LIBO) $(CPPO) $(_6CO) $(_6AO) bin 
