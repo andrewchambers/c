@@ -1633,8 +1633,19 @@ constexpr(void)
 static Node *
 condexpr(void)
 {
-	/* TODO: implement */
-	return logorexpr();
+	Node *n, *c, *t, *f;
+
+	c = logorexpr();
+	if(tok->k != '?')
+		return c;
+	t = expr();
+	expect(':');
+	f = condexpr();
+	n = mknode(NCOND, &tok->pos);
+	n->Cond.cond = c;
+	n->Cond.iftrue = t;
+	n->Cond.iffalse = f;
+	return n;
 }
 
 static Node *

@@ -176,6 +176,7 @@ enum {
 	NCAST,
 	NCASE,
 	NCOMMA,
+	NCOND,
 	NINIT,
 	NRETURN,
 	NSWITCH,
@@ -217,6 +218,11 @@ struct Node {
 			Node *iftrue;
 			Node *iffalse;
 		} If;
+		struct {
+			Node *cond;
+			Node *iftrue;
+			Node *iffalse;
+		} Cond;
 		struct {
 			char *lstart;
 			char *lend;
