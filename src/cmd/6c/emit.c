@@ -475,6 +475,25 @@ eswitch(Node *n)
 }
 
 static void
+cond(Node *n)
+{
+	char *lfalse, *lend;
+
+	if(!isitype(n->type) && !isptr(n->type))
+		panic("unimplemented emit cond");
+	expr(n->Cond.cond);
+	lfalse = newlabel();
+	lend = newlabel();
+	out("test %%rax, %%rax\n");
+	out("jz %s\n", lfalse);
+	expr(n->Cond.iftrue);
+	out("jmp %s\n", lend);
+	out("%s:\n", lfalse);
+	expr(n->Cond.iffalse);
+	out("%s:\n", lend);
+}
+
+static void
 block(Node *n)
 {
 	Vec *v;
@@ -612,6 +631,9 @@ expr(Node *n)
 		break;
 	case NSEL:
 		sel(n);
+		break;
+	case NCOND:
+		cond(n);
 		break;
 	case NCALL:
 		call(n);

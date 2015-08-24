@@ -33,6 +33,7 @@ tokktostr(int t)
 	case TOKHASHHASH:   return "##";
 	case TOKDIRSTART:   return "Directive start";
 	case TOKDIREND:     return "Directive end";
+	case '?':           return "?";
 	case '[':           return "[";
 	case '+':           return "+";
 	case '%':           return "%";

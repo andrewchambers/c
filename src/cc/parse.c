@@ -1638,6 +1638,7 @@ condexpr(void)
 	c = logorexpr();
 	if(tok->k != '?')
 		return c;
+	next();
 	t = expr();
 	expect(':');
 	f = condexpr();
@@ -1645,6 +1646,10 @@ condexpr(void)
 	n->Cond.cond = c;
 	n->Cond.iftrue = t;
 	n->Cond.iffalse = f;
+	/* TODO: what are the limitations? */
+	if(!sametype(t->type, f->type))
+		errorposf(&n->pos, "both cases of ? must be same type.");
+	n->type = t->type;
 	return n;
 }
 
