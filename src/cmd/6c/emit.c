@@ -40,6 +40,8 @@ calclocaloffsets(Node *f)
 		if(tsz < 8)
 			tsz = 8;
 		curoffset += tsz;
+		if(curoffset % s->type->align)
+			curoffset += (curoffset - (curoffset % curoffset % s->type->align));
 		s->stkloc.offset = -curoffset;
 	}
 	f->Func.localsz = curoffset;
