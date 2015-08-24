@@ -46,7 +46,7 @@ bin/cpp:  $(CPPO) $(LIBA)
 
 $(LIBA): $(LIBO)
 	@ mkdir -p lib
-	ar rcs $(LIBA) $(LIBO) 
+	ar rcs $(LIBA) $(LIBO)
 
 clean:
-	rm -rf $(LIBA) $(LIBO) $(CPPO) $(_6CO) $(_6AO) bin 
+	rm -rf $(LIBA) $(LIBO) $(CPPO) $(_6CO) $(_6AO) bin
