@@ -278,12 +278,12 @@ obinop(int op, CTy *t)
 			break;
 		}
 		out("cmp %%rcx, %%rax\n");
-		out("%s %s\n", opc, lset);
+		out("%s .%s\n", opc, lset);
 		out("movq $0, %%rax\n");
-		out("jmp %s\n", lafter);
-		out("%s:\n", lset);
+		out("jmp .%s\n", lafter);
+		out(".%s:\n", lset);
 		out("movq $1, %%rax\n");
-		out("%s:\n", lafter);
+		out(".%s:\n", lafter);
 		break;
 	default:
 		errorf("unimplemented binop %d\n", op);
@@ -403,9 +403,9 @@ eif(Node *n)
 {
 	expr(n->If.expr);
 	out("test %%rax, %%rax\n");
-	out("jz %s\n", n->If.lelse);
+	out("jz .%s\n", n->If.lelse);
 	stmt(n->If.iftrue);
-	out("%s:\n", n->If.lelse);
+	out(".%s:\n", n->If.lelse);
 	if(n->If.iffalse)
 		stmt(n->If.iffalse);
 }
@@ -415,41 +415,41 @@ efor(Node *n)
 {
 	if(n->For.init)
 		expr(n->For.init);
-	out("%s:\n", n->For.lstart);
+	out(".%s:\n", n->For.lstart);
 	if(n->For.cond)
 		expr(n->For.cond);
 	out("test %%rax, %%rax\n");
-	out("jz %s\n", n->For.lend);
+	out("jz .%s\n", n->For.lend);
 	stmt(n->For.stmt);
 	if(n->For.step)
 		expr(n->For.step);
-	out("jmp %s\n", n->For.lstart);
-	out("%s:\n", n->For.lend);
+	out("jmp .%s\n", n->For.lstart);
+	out(".%s:\n", n->For.lend);
 }
 
 static void
 ewhile(Node *n)
 {
-	out("%s:\n", n->While.lstart);
+	out(".%s:\n", n->While.lstart);
 	expr(n->While.expr);
 	out("test %%rax, %%rax\n");
-	out("jz %s\n", n->While.lend);
+	out("jz .%s\n", n->While.lend);
 	stmt(n->While.stmt);
-	out("jmp %s\n", n->While.lstart);
-	out("%s:\n", n->While.lend);
+	out("jmp .%s\n", n->While.lstart);
+	out(".%s:\n", n->While.lend);
 }
 
 static void
 dowhile(Node *n)
 {
-	out("%s:\n", n->DoWhile.lstart);
+	out(".%s:\n", n->DoWhile.lstart);
 	stmt(n->DoWhile.stmt);
-	out("%s:\n", n->DoWhile.lcond);
+	out(".%s:\n", n->DoWhile.lcond);
 	expr(n->DoWhile.expr);
 	out("test %%rax, %%rax\n");
-	out("jz %s\n", n->DoWhile.lend);
-	out("jmp %s\n", n->DoWhile.lstart);
-	out("%s:\n", n->DoWhile.lend);
+	out("jz .%s\n", n->DoWhile.lend);
+	out("jmp .%s\n", n->DoWhile.lstart);
+	out(".%s:\n", n->DoWhile.lend);
 }
 
 static void
@@ -463,15 +463,15 @@ eswitch(Node *n)
 		c = vecget(n->Switch.cases, i);
 		out("mov $%lld, %%rcx\n", c->Case.cond);
 		out("cmp %%rax, %%rcx\n");
-		out("je %s\n", c->Case.l);
+		out("je .%s\n", c->Case.l);
 	}
 	if(n->Switch.ldefault) {
-		out("jmp %s\n", n->Switch.ldefault);
+		out("jmp .%s\n", n->Switch.ldefault);
 	} else {
-		out("jmp %s\n", n->Switch.lend);
+		out("jmp .%s\n", n->Switch.lend);
 	}
 	stmt(n->Switch.stmt);
-	out("%s:\n", n->Switch.lend);
+	out(".%s:\n", n->Switch.lend);
 }
 
 static void
@@ -485,12 +485,12 @@ cond(Node *n)
 	lfalse = newlabel();
 	lend = newlabel();
 	out("test %%rax, %%rax\n");
-	out("jz %s\n", lfalse);
+	out("jz .%s\n", lfalse);
 	expr(n->Cond.iftrue);
-	out("jmp %s\n", lend);
-	out("%s:\n", lfalse);
+	out("jmp .%s\n", lend);
+	out(".%s:\n", lfalse);
 	expr(n->Cond.iffalse);
-	out("%s:\n", lend);
+	out(".%s:\n", lend);
 }
 
 static void
@@ -595,10 +595,10 @@ str(Node *n)
 
 	l = newlabel();
 	out(".data\n");
-	out("%s:\n", l);
+	out(".%s:\n", l);
 	out(".string %s\n", n->Str.v);
 	out(".text\n");
-	out("leaq %s(%%rip), %%rax\n", l);
+	out("leaq .%s(%%rip), %%rax\n", l);
 }
 
 static void
@@ -676,14 +676,14 @@ stmt(Node *n)
 		eswitch(n);
 		break;
 	case NGOTO:
-		out("jmp %s\n", n->Goto.l);
+		out("jmp .%s\n", n->Goto.l);
 		break;
 	case NCASE:
-		out("%s:\n", n->Case.l);
+		out(".%s:\n", n->Case.l);
 		stmt(n->Case.stmt);
 		break;
 	case NLABELED:
-		out("%s:\n", n->Labeled.l);
+		out(".%s:\n", n->Labeled.l);
 		stmt(n->Labeled.stmt);
 		break;
 	case NEXPRSTMT:

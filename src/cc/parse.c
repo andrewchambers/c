@@ -82,12 +82,13 @@ newlabel(void)
 	char *s;
 	int   n;
 
-	n = snprintf(0, 0, ".L%d", labelcount);
+	n = snprintf(0, 0, "L%d", labelcount);
 	if(n < 0)
-		panic("internal error\n");
+		panic("internal error");
 	n += 1;
 	s = gcmalloc(n);
-	snprintf(s, n, ".L%d", labelcount);
+	if(snprintf(s, n, "L%d", labelcount) < 0)
+		panic("internal error");
 	labelcount++;
 	return s;
 }
@@ -104,7 +105,7 @@ popswitch(void)
 {
 	switchdepth -= 1;
 	if(switchdepth < 0)
-		panic("internal error\n");
+		panic("internal error");
 }
 
 static Node *
@@ -130,7 +131,7 @@ popcontbrk(void)
 	brkdepth -= 1;
 	contdepth -= 1;
 	if(brkdepth < 0 || contdepth < 0)
-		panic("internal error\n");
+		panic("internal error");
 }
 
 static char *
@@ -161,7 +162,7 @@ popbrk(void)
 {
 	brkdepth -= 1;
 	if(brkdepth < 0)
-		panic("internal error\n");
+		panic("internal error");
 }
 
 
