@@ -6,6 +6,8 @@ static void expr(Node *);
 static void stmt(Node *);
 static void store(CTy *t);
 
+char *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+
 static FILE *o;
 
 void
@@ -25,7 +27,17 @@ out(char *fmt, ...)
 	va_end(va);
 }
 
-char *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+static void
+block(Node *n)
+{
+	Vec *v;
+	int  i;
+
+	v = n->Block.stmts;
+	for(i = 0; i < v->len ; i++) {
+		stmt(vecget(v, i));
+	}
+}
 
 static void
 calclocaloffsets(Node *f)
@@ -52,7 +64,7 @@ func(Node *f)
 {
 	Vec *v;
 	Sym *sym;
-	int i;
+	int  i;
 	
 	calclocaloffsets(f);
 	out(".text\n");
@@ -75,9 +87,7 @@ func(Node *f)
 			store(sym->type);
 		}
 	}
-	v = f->Func.body->Block.stmts;
-	for(i = 0; i < v->len; i++)
-		stmt(vecget(v, i));
+	block(f->Func.body);
 	out("leave\n");
 	out("ret\n");
 }
@@ -416,10 +426,11 @@ efor(Node *n)
 	if(n->For.init)
 		expr(n->For.init);
 	out(".%s:\n", n->For.lstart);
-	if(n->For.cond)
+	if(n->For.cond) {
 		expr(n->For.cond);
-	out("test %%rax, %%rax\n");
-	out("jz .%s\n", n->For.lend);
+		out("test %%rax, %%rax\n");
+		out("jz .%s\n", n->For.lend);
+	}
 	stmt(n->For.stmt);
 	if(n->For.step)
 		expr(n->For.step);
@@ -491,18 +502,6 @@ cond(Node *n)
 	out(".%s:\n", lfalse);
 	expr(n->Cond.iffalse);
 	out(".%s:\n", lend);
-}
-
-static void
-block(Node *n)
-{
-	Vec *v;
-	int  i;
-
-	v = n->Block.stmts;
-	for(i = 0; i < v->len ; i++) {
-		stmt(vecget(v, i));
-	}
 }
 
 static void

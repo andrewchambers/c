@@ -152,9 +152,21 @@ assign(Node *n)
 }
 
 static void
+block(Node *n)
+{
+	Vec *v;
+	int  i;
+
+	v = n->Block.stmts;
+	for(i = 0; i < v->len ; i++) {
+		stmt(vecget(v, i));
+	}
+}
+
+static void
 prologue(Node *f)
 {
-	int   i, tsz;
+	int   i;
 	Sym  *s;
 	char *v;
 
@@ -162,23 +174,17 @@ prologue(Node *f)
 	for(i = 0; i < f->Func.locals->len; i++) {
 		v = newv();
 		s = vecget(f->Func.locals, i);
-		tsz = s->type->size;
 		s->stkloc.label = v;
-		outi("%s =l alloc8 1\n", v);
+		outi("%s =l alloc8 %d\n", v, s->type->size);
 	}
 }
 
 static void
 func(Node *f)
 {
-	Vec *v;
-	int i;
-	
 	vcounter = 0;
 	prologue(f);
-	v = f->Func.body->Block.stmts;
-	for(i = 0; i < v->len; i++)
-		stmt(vecget(v, i));
+	block(f->Func.body);
 	out("@end\n");
 	outi("ret\n");
 }
@@ -212,6 +218,43 @@ ewhile(Node *n)
 	outi("jmp @%s\n", n->While.lstart);
 	out("@%s\n", n->While.lend);
 }
+
+static void
+eif(Node *n)
+{
+	char *cond, *ltrue;
+
+	ltrue = newlabel();
+	cond = expr(n->If.expr);
+	outi("jnz %s, @%s, @%s \n", cond, ltrue, n->If.lelse);
+	out("@%s\n", ltrue);
+	stmt(n->If.iftrue);
+	out("@%s\n", n->If.lelse);
+	if(n->If.iffalse)
+		stmt(n->If.iffalse);
+}
+
+static void
+efor(Node *n)
+{
+	char *cond, *lstmt;
+
+	if(n->For.init)
+		expr(n->For.init);
+	out("@%s\n", n->For.lstart);
+	lstmt = newlabel();
+	if(n->For.cond) {
+		cond = expr(n->For.cond);
+		outi("jnz %s, @%s, @%s\n", cond, lstmt, n->For.lend);
+	}
+	out("@%s\n", lstmt);
+	stmt(n->For.stmt);
+	if(n->For.step)
+		expr(n->For.step);
+	outi("jmp @%s\n", n->For.lstart);
+	out("@%s\n", n->For.lend);
+}
+
 
 static void
 ereturn(Node *r)
@@ -262,8 +305,20 @@ obinop(int op, CTy *t, char *l, char *r)
 	case '-':
 		outi("%s =%s sub %s, %s\n", v, tpfx, l, r);
 		break;
+	case '%':
+		outi("%s =%s rem %s, %s\n", v, tpfx, l, r);
+		break;
+	case '<':
+		outi("%s =%s cslt %s, %s\n", v, tpfx, l, r);
+		break;
+	case TOKNEQ:
+		outi("%s =%s cne %s, %s\n", v, tpfx, l, r);
+		break;
+	case TOKEQL:
+		outi("%s =%s ceq %s, %s\n", v, tpfx, l, r);
+		break;
 	default:
-		panic("unimplemented op");
+		panic("unimplemented op %d", op);
 	}
 	return v;
 }
@@ -307,11 +362,23 @@ stmt(Node *n)
 	case NWHILE:
 		ewhile(n);
 		break;
+	case NFOR:
+		efor(n);
+		break;
+	case NIF:
+		eif(n);
+		break;
+	case NBLOCK:
+		block(n);
+		break;
 	case NDECL:
 		decl(n);
 		break;
 	case NRETURN:
 		ereturn(n);
+		break;
+	case NGOTO:
+		outi("jmp @%s\n", n->Goto.l);
 		break;
 	case NEXPRSTMT:
 		if(n->ExprStmt.expr)

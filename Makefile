@@ -22,11 +22,11 @@ CPPO   = src/cmd/cpp/main.o
 _6CO   = src/cmd/6c/emit.o \
          src/cmd/6c/main.o 
 _6AO   = src/cmd/6a/main.o 
-LISCCO = src/cmd/liscc/emit.o \
-         src/cmd/liscc/main.o
+LWCCO  = src/cmd/lwcc/emit.o \
+         src/cmd/lwcc/main.o
 all:  bin/6c \
       bin/6a \
-      bin/liscc \
+      bin/lwcc \
       bin/cpp
 
 .PHONY: all clean
@@ -46,13 +46,13 @@ bin/cpp:  $(CPPO) $(LIBA)
 	@ mkdir -p bin
 	$(CC) $(LDFLAGS) $(CPPO) $(LIBA) -o $@
 
-bin/liscc: $(LISCCO) $(LIBA)
+bin/lwcc: $(LWCCO) $(LIBA)
 	@ mkdir -p bin
-	$(CC) $(LDFLAGS) $(LISCCO) $(LIBA) -o $@
+	$(CC) $(LDFLAGS) $(LWCCO) $(LIBA) -o $@
 
 $(LIBA): $(LIBO)
 	@ mkdir -p lib
 	ar rcs $(LIBA) $(LIBO)
 
 clean:
-	rm -rf $(LIBA) $(LIBO) $(CPPO) $(LISCCO) $(_6CO) $(_6AO) bin
+	rm -rf $(LIBA) $(LIBO) $(CPPO) $(LWCCO) $(_6CO) $(_6AO) bin
