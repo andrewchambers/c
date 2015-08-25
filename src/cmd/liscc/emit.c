@@ -65,7 +65,7 @@ store(CTy *t, char *v, char *p)
 			outi("storel %s, %s\n", v, p);
 			break;
 		case 4:
-			outi("storel %s, %s\n", v, p);
+			outi("storew %s, %s\n", v, p);
 			break;
 		case 2:
 		case 1:
@@ -179,6 +179,8 @@ func(Node *f)
 	v = f->Func.body->Block.stmts;
 	for(i = 0; i < v->len; i++)
 		stmt(vecget(v, i));
+	out("@end\n");
+	outi("ret\n");
 }
 
 static void
