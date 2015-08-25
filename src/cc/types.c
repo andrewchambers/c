@@ -25,9 +25,10 @@ convrank(CTy *t)
 		return 6;
 	case PRIMLDOUBLE:
 		return 7;
+	default:
+		panic("internal error");
+		return -1;
 	}
-	panic("internal error");
-	return -1;
 }
 
 int 
@@ -54,6 +55,8 @@ sametype(CTy *l, CTy *r)
 		if(l->Prim.type != r->Prim.type)
 			return 0;
 		return 1;
+	default:
+		return 0;
 	}
 	return 0;
 }

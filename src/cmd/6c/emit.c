@@ -209,6 +209,8 @@ addr(Node *n)
 		case SCAUTO:
 			out("leaq %d(%%rbp), %%rax\n", sym->stkloc.offset);
 			break;
+		default:
+			panic("internal error");
 		}
 		break;
 	case NIDX:

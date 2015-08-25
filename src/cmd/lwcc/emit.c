@@ -118,12 +118,14 @@ addr(Node *n)
 	case NIDENT:
 		sym = n->Ident.sym;
 		switch(sym->sclass) {
-		case SCSTATIC:
-		case SCGLOBAL:
 			panic("unimplemented addr");
 		case SCAUTO:
 			return sym->stkloc.label;
+		default:
+			panic("unimplemented addr");
 		}
+	default:
+		;
 	}
 	panic("unimplemented addr");
 	return 0;

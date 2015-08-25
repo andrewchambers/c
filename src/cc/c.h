@@ -2,7 +2,31 @@
    contains the interface the backends implement. */
 
 /* Token types */
-enum {
+enum Tokkind {
+	TOKADD    = '+',
+	TOKSUB    = '-',
+	TOKMUL    = '*',
+	TOKMOD    = '%',
+	TOKDIV    = '/',
+	TOKNOT    = '!',
+	TOKBNOT   = '~',
+	TOKGT     = '>',
+	TOKLT     = '<',
+	TOKASS    = '=',
+	TOKQUES   = '?',
+	TOKLBRACK = '[',
+	TOKRBRACK = ']',
+	TOKBAND   = '&',
+	TOKBOR    = '|',
+	TOKLBRACE = '{',
+	TOKRBRACE = '}',
+	TOKSEMI   = ';',
+	TOKLPAREN = '(',
+	TOKRPAREN = ')',
+	TOKDOT    = '.',
+	TOKCOLON  = ':',
+	TOKXOR    = '^',
+	TOKSTAR   = '*',
 	TOKNUM = 256,
 	TOKIDENT,
 	TOKIF,
@@ -64,7 +88,7 @@ enum {
 };
 
 /* Storage classes */
-enum {
+enum Sclass {
 	SCNONE,
 	SCEXTERN,
 	SCSTATIC,
@@ -81,7 +105,7 @@ struct SrcPos {
 	int   col;
 };
 
-enum {
+enum Ctypekind {
 	CVOID,
 	CPRIM,
 	CSTRUCT,
@@ -90,7 +114,7 @@ enum {
 	CFUNC
 };
 
-enum {
+enum PrimKind {
 	PRIMENUM,
 	PRIMCHAR,
 	PRIMSHORT,
@@ -118,8 +142,7 @@ struct NameTy {
 };
 
 struct CTy {
-	/* type tag, one of the C* types */
-	int t;
+	enum Ctypekind t;
 	int size;
 	int align;
 	union {
@@ -151,7 +174,7 @@ struct CTy {
 
 typedef struct {
 	SrcPos *pos;
-	int     sclass;
+	enum Sclass sclass;
 	CTy    *type;
 	char   *name;
 	char   *label;  /* SCGLOBAL, SCSTATIC. */
@@ -163,7 +186,7 @@ typedef struct {
 } Sym;
 
 /* node types */
-enum {
+enum Nodekind {
 	NASSIGN,
 	NFUNC,
 	NLABELED,
@@ -197,7 +220,7 @@ enum {
 typedef struct Node Node;
 struct Node {
 	/* type tag, one of the N* types */
-	int t;
+	enum Nodekind t;
 	SrcPos pos;
 	CTy *type;
 	union {
@@ -346,11 +369,11 @@ struct Lexer {
 
 typedef struct Tok Tok;
 struct Tok {
-	int    k;
-	char  *v;
-	int    ws; /* There was whitespace before this token */
-	int    nl; /* There was a newline before this token */
-	SrcPos pos;
+	enum Tokkind k;
+	char   *v;
+	int     ws; /* There was whitespace before this token */
+	int     nl; /* There was a newline before this token */
+	SrcPos  pos;
 };
 
 typedef struct Const Const;

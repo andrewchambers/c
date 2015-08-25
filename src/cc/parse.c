@@ -206,8 +206,9 @@ islval(Node *n)
 		return 1;
 	case NSEL:
 		return 1;
+	default:
+		return 0;
 	}
-	return 0;
 }
 
 static int
@@ -251,6 +252,8 @@ definesym(char *name, Sym *sym)
 	case SCAUTO:
 		vecappend(curfunc->Func.locals, sym);
 		break;
+	default:
+		;
 	}
 }
 
@@ -713,8 +716,9 @@ issclasstok(Tok *t) {
 	case TOKTYPEDEF:
 	case TOKAUTO:
 		return 1;
+	default:
+		return 0;
 	}
-	return 0;
 }
 
 static CTy *
@@ -766,6 +770,8 @@ declspecs(int *sclass)
 			case TOKTYPEDEF:
 				*sclass = SCTYPEDEF;
 				break;
+			default:
+				panic("internal error");
 			}
 			next();
 			continue;
@@ -1317,8 +1323,9 @@ istypestart(Tok *t)
 		return 1;
 	case TOKIDENT:	
 		return istypename(t->v);
+	default:
+		return 0;
 	}
-	return 0;
 }
 
 static int
@@ -1335,8 +1342,9 @@ isdeclstart(Tok *t)
 		return 1;
 	case TOKIDENT:
 		return istypename(t->v);
+	default:
+		return 0;
 	}
-	return 0;
 }
 
 static Node *
@@ -1877,6 +1885,8 @@ unaryexpr(void)
 		}
 		n = unaryexpr();
 		return n;
+	default:
+		;
 	}
 	return postexpr();
 }
