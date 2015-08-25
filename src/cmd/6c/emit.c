@@ -251,6 +251,7 @@ obinop(int op, CTy *t)
 		out("idiv %%rcx\n");
 		break;
 	case '%':
+		out("cqto\n");
 		out("idiv %%rcx\n");
 		out("mov %%rdx, %%rax\n");
 		break;
