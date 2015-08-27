@@ -957,9 +957,11 @@ directdeclarator(CTy *basety, char **name)
 	case '(':
 		expect('(');
 		stub = gcmalloc(sizeof(CTy));
+		*stub = *basety;
 		ty = declarator(stub, name, 0);
 		expect(')');
-		*stub = *declaratortail(basety);
+		if(tok->k == '(' || tok->k == '[')
+			*stub = *declaratortail(basety);
 		return ty;
 	case TOKIDENT:
 		if(name)
