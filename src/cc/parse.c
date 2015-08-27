@@ -960,8 +960,7 @@ directdeclarator(CTy *basety, char **name)
 		*stub = *basety;
 		ty = declarator(stub, name, 0);
 		expect(')');
-		if(tok->k == '(' || tok->k == '[')
-			*stub = *declaratortail(basety);
+		*stub = *declaratortail(basety);
 		return ty;
 	case TOKIDENT:
 		if(name)
