@@ -347,16 +347,6 @@ mkblock(SrcPos *p, Vec *v)
 }
 
 static Node *
-mkcomma(SrcPos *p, Vec *v)
-{
-	Node *n;
-
-	n = mknode(NCOMMA, p);
-	n->Comma.exprs = v;
-	return n;
-}
-
-static Node *
 mkincdec(SrcPos *p, int op, int post, Node *operand)
 {
 	Node *n;
@@ -1576,18 +1566,22 @@ expr(void)
 {
 	SrcPos *p;
 	Vec    *v;
-	Node   *n;
+	Node   *n, *last;
 
 	p = &tok->pos;
 	n = assignexpr();
+	last = n;
 	if(tok->k == ',') {
 		v = vec();
 		vecappend(v, n);
 		while(tok->k == ',') {
 			next();
-			vecappend(v, assignexpr());
+			last = assignexpr();
+			vecappend(v, last);
 		}
-		n = mkcomma(p, v);
+		n = mknode(NCOMMA, p);
+		n->Comma.exprs = v;
+		n->type = last->type;
 	}
 	return n;
 }

@@ -591,6 +591,16 @@ call(Node *n)
 }
 
 static void
+comma(Node *n)
+{
+	int i;
+
+	for(i = 0; i < n->Comma.exprs->len; i++) {
+		expr(vecget(n->Comma.exprs, i));
+	}
+}
+
+static void
 str(Node *n)
 {
 	char *l;
@@ -607,6 +617,9 @@ static void
 expr(Node *n)
 {
 	switch(n->t){
+	case NCOMMA:
+		comma(n);
+		break;
 	case NCAST:
 		cast(n);
 		break;
