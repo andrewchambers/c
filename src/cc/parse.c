@@ -73,6 +73,7 @@ static Node *switches[MAXLABELDEPTH];
 Node *curfunc;
 Map  *labels;
 Vec  *gotos;
+Vec  *tentativesyms;
 
 int labelcount;
 
@@ -238,23 +239,81 @@ lookup(Map *scope[], char *k)
 	return 0;
 }
 
+/* TODO: proper efficient set for tentative syms */
 static void
-definesym(char *name, Sym *sym)
+removetentativesym(Sym *sym)
 {
-	/* Handle valid redefines */
-	if(!define(syms, name, sym)) {
-		/* TODO:
-		 Check if types are compatible.
-		*/
-		 errorposf(sym->pos, "redefinition of symbol %s", name);
+	int i;
+	Vec *newv;
+	Sym *s;
+
+	newv = vec();
+	for(i = 0; i < tentativesyms->len; i++) {
+		s = vecget(tentativesyms, i);
+		if(s == sym)
+			continue;
+		vecappend(newv, s);
 	}
-	switch(sym->sclass) {
-	case SCAUTO:
-		vecappend(curfunc->Func.locals, sym);
-		break;
-	default:
-		;
+	tentativesyms = newv;
+}
+
+static void
+addtentativesym(Sym *sym)
+{
+	int i;
+	Sym *s;
+
+	for(i = 0; i < tentativesyms->len; i++) {
+		s = vecget(tentativesyms, i);
+		if(s == sym)
+			return;
 	}
+	vecappend(tentativesyms, sym);
+}
+
+static Sym *
+definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
+{
+	Sym *sym;
+
+	if(sclass == SCAUTO && isglobal())
+		errorposf(p, "defining local symbol in global scope");
+	sym = mapget(syms[nscopes - 1], name);
+	if(sym) {
+		if(sclass != SCGLOBAL && sclass != SCEXTERN)
+			errorposf(p, "redefinition of %s with no linkage", name);
+		if(sym->sclass != sclass)
+			errorposf(p, "redefinition of %s with differing sclass", name);
+		if(sym->sclass == SCTYPEDEF && !sametype(sym->type, type))
+			errorposf(p, "redefinition of typedef %s with differing type", name);
+		if(sym->node && n)
+			errorposf(p, "redefinition of %s", name);
+		if(!sym->node && n) {
+			sym->node = n;
+			emitsym(sym);
+			removetentativesym(sym);
+		}
+	} else {
+		sym = gcmalloc(sizeof(Sym));
+		sym->name = name;
+		sym->sclass = sclass;
+		sym->label = newlabel();
+		sym->type = type;
+		sym->node = n;
+		if(!define(syms, name, sym))
+			panic("internal error");
+		switch(sym->sclass) {
+		case SCAUTO:
+			vecappend(curfunc->Func.locals, sym);
+			break;
+		default:
+			if(sym->node)
+				emitsym(sym);
+			else
+				addtentativesym(sym);
+		}
+	}
+	return sym;
 }
 
 static CTy *
@@ -530,24 +589,26 @@ expect(int kind)
 	next();
 }
 
-void
-parseinit()
+void 
+parse()
 {
+	int i;
+	Sym *sym;
+
 	switchdepth = 0;
 	brkdepth = 0;
 	contdepth = 0;
 	nscopes = 0;
+	tentativesyms = vec();
 	pushscope();
 	next();
 	next();
-}
-
-Node * 
-parsenext()
-{
-	if(tok->k == TOKEOF)
-		return 0;
-	return decl();
+	while(tok->k != TOKEOF)
+		decl();
+	for(i = 0; i < tentativesyms->len; i++) {
+		sym = vecget(tentativesyms, i);
+		emitsym(sym);
+	}
 }
 
 static void
@@ -576,33 +637,6 @@ params(CTy *fty)
 		fty->Func.isvararg = 1;
 		next();
 	}
-}
-
-static Sym *
-mksym(SrcPos *p, int sclass, char *name, CTy *t)
-{
-	Sym *s;
-
-	s = gcmalloc(sizeof(Sym));
-	s->pos = p;
-	s->sclass = sclass;
-	s->name = name;
-	s->type = t;
-	switch(sclass) {
-	case SCGLOBAL:
-		s->label = name;
-		break;
-	case SCSTATIC:
-		s->label = newlabel();
-		break;
-	case SCAUTO:
-		if(isglobal())
-			errorposf(p, "automatic storage outside of function");
-		break;
-	default:
-		panic("internal error");
-	}
-	return s;
 }
 
 static Node *
@@ -636,9 +670,8 @@ decl()
 		}
 		if(!name)
 			errorposf(pos, "decl needs to specify a name");
-		sym = mksym(pos, sclass, name, type);
+		sym = definesym(pos, sclass, name, type, init);
 		vecappend(syms, sym);
-		definesym(name, sym);
 		if(isglobal() && tok->k == '{') {
 			if(init)
 				errorposf(pos, "function declaration has an initializer");
@@ -650,9 +683,9 @@ decl()
 			curfunc->Func.params = vec();
 			curfunc->Func.locals = vec();
 			fbody();
-			n = curfunc;
+			sym = definesym(pos, sclass, name, type, curfunc);
 			curfunc = 0;
-			return n;
+			goto done;
 		}
 		if(tok->k == ',')
 			next();
@@ -660,8 +693,8 @@ decl()
 			break;
 	}
 	expect(';');
+  done:
 	n = mknode(NDECL, pos);
-	n->Decl.sclass = sclass;
 	n->Decl.syms = syms;
 	return n;
 }
@@ -681,8 +714,7 @@ fbody(void)
 	for(i = 0; i < curfunc->type->Func.params->len; i++) {
 		nt = vecget(curfunc->type->Func.params, i);
 		if(nt->name) {
-			sym = mksym(&curfunc->pos, SCAUTO, nt->name, nt->type);
-			definesym(nt->name, sym);
+			sym = definesym(&curfunc->pos, SCAUTO, nt->name, nt->type, 0);
 			vecappend(curfunc->Func.params, sym);
 		}
 	}

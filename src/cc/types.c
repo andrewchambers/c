@@ -41,6 +41,8 @@ compatiblestruct(CTy *l, CTy *r)
 int 
 sametype(CTy *l, CTy *r)
 {
+	if(l == r)
+		return 1;
 	/* TODO */
 	switch(l->t) {
 	case CVOID:
@@ -55,8 +57,17 @@ sametype(CTy *l, CTy *r)
 		if(l->Prim.type != r->Prim.type)
 			return 0;
 		return 1;
+	case CPTR:
+		if(r->t != CPTR)
+			return 0;
+		return sametype(l->Ptr.subty, r->Ptr.subty);
+	case CFUNC:
+		if(r->t != CFUNC)
+			return 0;
+		/* TODO */
+		return 1;
 	default:
-		return 0;
+		panic("unimplemented same type");
 	}
 	return 0;
 }

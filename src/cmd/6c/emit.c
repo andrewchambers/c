@@ -97,19 +97,10 @@ decl(Node *n)
 {
 	int  i;
 	Sym *sym;
-	switch(n->Decl.sclass) {
-	case SCTYPEDEF:
-		break;
-	case SCAUTO:
-		break;
-	case SCSTATIC:
-	case SCGLOBAL:
-		out(".data\n");
-		for(i = 0; i < n->Decl.syms->len; i++) {
-			sym = vecget(n->Decl.syms, i);
-			out(".comm %s, %d, %d\n", sym->label, 8, 8);
-		}
-		break;
+
+	for(i = 0; i < n->Decl.syms->len; i++) {
+		sym = vecget(n->Decl.syms, i);
+		emitsym(sym);
 	}
 }
 
@@ -203,8 +194,10 @@ addr(Node *n)
 		sym = n->Ident.sym;
 		switch(sym->sclass) {
 		case SCSTATIC:
+			out("leaq .%s(%%rip), %%rax\n", sym->label);
+			break;
 		case SCGLOBAL:
-			out("leaq %s(%%rip), %%rax\n", sym->label);
+			out("leaq %s(%%rip), %%rax\n", sym->name);
 			break;
 		case SCAUTO:
 			out("leaq %d(%%rbp), %%rax\n", sym->stkloc.offset);
@@ -710,30 +703,29 @@ stmt(Node *n)
 	}	
 }
 
-static void
-global(Node *n)
+void
+emitsym(Sym *sym)
 {
-	switch(n->t){
-	case NFUNC:
-		func(n);
+	out("# emit sym %s\n", sym->name);
+	if(isfunc(sym->type)) {
+		func(sym->node);
+		return;
+	}
+	switch(sym->sclass) {
+	case SCTYPEDEF:
 		break;
-	case NDECL:
-		decl(n);
+	case SCAUTO:
+		break;
+	case SCSTATIC:
+		out(".data\n");
+		out(".comm %s, %d, %d\n", sym->label, sym->type->size, sym->type->align);
+		break;
+	case SCGLOBAL:
+		/* TODO */
+		out(".data\n");
+		out(".comm %s, %d, %d\n", sym->name, sym->type->size, sym->type->align);
 		break;
 	default:
-		errorf("unimplemented emit global\n");
-	}
-}
-
-void
-emit(void)
-{
-	Node *n;
-
-	while(1) {
-		n = parsenext();
-		if(!n)
-			return;
-		global(n);
+		panic("internal error");
 	}
 }

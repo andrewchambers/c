@@ -1,6 +1,14 @@
 /* Provides the preprocessor, compiler frontend. It also
    contains the interface the backends implement. */
 
+typedef struct SrcPos SrcPos;
+typedef struct StructMember StructMember;
+typedef struct NameTy NameTy;
+typedef struct CTy CTy;
+typedef struct Sym Sym;
+typedef struct Node Node;
+typedef struct Lexer Lexer;
+
 /* Token types */
 enum Tokkind {
 	TOKADD    = '+',
@@ -98,7 +106,6 @@ enum Sclass {
 	SCAUTO
 };
 
-typedef struct SrcPos SrcPos;
 struct SrcPos {
 	char *file;
 	int   line;
@@ -125,10 +132,6 @@ enum PrimKind {
 	PRIMDOUBLE,
 	PRIMLDOUBLE
 };
-
-typedef struct StructMember StructMember;
-typedef struct NameTy NameTy;
-typedef struct CTy CTy;
 
 struct StructMember {
 	int   offset;
@@ -172,19 +175,6 @@ struct CTy {
 	};
 };
 
-typedef struct {
-	SrcPos *pos;
-	enum Sclass sclass;
-	CTy    *type;
-	char   *name;
-	char   *label;  /* SCGLOBAL, SCSTATIC. */
-	/* SCAUTO only. */
-	union { /* For backend use */
-		int   offset;
-		char *label; /* For backends which want a text label. */
-	} stkloc;
-} Sym;
-
 /* node types */
 enum Nodekind {
 	NASSIGN,
@@ -217,7 +207,6 @@ enum Nodekind {
 	NEXPRSTMT
 };
 
-typedef struct Node Node;
 struct Node {
 	/* type tag, one of the N* types */
 	enum Nodekind t;
@@ -232,7 +221,6 @@ struct Node {
 			Vec  *locals; /* list of *Sym */
 		} Func;
 		struct {
-			int sclass;
 			Vec *syms;
 		} Decl;
 		struct {
@@ -352,9 +340,23 @@ struct Node {
 	};
 };
 
+
+struct Sym {
+	SrcPos *pos;
+	enum Sclass sclass;
+	Node   *node;
+	CTy    *type;
+	char   *name;
+	char   *label;  /* SCGLOBAL, SCSTATIC. */
+	/* SCAUTO only. */
+	union { /* For backend use */
+		int   offset;
+		char *label; /* For backends which want a text label. */
+	} stkloc;
+};
+
 #define MAXTOKSZ 4096
 
-typedef struct Lexer Lexer;
 struct Lexer {
 	FILE   *f;
 	SrcPos pos;
@@ -414,8 +416,7 @@ CTy *structmemberty(CTy *, char *);
 void addstructmember(SrcPos *, CTy *, char *, CTy *);
 
 /* parse.c */
-void  parseinit(void);
-Node *parsenext(void);
+void  parse(void);
 char *newlabel();
 
 /* foldexpr.c */
@@ -423,6 +424,6 @@ Const *foldexpr(Node *);
 
 /* backend functions */
 void  emitinit(FILE *);
-void  emit(void);
+void  emitsym(Sym *);
 
 

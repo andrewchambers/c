@@ -54,3 +54,20 @@ vecappend(Vec *v, void *x)
 	v->len++;
 }
 
+int
+vecremove(Vec *v, void *x)
+{
+	int i;
+
+	for(i = 0; i < v->len; i++) {
+		if(v->d[i] == x)
+			break;
+	}
+	if(i == v->len)
+		return 0;
+	for(; i < v->len - 1; i++) {
+		v->d[i] = v->d[i+1];
+	}
+	v->len -= 1;
+	return 1;
+}
