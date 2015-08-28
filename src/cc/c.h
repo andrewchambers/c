@@ -151,8 +151,7 @@ struct CTy {
 	union {
 		struct {
 			CTy *rtype;
-			Vec *params;
-			Vec *localsyms;
+			Vec *params; /* Vec of *NameTy */
 			int  isvararg;
 		} Func;
 		struct {

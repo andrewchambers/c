@@ -41,9 +41,11 @@ compatiblestruct(CTy *l, CTy *r)
 int 
 sametype(CTy *l, CTy *r)
 {
+	int     i;
+	NameTy *lnt, *rnt;
+
 	if(l == r)
 		return 1;
-	/* TODO */
 	switch(l->t) {
 	case CVOID:
 		if(r->t != CVOID)
@@ -64,7 +66,18 @@ sametype(CTy *l, CTy *r)
 	case CFUNC:
 		if(r->t != CFUNC)
 			return 0;
-		/* TODO */
+		if(!sametype(l->Func.rtype, r->Func.rtype))
+			return 0;
+		if(l->Func.isvararg != r->Func.isvararg)
+			return 0;
+		if(l->Func.params->len != r->Func.params->len)
+			return 0;
+		for(i = 0; i < l->Func.params->len; i++) {
+			lnt = vecget(l->Func.params, i);
+			rnt = vecget(r->Func.params, i);
+			if(!sametype(lnt->type, rnt->type))
+				return 0;
+		}
 		return 1;
 	default:
 		panic("unimplemented same type");
