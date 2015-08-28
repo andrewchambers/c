@@ -953,15 +953,15 @@ declspecs(int *sclass)
 static CTy *
 declarator(CTy *basety, char **name, Node **init) 
 {
-	CTy *t, *subt;
+	CTy *t;
 
 	while (tok->k == TOKCONST || tok->k == TOKVOLATILE)
 		next();
 	switch(tok->k) {
 	case '*':
 		next();
-		subt = declarator(basety, name, init);
-		t = mkptr(subt);
+		basety = mkptr(basety);
+		t = declarator(basety, name, init);
 		return t;
 	default:
 		t = directdeclarator(basety, name);

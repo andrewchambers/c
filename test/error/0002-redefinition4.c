@@ -1,10 +1,9 @@
 /*
 PATTERN: x
-PATTERN: c:9
+PATTERN: typedef
+PATTERN: c:8
 */
 
-struct x {
-	int x;
-	int y;
-	struct { int x; };
-};
+typedef int  x;
+typedef int  x;
+typedef int *x;
