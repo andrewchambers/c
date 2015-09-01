@@ -278,8 +278,6 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 {
 	Sym *sym;
 
-	if(type->incomplete)
-		errorposf(p, "cannot define symbol with an incomplete type");
 	if(sclass == SCAUTO && isglobal())
 		errorposf(p, "defining local symbol in global scope");
 	sym = mapget(syms[nscopes - 1], name);
@@ -294,6 +292,8 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 			errorposf(p, "redefinition of %s", name);
 		if(!sym->node && n) {
 			sym->node = n;
+			if(sym->type->incomplete)
+				errorposf(p, "cannot define symbol with an incomplete type");
 			emitsym(sym);
 			removetentativesym(sym);
 		}
@@ -309,6 +309,8 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 		panic("internal error");
 	switch(sym->sclass) {
 	case SCAUTO:
+		if(sym->type->incomplete)
+			errorposf(p, "cannot declare local variable of incomplete type");
 		vecappend(curfunc->Func.locals, sym);
 		break;
 	default:
@@ -2007,8 +2009,8 @@ postexpr(void)
 		case '.':
 			if(!isstruct(n1->type))
 				errorposf(&tok->pos, "expected a struct");
-			if(n1->type->Struct.unspecified)
-				errorposf(&tok->pos, "struct is not realized");
+			if(n1->type->incomplete)
+				errorposf(&tok->pos, "selector on incomplete type");
 			n2 = mknode(NSEL, &tok->pos);
 			next();
 			n2->Sel.name = tok->v;
@@ -2022,8 +2024,8 @@ postexpr(void)
 		case TOKARROW:
 			if(!(isptr(n1->type) && isstruct(n1->type->Ptr.subty)))
 				errorposf(&tok->pos, "expected a struct pointer");
-			if(n1->type->Ptr.subty->Struct.unspecified)
-				errorposf(&tok->pos, "struct is not realized");
+			if(n1->type->Ptr.subty->incomplete)
+				errorposf(&tok->pos, "selector on incomplete type");
 			n2 = mknode(NSEL, &tok->pos);
 			next();
 			n2->Sel.name = tok->v;

@@ -157,7 +157,6 @@ struct CTy {
 		} Func;
 		struct {
 			int   isunion;
-			int   unspecified;
 			char *name;
 			Vec  *members;
 		} Struct;
