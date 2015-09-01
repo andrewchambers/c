@@ -1176,6 +1176,8 @@ pstruct()
 				next();
 				constexpr();
 			}
+			if(t->incomplete)
+				errorposf(p, "cannot have incomplete type inside struct/union");
 			addstructmember(p, strct, name, t);
 			if(tok->k != ',')
 				break;
