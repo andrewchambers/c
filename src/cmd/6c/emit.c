@@ -82,7 +82,7 @@ func(Node *f)
 		if(i < 6) {
 			out("movq %%%s, %d(%%rbp)\n", intargregs[i], sym->stkloc.offset);
 		} else {
-			out("movq %d(%%rbp), %%rbx\n", 16 + 8 * (i - 6));
+			out("movq %d(%%rbp), %%rcx\n", 16 + 8 * (i - 6));
 			out("leaq %d(%%rbp), %%rax\n", sym->stkloc.offset);
 			store(sym->type);
 		}
@@ -144,16 +144,16 @@ store(CTy *t)
 	if(isitype(t) || isptr(t)) {
 		switch(t->size) {
 		case 8:
-			out("movq %%rbx, (%%rax)\n");
+			out("movq %%rcx, (%%rax)\n");
 			break;
 		case 4:
-			out("movl %%ebx, (%%rax)\n");
+			out("movl %%ecx, (%%rax)\n");
 			break;
 		case 2:
-			out("movw %%bx, (%%rax)\n");
+			out("movw %%cx, (%%rax)\n");
 			break;
 		case 1:
-			out("movb %%bl, (%%rax)\n");
+			out("movb %%cl, (%%rax)\n");
 			break;
 		default:
 			panic("internal error\n");
@@ -309,11 +309,11 @@ assign(Node *n)
 		expr(r);
 		out("pushq %%rax\n");
 		addr(l);
-		out("popq %%rbx\n");
+		out("popq %%rcx\n");
 		if(!isptr(l->type) && !isitype(l->type))
 			errorf("unimplemented assign\n");
 		store(l->type);
-		out("movq %%rbx, %%rax\n");
+		out("movq %%rcx, %%rax\n");
 		return;
 	}
 	addr(l);
@@ -324,10 +324,10 @@ assign(Node *n)
 	out("movq %%rax, %%rcx\n");
 	out("popq %%rax\n");
 	obinop(op, n->type);
-	out("movq %%rax, %%rbx\n");
+	out("movq %%rax, %%rcx\n");
 	out("popq %%rax\n");
 	store(l->type);
-	out("movq %%rbx, %%rax\n");
+	out("movq %%rcx, %%rax\n");
 }
 
 static void
@@ -385,10 +385,10 @@ incdec(Node *n)
 		out("inc %%rax\n");
 	else
 		out("dec %%rax\n");
-	out("movq %%rax, %%rbx\n");
+	out("movq %%rax, %%rcx\n");
 	out("popq %%rax\n");
 	store(n->type);
-	out("movq %%rbx, %%rax\n");
+	out("movq %%rcx, %%rax\n");
 	if(n->Incdec.post == 1) {
 		if(n->Incdec.op == TOKINC)
 			out("dec %%rax\n");
