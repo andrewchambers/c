@@ -118,11 +118,11 @@ enum Ctypekind {
 	CSTRUCT,
 	CARR,
 	CPTR,
-	CFUNC
+	CFUNC,
+	CENUM,
 };
 
 enum PrimKind {
-	PRIMENUM,
 	PRIMCHAR,
 	PRIMSHORT,
 	PRIMINT,
@@ -148,6 +148,7 @@ struct CTy {
 	enum Ctypekind t;
 	int size;
 	int align;
+	int incomplete;
 	union {
 		struct {
 			CTy *rtype;

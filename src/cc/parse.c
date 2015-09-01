@@ -40,6 +40,8 @@ static Node  *decl(void);
 static Node  *declinit(void);
 static void   fbody(void);
 static CTy   *declspecs(int *);
+
+static CTy   *ptag(void);
 static CTy   *pstruct(void);
 static CTy   *penum(void);
 static CTy   *typename(void);
@@ -808,13 +810,13 @@ declspecs(int *sclass)
 			if(bits)
 				goto err;
 			bits |= BITSTRUCT;
-			t = pstruct();
+			t = ptag();
 			goto done;
 		case TOKENUM:
 			if(bits)
 				goto err;
 			bits |= BITENUM;
-			t = penum();
+			t = ptag();
 			goto done;
 		case TOKVOID:
 			if(bits&BITVOID)
@@ -1053,13 +1055,102 @@ declaratortail(CTy *basety)
 	}
 }
 
-static void
-pstructbody(CTy *strct)
+static CTy *
+ptag()
+{
+	SrcPos *pos;
+	char   *name;
+	int     tkind;
+	CTy    *namety, *bodyty;
+
+	pos = &tok->pos;
+	namety = 0;
+	bodyty = 0;
+	name = 0;
+	switch(tok->k) {
+	case TOKUNION:
+	case TOKSTRUCT:
+	case TOKENUM:
+		tkind = tok->k;
+		next();
+		break;
+	default:
+		errorposf(pos, "expected a tag");
+	}
+	if(tok->k == TOKIDENT) {
+		name = tok->v;
+		next();
+		namety = lookup(tags, name);
+		if(namety) {
+			switch(tkind) {
+			case TOKUNION:
+			case TOKSTRUCT:
+				if(namety->t != CSTRUCT)
+					errorposf(pos, "struct/union accessed by enum tag");
+				if(namety->Struct.isunion != (tkind == TOKUNION))
+					errorposf(pos, "struct/union accessed by wrong tag type");
+				break;
+			case TOKENUM:
+				if(namety->t != CENUM)
+					errorposf(pos, "enum tag accessed by struct or union");
+				break;
+			default:
+				panic("internal error");
+			}
+		} else {
+			switch(tkind) {
+			case TOKUNION:
+			case TOKSTRUCT:
+				namety = newtype(CSTRUCT);
+				namety->incomplete = 1;
+				break;
+			case TOKENUM:
+				namety = newtype(CENUM);
+				namety->incomplete = 1;
+				break;
+			default:
+				panic("unreachable");
+			}
+		}
+	}
+	if(tok->k == '{' || !name) {
+		switch(tkind) {
+		case TOKUNION:
+		case TOKSTRUCT:
+			/* TODO union, pass in flag for union */
+			bodyty = pstruct();
+			break;
+		case TOKENUM:
+			bodyty = penum();
+			break;
+		default:
+			panic("unreachable");
+		}
+	}
+	if(!name)
+		return bodyty;
+	if(bodyty && !namety->incomplete)
+		errorposf(pos, "redefinition of tag %s", name);
+	if(bodyty) {
+		mapset(tags[nscopes - 1], name, bodyty);
+		return bodyty;
+	}
+	mapset(tags[nscopes - 1], name, namety);
+	return namety;
+}
+
+static CTy *
+pstruct()
 {
 	SrcPos *p;
+	CTy    *strct;
 	char   *name;
 	int     sclass;
 	CTy    *t, *basety;
+
+	strct = newtype(CSTRUCT);
+	strct->Struct.members = vec();
+	strct->align = 32;
 
 	expect('{');
 	while(tok->k != '}') {
@@ -1079,48 +1170,7 @@ pstructbody(CTy *strct)
 		expect(';');
 	}
 	expect('}');
-}
-
-static CTy *
-pstruct() 
-{
-	CTy  *new, *t;
-	int   hastagname;
-
-	hastagname = 0;
-	if(tok->k != TOKUNION && tok->k != TOKSTRUCT)
-		errorposf(&tok->pos, "expected union or struct");
-	new = newtype(CSTRUCT);
-	new->Struct.isunion = tok->k == TOKUNION;
-	new->Struct.members = vec();
-	new->align = 8;
-	next();
-	if(tok->k == TOKIDENT) {
-		hastagname = 1;
-		new->Struct.name = tok->v;
-		next();
-	}
-	if(!hastagname && tok->k != '{')
-		errorposf(&tok->pos, "expected struct or union declaration");
-	if(hastagname && tok->k != '{') {
-		t = lookup(tags, new->Struct.name);
-		if(t) {
-			if(t->t != CSTRUCT || t->Struct.isunion != new->Struct.isunion)
-				errorposf(&tok->pos, "%s already declared with a differet tag kind", new->Struct.name);
-			return t;
-		}
-		new->Struct.unspecified = 1;
-		if(!define(tags, new->Struct.name, new))
-			panic("internal error pstruct\n");
-		return new;
-	}
-	pstructbody(new);
-	if(!hastagname)
-		return new;
-	/* TODO overwrite if unspecified in current scope */
-	if(!define(tags, new->Struct.name, new))
-		errorposf(&tok->pos, "redefinition of tag %s", new->Struct.name);
-	return new;
+	return strct;
 }
 
 static CTy *
@@ -1128,12 +1178,6 @@ penum()
 {
 	CTy *t;
 
-	expect(TOKENUM);
-	if(tok->k == TOKIDENT) {
-		if(!define(tags, tok->v, "TODO"))
-			errorposf(&tok->pos, "redefinition of tag %s", tok->v);
-		next();
-	}
 	expect('{');
 	for(;;) {
 		/* if(!definesym(tok->v, "TODO"))
@@ -1149,8 +1193,7 @@ penum()
 		next();
 	}
 	expect('}');
-	t = newtype(CPRIM);
-	t->Prim.type = PRIMENUM;
+	t = newtype(CENUM);
 	return t;
 }
 

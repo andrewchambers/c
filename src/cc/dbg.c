@@ -14,9 +14,6 @@ _dumpty(CTy *ty)
 	case CPRIM:
 		issigned = ty->Prim.issigned;
 		switch(ty->Prim.type){
-		case PRIMENUM:
-			fprintf(stderr, "enum");
-			break;
 		case PRIMCHAR:
 			fprintf(stderr, issigned ? "char" : "uchar");
 			break;
