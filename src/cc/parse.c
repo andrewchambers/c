@@ -293,25 +293,25 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 			emitsym(sym);
 			removetentativesym(sym);
 		}
-	} else {
-		sym = gcmalloc(sizeof(Sym));
-		sym->name = name;
-		sym->sclass = sclass;
-		sym->label = newlabel();
-		sym->type = type;
-		sym->node = n;
-		if(!define(syms, name, sym))
-			panic("internal error");
-		switch(sym->sclass) {
-		case SCAUTO:
-			vecappend(curfunc->Func.locals, sym);
-			break;
-		default:
-			if(sym->node)
-				emitsym(sym);
-			else
-				addtentativesym(sym);
-		}
+		return sym;
+	}
+	sym = gcmalloc(sizeof(Sym));
+	sym->name = name;
+	sym->sclass = sclass;
+	sym->label = newlabel();
+	sym->type = type;
+	sym->node = n;
+	if(!define(syms, name, sym))
+		panic("internal error");
+	switch(sym->sclass) {
+	case SCAUTO:
+		vecappend(curfunc->Func.locals, sym);
+		break;
+	default:
+		if(sym->node)
+			emitsym(sym);
+		else
+			addtentativesym(sym);
 	}
 	return sym;
 }
