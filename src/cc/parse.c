@@ -1100,6 +1100,10 @@ ptag()
 		} else {
 			switch(tkind) {
 			case TOKUNION:
+				namety = newtype(CSTRUCT);
+				namety->Struct.isunion = 1;
+				namety->incomplete = 1;
+				break;
 			case TOKSTRUCT:
 				namety = newtype(CSTRUCT);
 				namety->incomplete = 1;
@@ -1111,8 +1115,10 @@ ptag()
 			default:
 				panic("unreachable");
 			}
+			mapset(tags[nscopes - 1], name, namety);
 		}
 	}
+
 	if(tok->k == '{' || !name) {
 		switch(tkind) {
 		case TOKUNION:
@@ -1127,15 +1133,18 @@ ptag()
 			panic("unreachable");
 		}
 	}
-	if(!name)
+	if(!name) {
+		if(!bodyty)
+			panic("internal error");
 		return bodyty;
-	if(bodyty && !namety->incomplete)
-		errorposf(pos, "redefinition of tag %s", name);
+	}
 	if(bodyty) {
+		namety = mapget(tags[nscopes - 1], name);
+		if(namety && !namety->incomplete)
+			errorposf(pos, "redefinition of tag %s", name);
 		mapset(tags[nscopes - 1], name, bodyty);
 		return bodyty;
 	}
-	mapset(tags[nscopes - 1], name, namety);
 	return namety;
 }
 
