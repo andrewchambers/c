@@ -278,6 +278,8 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 {
 	Sym *sym;
 
+	if(type->incomplete)
+		errorposf(p, "cannot define symbol with an incomplete type");
 	if(sclass == SCAUTO && isglobal())
 		errorposf(p, "defining local symbol in global scope");
 	sym = mapget(syms[nscopes - 1], name);
