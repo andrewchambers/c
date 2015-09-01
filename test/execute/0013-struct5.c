@@ -1,22 +1,16 @@
-struct s1 {
-    int y;
-    int z;
+struct T;
+
+struct T {
+	int x;
 };
 
-struct s2 {
-    struct s1 *p;
-};
-
-int main()
+int
+main()
 {
-    struct s1 nested;
-    struct s2 v;
-    v.p = &nested;
-    v.p->y = 1;
-    v.p->z = 2;
-    if (nested.y != 1)
-        return 1;
-    if (nested.z != 2)
-        return 2;
-    return 0;
+	struct T v;
+	{ struct T { int z; }; }
+	v.x = 2;
+	if(v.x != 2)
+		return 1;
+	return 0;
 }
