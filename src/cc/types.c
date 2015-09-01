@@ -43,6 +43,7 @@ sametype(CTy *l, CTy *r)
 {
 	int     i;
 	NameTy *lnt, *rnt;
+	StructMember *lsm, *rsm;
 
 	if(l == r)
 		return 1;
@@ -76,6 +77,20 @@ sametype(CTy *l, CTy *r)
 			lnt = vecget(l->Func.params, i);
 			rnt = vecget(r->Func.params, i);
 			if(!sametype(lnt->type, rnt->type))
+				return 0;
+		}
+		return 1;
+	case CSTRUCT:
+		if(r->t != CSTRUCT)
+			return 0;
+		if(l->incomplete || r->incomplete)
+			return l->incomplete == r->incomplete;
+		if(l->Struct.members->len != r->Struct.members->len)
+			return 0;
+		for(i = 0; i < l->Struct.members->len; i++) {
+			lsm = vecget(l->Struct.members, i);
+			rsm = vecget(r->Struct.members, i);
+			if(!sametype(lsm->type, rsm->type))
 				return 0;
 		}
 		return 1;

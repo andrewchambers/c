@@ -1120,7 +1120,6 @@ ptag()
 			mapset(tags[nscopes - 1], name, namety);
 		}
 	}
-
 	if(tok->k == '{' || !name) {
 		switch(tkind) {
 		case TOKUNION:
@@ -1142,10 +1141,14 @@ ptag()
 	}
 	if(bodyty) {
 		namety = mapget(tags[nscopes - 1], name);
-		if(namety && !namety->incomplete)
+		if(!namety) {
+			mapset(tags[nscopes - 1], name, bodyty);
+			return bodyty;
+		}
+		if(!namety->incomplete)
 			errorposf(pos, "redefinition of tag %s", name);
-		mapset(tags[nscopes - 1], name, bodyty);
-		return bodyty;
+		*namety = *bodyty;
+		return namety;
 	}
 	return namety;
 }
@@ -2015,7 +2018,7 @@ postexpr(void)
 			n1 = n2;
 			break;
 		case TOKARROW:
-			if(!isptr(n1->type) && isstruct(n1->type->Ptr.subty))
+			if(!(isptr(n1->type) && isstruct(n1->type->Ptr.subty)))
 				errorposf(&tok->pos, "expected a struct pointer");
 			if(n1->type->Ptr.subty->Struct.unspecified)
 				errorposf(&tok->pos, "struct is not realized");
