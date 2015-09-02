@@ -72,7 +72,7 @@ func(Node *f)
 	out("%s:\n", f->Func.name);
 	out("pushq %%rbp\n");
 	out("movq %%rsp, %%rbp\n");
-	if (f->Func.localsz)
+	if(f->Func.localsz)
 		out("sub $%d, %%rsp\n", f->Func.localsz);
 	v = f->Func.params;
 	for(i = 0; i < v->len; i++) {

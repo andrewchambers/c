@@ -27,7 +27,7 @@ $ bash test.sh
 
 ### Stage 1.
 
-Self hosting x86_64.
+Self hosting x86_64, dumb backend.
 
 ### Stage 2.
 
@@ -47,6 +47,7 @@ Build musl libc.
 - Replace gnu as with our own assembler.
 - Replace ld with our own static linker.
 - Build OS kernels.
+- Advanced SSA backend.
 
 ## Status
 
