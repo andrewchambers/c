@@ -342,16 +342,15 @@ struct Node {
 
 struct Sym {
 	SrcPos *pos;
-	enum Sclass sclass;
-	Node   *node;
 	CTy    *type;
 	char   *name;
-	char   *label;  /* SCGLOBAL, SCSTATIC. */
-	/* SCAUTO only. */
-	union { /* For backend use */
+	struct {
+		enum   Sclass sclass;
+		Node   *node;
+		char   *label;  /* SCGLOBAL, SCSTATIC. */
+		/* SCAUTO only. */
 		int   offset;
-		char *label; /* For backends which want a text label. */
-	} stkloc;
+    } Var;
 };
 
 #define MAXTOKSZ 4096

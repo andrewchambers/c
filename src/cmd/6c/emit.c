@@ -54,7 +54,7 @@ calclocaloffsets(Node *f)
 		curoffset += tsz;
 		if(curoffset % s->type->align)
 			curoffset += (curoffset - (curoffset % curoffset % s->type->align));
-		s->stkloc.offset = -curoffset;
+		s->Var.offset = -curoffset;
 	}
 	f->Func.localsz = curoffset;
 }
@@ -80,10 +80,10 @@ func(Node *f)
 		if(!isitype(sym->type) && !isptr(sym->type))
 			errorposf(&f->pos, "internal error - unimplemented arg type");
 		if(i < 6) {
-			out("movq %%%s, %d(%%rbp)\n", intargregs[i], sym->stkloc.offset);
+			out("movq %%%s, %d(%%rbp)\n", intargregs[i], sym->Var.offset);
 		} else {
 			out("movq %d(%%rbp), %%rcx\n", 16 + 8 * (i - 6));
-			out("leaq %d(%%rbp), %%rax\n", sym->stkloc.offset);
+			out("leaq %d(%%rbp), %%rax\n", sym->Var.offset);
 			store(sym->type);
 		}
 	}
@@ -192,15 +192,15 @@ addr(Node *n)
 		break;
 	case NIDENT:
 		sym = n->Ident.sym;
-		switch(sym->sclass) {
+		switch(sym->Var.sclass) {
 		case SCSTATIC:
-			out("leaq .%s(%%rip), %%rax\n", sym->label);
+			out("leaq .%s(%%rip), %%rax\n", sym->Var.label);
 			break;
 		case SCGLOBAL:
 			out("leaq %s(%%rip), %%rax\n", sym->name);
 			break;
 		case SCAUTO:
-			out("leaq %d(%%rbp), %%rax\n", sym->stkloc.offset);
+			out("leaq %d(%%rbp), %%rax\n", sym->Var.offset);
 			break;
 		default:
 			panic("internal error");
@@ -708,17 +708,17 @@ emitsym(Sym *sym)
 {
 	out("# emit sym %s\n", sym->name);
 	if(isfunc(sym->type)) {
-		func(sym->node);
+		func(sym->Var.node);
 		return;
 	}
-	switch(sym->sclass) {
+	switch(sym->Var.sclass) {
 	case SCTYPEDEF:
 		break;
 	case SCAUTO:
 		break;
 	case SCSTATIC:
 		out(".data\n");
-		out(".comm %s, %d, %d\n", sym->label, sym->type->size, sym->type->align);
+		out(".comm %s, %d, %d\n", sym->Var.label, sym->type->size, sym->type->align);
 		break;
 	case SCGLOBAL:
 		/* TODO */

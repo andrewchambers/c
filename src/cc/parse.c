@@ -273,6 +273,22 @@ addtentativesym(Sym *sym)
 	vecappend(tentativesyms, sym);
 }
 
+
+static Sym *
+defineenum(SrcPos *p, char *name, CTy *type, int64 v)
+{
+	Sym *sym;
+
+
+	sym = gcmalloc(sizeof(Sym));
+	sym->pos = p;
+	sym->name = name;
+	sym->type = type;
+	if(!define(syms, name, sym))
+		errorposf(p, "redefinition of %s", name);
+	return sym;
+}
+
 static Sym *
 definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 {
@@ -284,14 +300,14 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 	if(sym) {
 		if(sclass != SCGLOBAL && sclass != SCEXTERN)
 			errorposf(p, "redefinition of %s with no linkage", name);
-		if(sym->sclass != sclass)
+		if(sym->Var.sclass != sclass)
 			errorposf(p, "redefinition of %s with differing sclass", name);
-		if(sym->sclass == SCTYPEDEF && !sametype(sym->type, type))
+		if(sym->Var.sclass == SCTYPEDEF && !sametype(sym->type, type))
 			errorposf(p, "redefinition of typedef %s with differing type", name);
-		if(sym->node && n)
+		if(sym->Var.node && n)
 			errorposf(p, "redefinition of %s", name);
-		if(!sym->node && n) {
-			sym->node = n;
+		if(!sym->Var.node && n) {
+			sym->Var.node = n;
 			if(sym->type->incomplete)
 				errorposf(p, "cannot define symbol with an incomplete type");
 			emitsym(sym);
@@ -301,20 +317,20 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 	}
 	sym = gcmalloc(sizeof(Sym));
 	sym->name = name;
-	sym->sclass = sclass;
-	sym->label = newlabel();
 	sym->type = type;
-	sym->node = n;
+	sym->Var.sclass = sclass;
+	sym->Var.label = newlabel();
+	sym->Var.node = n;
 	if(!define(syms, name, sym))
 		panic("internal error");
-	switch(sym->sclass) {
+	switch(sym->Var.sclass) {
 	case SCAUTO:
 		if(sym->type->incomplete)
 			errorposf(p, "cannot declare local variable of incomplete type");
 		vecappend(curfunc->Func.locals, sym);
 		break;
 	default:
-		if(sym->node)
+		if(sym->Var.node)
 			emitsym(sym);
 		else
 			addtentativesym(sym);
@@ -883,7 +899,7 @@ declspecs(int *sclass)
 			break;
 		case TOKIDENT:
 			sym = lookup(syms, tok->v);
-			if(sym && sym->sclass == SCTYPEDEF)
+			if(sym && sym->Var.sclass == SCTYPEDEF)
 				t = sym->type;
 			if(t && !bits) {
 				bits |= BITIDENT;
@@ -1385,7 +1401,7 @@ istypename(char *n)
 	Sym *sym;
 
 	sym = lookup(syms, nexttok->v);
-	if(sym && sym->sclass == SCTYPEDEF)
+	if(sym && sym->Var.sclass == SCTYPEDEF)
 		return 1;
 	return 0;
 }
