@@ -7,9 +7,23 @@ static void ungetch(Lexer *l, int c);
 static int  nextc(Lexer *l);
 
 char *
-tokktostr(int t) 
+tokktostr(enum Tokkind t) 
 {
 	switch(t) {
+	case TOKIDENT:      return "ident";
+	case TOKNUM:        return "number";
+	case TOKIF:         return "if";
+	case TOKELSE:       return "else";
+	case TOKDO:         return "do";
+	case TOKWHILE:      return "while";
+	case TOKFOR:        return "for";
+	case TOKVOID:       return "void";
+	case TOKCHAR:       return "char";
+	case TOKSHORT:      return "short";
+	case TOKINT:        return "int";
+	case TOKLONG:       return "long";
+	case TOKSIGNED:     return "signed";
+	case TOKUNSIGNED:   return "unsigned";
 	case TOKEOF:        return "end of file";
 	case TOKSUBASS:     return "-=";
 	case TOKSHR:        return ">>";
@@ -59,7 +73,6 @@ tokktostr(int t)
 	case '^':           return "^";
 	case '\\':          return "\\";
 	}
-	errorf("unknown token %d\n", t);
 	return 0;
 }
 

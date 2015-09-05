@@ -35,6 +35,8 @@ enum Tokkind {
 	TOKCOLON  = ':',
 	TOKXOR    = '^',
 	TOKSTAR   = '*',
+	TOKCOMMA  = ',',
+	TOKBSLASH = '\\',
 	TOKNUM = 256,
 	TOKIDENT,
 	TOKIF,
@@ -160,6 +162,9 @@ struct CTy {
 			char *name;
 			Vec  *members;
 		} Struct;
+		struct {
+			Vec  *members;
+		} Enum;
 		struct {
 			CTy *subty;
 		} Ptr;
@@ -404,7 +409,7 @@ void errorposf(SrcPos *, char *, ...);
 
 /* lex.c cpp.c */
 void  cppinit(char *);
-char *tokktostr(int);
+char *tokktostr(enum Tokkind);
 Tok  *lex(Lexer *);
 Tok  *pp(void);
 

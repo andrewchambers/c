@@ -6,8 +6,10 @@
 int
 convrank(CTy *t)
 {
-	if(t->t != CPRIM)
+	if(t->t != CPRIM && t->t != CENUM)
 		panic("internal error");
+	if(t->t == CENUM)
+		return 2;
 	switch(t->Prim.type){
 	case PRIMCHAR:
 		return 0;
@@ -48,6 +50,10 @@ sametype(CTy *l, CTy *r)
 	if(l == r)
 		return 1;
 	switch(l->t) {
+	case CENUM:
+		if(r->t != CENUM)
+			return 0;
+		return 1;
 	case CVOID:
 		if(r->t != CVOID)
 			return 0;
@@ -117,6 +123,8 @@ isftype(CTy *t)
 int
 isitype(CTy *t)
 {
+	if(t->t == CENUM)
+		return 1;
 	if(t->t != CPRIM)
 		return 0;
 	switch(t->Prim.type){

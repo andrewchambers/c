@@ -401,6 +401,13 @@ incdec(Node *n)
 static void
 ident(Node *n)
 {
+	Sym *sym;
+
+	sym = n->Ident.sym;
+	if(sym->k == SYMENUM) {
+		out("movq $%d, %%rax\n", sym->Enum.v);
+		return;
+	}
 	addr(n);
 	load(n->type);
 }

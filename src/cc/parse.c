@@ -279,11 +279,12 @@ defineenum(SrcPos *p, char *name, CTy *type, int64 v)
 {
 	Sym *sym;
 
-
 	sym = gcmalloc(sizeof(Sym));
 	sym->pos = p;
 	sym->name = name;
 	sym->type = type;
+	sym->k = SYMENUM;
+	sym->Enum.v = v;
 	if(!define(syms, name, sym))
 		errorposf(p, "redefinition of %s", name);
 	return sym;
@@ -1229,24 +1230,42 @@ pstruct()
 static CTy *
 penum()
 {
-	CTy *t;
+	SrcPos *p;
+	char   *name;
+	CTy    *t;
+	Const  *c;
+	Sym    *s;
+	int64   v;
 
+	v = 0;
+	t = newtype(CENUM);
+	/* TODO: backend specific? */
+	t->size = 8;
+	t->align = 8;
+	t->Enum.members = vec();
 	expect('{');
 	for(;;) {
-		/* if(!definesym(tok->v, "TODO"))
-			errorposf(&tok->pos, "redefinition of symbol %s", tok->v);
-		*/
+		if(tok->k == '}')
+			break;
+		p = &tok->pos;
+		name = tok->v;
 		expect(TOKIDENT);
 		if(tok->k == '=') {
 			next();
-			constexpr();
+			c = constexpr();
+			if(c->p)
+				errorposf(p, "pointer derived constant in enum");
+			v = c->v;
 		}
+		s = defineenum(p, name, t, v);
+		vecappend(t->Enum.members, s);
 		if(tok->k != ',')
 			break;
 		next();
+		v += 1;
 	}
 	expect('}');
-	t = newtype(CENUM);
+	
 	return t;
 }
 
