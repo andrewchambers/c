@@ -294,47 +294,66 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 {
 	Sym *sym;
 
+	if(sclass == SCAUTO || n != 0)
+		if(type->incomplete)
+			errorposf(p, "cannot use incomplete type in this context");
+
 	if(sclass == SCAUTO && isglobal())
 		errorposf(p, "defining local symbol in global scope");
 	sym = mapget(syms[nscopes - 1], name);
 	if(sym) {
-		if(sclass != SCGLOBAL && sclass != SCEXTERN)
-			errorposf(p, "redefinition of %s with no linkage", name);
-		if(sym->Var.sclass != sclass)
-			errorposf(p, "redefinition of %s with differing sclass", name);
-		if(sym->Var.sclass == SCTYPEDEF && !sametype(sym->type, type))
-			errorposf(p, "redefinition of typedef %s with differing type", name);
-		if(sym->Var.node && n)
+		switch(sym->k) {
+		case SYMTYPE:
+			if(sclass != SCTYPEDEF || !sametype(sym->type, type))
+				errorposf(p, "incompatible redefinition of typedef %s", name);
+			break;
+		case SYMGLOBAL:
+			if(sym->Global.sclass != sclass)
+				errorposf(p, "redefinition of %s with differing storage class", name);
+			if(sym->Global.init && n)
+				errorposf(p, "%s already initialized", name);
+			if(!sym->Global.init && n) {
+				sym->Global.init = n;
+				emitsym(sym);
+				removetentativesym(sym);
+			}
+			break;
+		default:
 			errorposf(p, "redefinition of %s", name);
-		if(!sym->Var.node && n) {
-			sym->Var.node = n;
-			if(sym->type->incomplete)
-				errorposf(p, "cannot define symbol with an incomplete type");
-			emitsym(sym);
-			removetentativesym(sym);
 		}
 		return sym;
 	}
 	sym = gcmalloc(sizeof(Sym));
 	sym->name = name;
 	sym->type = type;
-	sym->Var.sclass = sclass;
-	sym->Var.label = newlabel();
-	sym->Var.node = n;
-	if(!define(syms, name, sym))
-		panic("internal error");
-	switch(sym->Var.sclass) {
+	switch(sclass) {
 	case SCAUTO:
-		if(sym->type->incomplete)
-			errorposf(p, "cannot declare local variable of incomplete type");
+		sym->k = SYMLOCAL;
 		vecappend(curfunc->Func.locals, sym);
 		break;
-	default:
-		if(sym->Var.node)
+	case SCTYPEDEF:
+		sym->k = SYMTYPE;
+		break;
+	case SCGLOBAL:
+		sym->k = SYMGLOBAL;
+		sym->Global.label = name;
+		sym->Global.sclass = SCGLOBAL;
+		sym->Global.init = n;
+		break;
+	case SCSTATIC:
+		sym->k = SYMGLOBAL;
+		sym->Global.label = newlabel();
+		sym->Global.sclass = SCSTATIC;
+		break;
+	}
+	if(sym->k == SYMGLOBAL) {
+		if(sym->Global.init)
 			emitsym(sym);
 		else
 			addtentativesym(sym);
 	}
+	if(!define(syms, name, sym))
+		panic("internal error");
 	return sym;
 }
 
@@ -899,7 +918,7 @@ declspecs(int *sclass)
 			break;
 		case TOKIDENT:
 			sym = lookup(syms, tok->v);
-			if(sym && sym->Var.sclass == SCTYPEDEF)
+			if(sym && sym->k == SYMTYPE)
 				t = sym->type;
 			if(t && !bits) {
 				bits |= BITIDENT;
@@ -1401,7 +1420,7 @@ istypename(char *n)
 	Sym *sym;
 
 	sym = lookup(syms, nexttok->v);
-	if(sym && sym->Var.sclass == SCTYPEDEF)
+	if(sym && sym->k == SYMTYPE)
 		return 1;
 	return 0;
 }

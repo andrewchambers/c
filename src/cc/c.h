@@ -339,18 +339,31 @@ struct Node {
 	};
 };
 
+enum Symkind {
+	SYMENUM,
+	SYMTYPE,
+	SYMGLOBAL,
+	SYMLOCAL,
+};
 
 struct Sym {
+	enum Symkind k;
 	SrcPos *pos;
 	CTy    *type;
 	char   *name;
-	struct {
-		enum   Sclass sclass;
-		Node   *node;
-		char   *label;  /* SCGLOBAL, SCSTATIC. */
-		/* SCAUTO only. */
-		int   offset;
-    } Var;
+	union {
+		struct {
+			int   sclass;
+			char *label;
+			Node *init;
+		} Global;
+		struct {
+			int offset;
+		} Local;
+		struct {
+			int64 v;
+		} Enum;
+	};
 };
 
 #define MAXTOKSZ 4096

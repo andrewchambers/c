@@ -70,9 +70,9 @@ foldaddr(Node *n)
 	if(n->Unop.operand->t != NIDENT)
 		return 0;
 	sym = n->Unop.operand->Ident.sym;
-	if(sym->Var.sclass != SCGLOBAL && sym->Var.sclass != SCSTATIC)
+	if(sym->k != SYMGLOBAL)
 		return 0;
-	return mkconst(sym->Var.label, 0);
+	return mkconst(sym->Global.label, 0);
 }
 
 static Const *

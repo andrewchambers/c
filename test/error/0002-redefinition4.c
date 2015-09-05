@@ -1,7 +1,7 @@
 /*
 PATTERN: x
 PATTERN: typedef
-PATTERN: c:8
+PATTERN: c:9
 */
 
 typedef int  x;

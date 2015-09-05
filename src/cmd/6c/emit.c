@@ -48,13 +48,15 @@ calclocaloffsets(Node *f)
 	curoffset = 0;
 	for(i = 0; i < f->Func.locals->len; i++) {
 		s = vecget(f->Func.locals, i);
+		if(s->k != SYMLOCAL)
+			panic("internal error");
 		tsz = s->type->size;
 		if(tsz < 8)
 			tsz = 8;
 		curoffset += tsz;
 		if(curoffset % s->type->align)
 			curoffset += (curoffset - (curoffset % curoffset % s->type->align));
-		s->Var.offset = -curoffset;
+		s->Local.offset = -curoffset;
 	}
 	f->Func.localsz = curoffset;
 }
@@ -77,13 +79,15 @@ func(Node *f)
 	v = f->Func.params;
 	for(i = 0; i < v->len; i++) {
 		sym = vecget(v, i);
+		if(sym->k != SYMLOCAL)
+			panic("internal error");
 		if(!isitype(sym->type) && !isptr(sym->type))
 			errorposf(&f->pos, "internal error - unimplemented arg type");
 		if(i < 6) {
-			out("movq %%%s, %d(%%rbp)\n", intargregs[i], sym->Var.offset);
+			out("movq %%%s, %d(%%rbp)\n", intargregs[i], sym->Local.offset);
 		} else {
 			out("movq %d(%%rbp), %%rcx\n", 16 + 8 * (i - 6));
-			out("leaq %d(%%rbp), %%rax\n", sym->Var.offset);
+			out("leaq %d(%%rbp), %%rax\n", sym->Local.offset);
 			store(sym->type);
 		}
 	}
@@ -192,15 +196,12 @@ addr(Node *n)
 		break;
 	case NIDENT:
 		sym = n->Ident.sym;
-		switch(sym->Var.sclass) {
-		case SCSTATIC:
-			out("leaq .%s(%%rip), %%rax\n", sym->Var.label);
+		switch(sym->k) {
+		case SYMGLOBAL:
+			out("leaq %s(%%rip), %%rax\n", sym->Global.label);
 			break;
-		case SCGLOBAL:
-			out("leaq %s(%%rip), %%rax\n", sym->name);
-			break;
-		case SCAUTO:
-			out("leaq %d(%%rbp), %%rax\n", sym->Var.offset);
+		case SYMLOCAL:
+			out("leaq %d(%%rbp), %%rax\n", sym->Local.offset);
 			break;
 		default:
 			panic("internal error");
@@ -707,25 +708,19 @@ void
 emitsym(Sym *sym)
 {
 	out("# emit sym %s\n", sym->name);
-	if(isfunc(sym->type)) {
-		func(sym->Var.node);
-		return;
-	}
-	switch(sym->Var.sclass) {
-	case SCTYPEDEF:
-		break;
-	case SCAUTO:
-		break;
-	case SCSTATIC:
-		out(".data\n");
-		out(".comm %s, %d, %d\n", sym->Var.label, sym->type->size, sym->type->align);
-		break;
-	case SCGLOBAL:
-		/* TODO */
+	switch(sym->k){
+	case SYMGLOBAL:
+		if(isfunc(sym->type)) {
+			func(sym->Global.init);
+			return;
+		}
 		out(".data\n");
 		out(".comm %s, %d, %d\n", sym->name, sym->type->size, sym->type->align);
 		break;
-	default:
+	case SYMLOCAL:
+		break;
+	case SYMENUM:
+	case SYMTYPE:
 		panic("internal error");
 	}
 }
