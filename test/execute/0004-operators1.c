@@ -4,6 +4,7 @@ int
 main()
 {
 	int x;
+
 	x = 0;
 	x = x + 2;        // 2
 	x = x - 1;        // 1

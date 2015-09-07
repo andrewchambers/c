@@ -340,8 +340,52 @@ assign(Node *n)
 }
 
 static void
+shortcircuit(Node *n)
+{
+	char *t, *f, *e;
+
+	t = newlabel();
+	f = newlabel();
+	e = newlabel();
+
+	expr(n->Binop.l);
+	if(n->Binop.op == TOKLAND) {
+		out("testq %%rax, %%rax\n");
+		out("jz .%s\n", f);
+	} else if(n->Binop.op == TOKLOR) {
+		out("testq %%rax, %%rax\n");
+		out("jnz .%s\n", t);
+	} else {
+		panic("internal error");
+	}
+	expr(n->Binop.r);
+	if(n->Binop.op == TOKLAND) {
+		out("testq %%rax, %%rax\n");
+		out("jz .%s\n", f);
+		out("jmp .%s\n", t);
+	} else if(n->Binop.op == TOKLOR) {
+		out("testq %%rax, %%rax\n");
+		out("jnz .%s\n", t);
+		out("jmp .%s\n", f);
+	} else {
+		panic("internal error");
+	}
+	out(".%s:\n", t);
+	out("mov $1, %%rax\n");
+	out("jmp .%s\n", e);
+	out(".%s:\n", f);
+	out("xor %%rax, %%rax\n");
+	out("jmp .%s\n", e);
+	out(".%s:\n", e);
+}
+
+static void
 binop(Node *n)
 {
+	if(n->Binop.op == TOKLAND || n->Binop.op == TOKLOR) {
+		shortcircuit(n);
+		return;
+	}
 	expr(n->Binop.l);
 	out("pushq %%rax\n");
 	expr(n->Binop.r);
@@ -430,13 +474,18 @@ ident(Node *n)
 static void
 eif(Node *n)
 {
+	char *end;
+
+	end = newlabel();
 	expr(n->If.expr);
 	out("test %%rax, %%rax\n");
 	out("jz .%s\n", n->If.lelse);
 	stmt(n->If.iftrue);
+	out("jmp .%s\n", end);
 	out(".%s:\n", n->If.lelse);
 	if(n->If.iffalse)
 		stmt(n->If.iffalse);
+	out(".%s:\n", end);
 }
 
 static void
