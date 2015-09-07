@@ -98,6 +98,30 @@ foldunop(Node *n)
 }
 
 Const *
+foldcast(Node *n)
+{
+	if(!isitype(n->type))
+		return 0;
+	if(!isitype(n->Cast.operand->type))
+		return 0;
+	return foldexpr(n->Cast.operand);
+}
+
+Const *
+foldident(Node *n)
+{
+	Sym *sym;
+
+	sym = n->Ident.sym;
+	switch(sym->k) {
+	case SYMENUM:
+		return mkconst(0, sym->Enum.v);
+	default:
+		return 0;
+	}
+}
+
+Const *
 foldexpr(Node *n)
 {
 	switch(n->t) {
@@ -107,7 +131,14 @@ foldexpr(Node *n)
 		return foldunop(n);
 	case NNUM:
 		return mkconst(0, n->Num.v);
+	case NSIZEOF:
+		return mkconst(0, n->Sizeof.type->size);
+	case NCAST:
+		return foldcast(n);
+	case NIDENT:
+		return foldident(n);
 	default:
 		return 0;
 	}
 }
+

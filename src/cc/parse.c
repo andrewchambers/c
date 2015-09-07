@@ -42,7 +42,7 @@ static void   fbody(void);
 static CTy   *declspecs(int *);
 
 static CTy   *ptag(void);
-static CTy   *pstruct(void);
+static CTy   *pstruct(int);
 static CTy   *penum(void);
 static CTy   *typename(void);
 static CTy   *declarator(CTy *, char **, Node **);
@@ -409,8 +409,14 @@ mkprimtype(int type, int sig)
 		t->size = 8;
 		t->align = 8;
 		break;
+	case PRIMDOUBLE:
+	case PRIMLDOUBLE:
+	case PRIMFLOAT:
+		t->size = 8;
+		t->align = 8;
+		break;
 	default:
-		panic("internal error mkprimtype\n");
+		panic("internal error mkprimtype %d\n", t->Prim.type);
 	}
 	return t;
 }
@@ -1161,9 +1167,10 @@ ptag()
 	if(tok->k == '{' || !name) {
 		switch(tkind) {
 		case TOKUNION:
+			bodyty = pstruct(1);
+			break;
 		case TOKSTRUCT:
-			/* TODO union, pass in flag for union */
-			bodyty = pstruct();
+			bodyty = pstruct(0);
 			break;
 		case TOKENUM:
 			bodyty = penum();
@@ -1192,7 +1199,7 @@ ptag()
 }
 
 static CTy *
-pstruct()
+pstruct(int isunion)
 {
 	SrcPos *p;
 	CTy    *strct;
@@ -1203,6 +1210,7 @@ pstruct()
 	strct = newtype(CSTRUCT);
 	strct->Struct.members = vec();
 	strct->align = 32;
+	strct->Struct.isunion = isunion;
 
 	expect('{');
 	while(tok->k != '}') {
@@ -2027,7 +2035,8 @@ unaryexpr(void)
 		} else {
 			ty = unaryexpr()->type;
 		}
-		n->type = ty;
+		n->Sizeof.type = ty;
+		n->type = mkprimtype(PRIMINT, 1);
 		return n;
 	default:
 		;

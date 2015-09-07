@@ -209,8 +209,6 @@ addstructmember(SrcPos *pos, CTy *t, char *name, CTy *membt)
 	sm->type = membt;
 	if(!isstruct(t))
 		panic("internal error");
-	if(t->Struct.isunion)
-		panic("unimplemented addstructmember");
 	if(sm->name == 0 && isstruct(sm->type)) {
 		for(i = 0; i < sm->type->Struct.members->len; i++) {
 			subsm = vecget(sm->type->Struct.members, i);
@@ -218,10 +216,13 @@ addstructmember(SrcPos *pos, CTy *t, char *name, CTy *membt)
 		}
 		return;
 	}
-	for(i = 0; i < t->Struct.members->len; i++) {
-		subsm = vecget(t->Struct.members, i);
-		if(strcmp(sm->name, subsm->name) == 0)
-			errorposf(pos ,"struct already has a member named %s", sm->name);
+	if(sm->name) {
+		for(i = 0; i < t->Struct.members->len; i++) {
+			subsm = vecget(t->Struct.members, i);
+			if(subsm->name)
+			if(strcmp(sm->name, subsm->name) == 0)
+				errorposf(pos ,"struct already has a member named %s", sm->name);
+		}
 	}
 	sz = t->size;
 	align = sm->type->align;
