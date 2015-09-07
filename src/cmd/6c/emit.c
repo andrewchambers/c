@@ -636,6 +636,9 @@ expr(Node *n)
 	case NSTR:
 		str(n);
 		break;
+	case NSIZEOF:
+		out("movq $%lld, %%rax\n", n->type->size);
+		break;
 	case NNUM:
 		out("movq $%lld, %%rax\n", n->Num.v);
 		break;

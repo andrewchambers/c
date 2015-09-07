@@ -1999,6 +1999,7 @@ static Node *
 unaryexpr(void)
 {
 	Tok  *t;
+	CTy  *ty;
 	Node *n;
 
 	switch (tok->k) {
@@ -2021,11 +2022,12 @@ unaryexpr(void)
 		next();
 		if(tok->k == '(' && istypestart(nexttok)) {
 			expect('(');
-			typename();
+			ty = typename();
 			expect(')');
-			return 0;
+		} else {
+			ty = unaryexpr()->type;
 		}
-		n = unaryexpr();
+		n->type = ty;
 		return n;
 	default:
 		;

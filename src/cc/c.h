@@ -338,9 +338,6 @@ struct Node {
 			Node *funclike;
 			Vec  *args;
 		} Call;
-		struct {
-			CTy *t;
-		} Sizeof;
 	};
 };
 
