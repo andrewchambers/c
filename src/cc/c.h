@@ -401,8 +401,8 @@ struct Const {
 void dumpty(CTy *);
 
 /* error.c */
-void errorf(char *, ...);
-void errorposf(SrcPos *, char *, ...);
+void errorf(char *, ...) NORETURN;
+void errorposf(SrcPos *, char *, ...) NORETURN;
 
 /* lex.c cpp.c */
 void  cppinit(char *);

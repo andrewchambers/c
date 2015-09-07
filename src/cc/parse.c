@@ -725,7 +725,7 @@ decl()
 			curfunc->Func.params = vec();
 			curfunc->Func.locals = vec();
 			fbody();
-			sym = definesym(pos, sclass, name, type, curfunc);
+			definesym(pos, sclass, name, type, curfunc);
 			curfunc = 0;
 			goto done;
 		}
