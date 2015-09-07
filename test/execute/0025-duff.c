@@ -1,3 +1,12 @@
+/* Disgusting, no?  But it compiles and runs just fine.  I feel a combination of
+   pride and revulsion at this discovery.  If no one's thought of it before,
+   I think I'll name it after myself.
+
+   It amazes me that after 10 years of writing C there are still
+   little corners that I haven't explored fully.
+
+   - Tom Duff */
+
 int main()
 {
 	int  count, n;
