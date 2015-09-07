@@ -1,15 +1,15 @@
 int main()
 {
 	int  count, n;
-    char *from, *to;
-    char a[39], b[39];
-    
-    from = a;
-    to = b;
-    from[0] = 1;
-    from[1] = 2;
-    from[2] = 3;
-    count = 39;
+	char *from, *to;
+	char a[39], b[39];
+
+	from = a;
+	to = b;
+	from[0] = 1;
+	from[1] = 2;
+	from[2] = 3;
+	count = 39;
 	n = (count + 7) / 8;
 	switch (count % 8) {
 	case 0: do { *to++ = *from++;
@@ -30,3 +30,4 @@ int main()
 		return 1;
 	return 0;
 }
+
