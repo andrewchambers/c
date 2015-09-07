@@ -100,6 +100,12 @@ sametype(CTy *l, CTy *r)
 				return 0;
 		}
 		return 1;
+	case CARR:
+		if(r->t != CARR)
+			return 0;
+		if(r->Arr.dim != l->Arr.dim)
+			return 0;
+		return 1;
 	default:
 		panic("unimplemented same type");
 	}

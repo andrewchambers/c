@@ -377,15 +377,22 @@ unop(Node *n)
 static void
 incdec(Node *n)
 {
-	if(!isitype(n->type))
+	if(!isitype(n->type) && !isptr(n->type))
 		panic("unimplemented incdec");
 	addr(n->Incdec.operand);
 	out("pushq %%rax\n");
 	load(n->type);
-	if(n->Incdec.op == TOKINC)
-		out("inc %%rax\n");
-	else
-		out("dec %%rax\n");
+	if(isptr(n->type)) {
+		if(n->Incdec.op == TOKINC)
+			out("add $%d, %%rax\n", n->type->Ptr.subty->size);
+		else
+			out("add $%d, %%rax\n", -n->type->Ptr.subty->size);
+	} else {
+		if(n->Incdec.op == TOKINC)
+			out("inc %%rax\n");
+		else
+			out("dec %%rax\n");
+	}
 	out("movq %%rax, %%rcx\n");
 	out("popq %%rax\n");
 	store(n->type);
@@ -526,6 +533,8 @@ cast(Node *n)
 	if(isitype(from) && isitype(to))
 		return;
 	if(isfunc(from) && isptr(to))
+		return;
+	if(isarray(from) && isptr(to))
 		return;
 	errorf("unimplemented cast %d %d\n", from->t, to->t);
 }
