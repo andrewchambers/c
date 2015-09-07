@@ -4,11 +4,12 @@ int main()
 	char *from, *to;
 	char a[39], b[39];
 
+	for(n = 0; n < 39; n++) {
+		a[n] = n;
+		b[n] = 0;
+	}
 	from = a;
 	to = b;
-	from[0] = 1;
-	from[1] = 2;
-	from[2] = 3;
 	count = 39;
 	n = (count + 7) / 8;
 	switch (count % 8) {
@@ -22,12 +23,9 @@ int main()
 	case 1:      *to++ = *from++;
 			} while (--n > 0);
 	}
-	if(a[0] != 1)
-		return 1;
-	if(a[1] != 2)
-		return 1;
-	if(a[2] != 3)
-		return 1;
+	for(n = 0; n < 39; n++)
+		if(a[n] != b[n])
+			return 1;
 	return 0;
 }
 
