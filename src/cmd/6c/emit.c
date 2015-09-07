@@ -266,6 +266,8 @@ obinop(int op, CTy *t)
 		break;
 	case TOKEQL:
 	case TOKNEQ:
+	case TOKGEQ:
+	case TOKLEQ:
 	case '>':
 	case '<':
 		lset = newlabel();
@@ -282,6 +284,12 @@ obinop(int op, CTy *t)
 			break;
 		case '>':
 			opc = "jg";
+			break;
+		case TOKGEQ:
+			opc = "jge";
+			break;
+		case TOKLEQ:
+			opc = "jle";
 			break;
 		}
 		out("cmp %%rcx, %%rax\n");
@@ -361,7 +369,7 @@ unop(Node *n)
 		expr(n->Unop.operand);
 		out("xorq %%rcx, %%rcx\n");
 		out("testq %%rax, %%rax\n");
-		out("setnz %%cl\n");
+		out("setz %%cl\n");
 		out("movq %%rcx, %%rax\n");
 		break;
 	case '-':
