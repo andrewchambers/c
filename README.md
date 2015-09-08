@@ -1,4 +1,5 @@
 # A smaller, faster C compiler suite.
+[![Join the chat at https://gitter.im/andrewchambers/c](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/andrewchambers/c?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 - Fast.
 - Consistent.
@@ -47,7 +48,7 @@ Build musl libc.
 - Replace gnu as with our own assembler.
 - Replace ld with our own static linker.
 - Build OS kernels.
-- Advanced SSA backend.
+- SSA backend.
 
 ## Status
 
@@ -55,7 +56,12 @@ Pre stage 1.
 
 See tests for what works.
 
-## Code layout
+## Contributing
+
+Contributors welcome, preferrably discuss on gitter before starting something.
+Even contributing self contained test cases is useful.
+
+### Code layout
 
 - Libraries are in src/*
 - Commands are in src/cmd/*
@@ -63,7 +69,7 @@ See tests for what works.
 If you are unsure about the purpose of a library, check the header which
 should give a short description.
 
-## Code style
+### Code style
 
 Follow Plan9 style conventions. Headers are not allowed to include
 other headers to eliminate circular dependencies and increase build speed.
@@ -73,7 +79,7 @@ src/u.h is the only exception to this rule.
 - http://plan9.bell-labs.com/magic/man2html/6/style
 - http://aiju.de/b/style
 
-## Bug fixes and issues.
+### Bug fixes and issues
 
 Try and attach a single source file which exibits your issue. If possible
 reduce the test case by hand until it is as small as possible.
