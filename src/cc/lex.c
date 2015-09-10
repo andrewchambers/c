@@ -7,7 +7,7 @@ static void ungetch(Lexer *l, int c);
 static int  nextc(Lexer *l);
 
 char *
-tokktostr(enum Tokkind t) 
+tokktostr(Tokkind t)
 {
 	switch(t) {
 	case TOKIDENT:      return "ident";

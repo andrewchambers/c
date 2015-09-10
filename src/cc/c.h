@@ -1,5 +1,5 @@
 /* Provides the preprocessor, compiler frontend. It also
-   contains the interface the backends implement. */
+   contains the interface the c compilers implement. */
 
 typedef struct SrcPos SrcPos;
 typedef struct StructMember StructMember;
@@ -10,7 +10,7 @@ typedef struct Node Node;
 typedef struct Lexer Lexer;
 
 /* Token types */
-enum Tokkind {
+typedef enum {
 	TOKADD    = '+',
 	TOKSUB    = '-',
 	TOKMUL    = '*',
@@ -95,10 +95,10 @@ enum Tokkind {
 	TOKDIRSTART,
 	TOKDIREND,
 	TOKEOF /* EOF needs to be the last. */
-};
+} Tokkind;
 
 /* Storage classes */
-enum Sclass {
+typedef enum {
 	SCNONE,
 	SCEXTERN,
 	SCSTATIC,
@@ -106,7 +106,7 @@ enum Sclass {
 	SCGLOBAL,
 	SCTYPEDEF,
 	SCAUTO
-};
+} Sclass;
 
 struct SrcPos {
 	char *file;
@@ -114,7 +114,7 @@ struct SrcPos {
 	int   col;
 };
 
-enum Ctypekind {
+typedef enum {
 	CVOID,
 	CPRIM,
 	CSTRUCT,
@@ -122,9 +122,9 @@ enum Ctypekind {
 	CPTR,
 	CFUNC,
 	CENUM,
-};
+} Ctypekind;
 
-enum PrimKind {
+typedef enum {
 	PRIMCHAR,
 	PRIMSHORT,
 	PRIMINT,
@@ -133,7 +133,7 @@ enum PrimKind {
 	PRIMFLOAT,
 	PRIMDOUBLE,
 	PRIMLDOUBLE
-};
+} Primkind;
 
 struct StructMember {
 	int   offset;
@@ -147,7 +147,7 @@ struct NameTy {
 };
 
 struct CTy {
-	enum Ctypekind t;
+	Ctypekind t;
 	int size;
 	int align;
 	int incomplete;
@@ -180,7 +180,7 @@ struct CTy {
 };
 
 /* node types */
-enum Nodekind {
+typedef enum {
 	NASSIGN,
 	NFUNC,
 	NLABELED,
@@ -209,11 +209,11 @@ enum Nodekind {
 	NIF,
 	NDECL,
 	NEXPRSTMT
-};
+} Nodekind;
 
 struct Node {
 	/* type tag, one of the N* types */
-	enum Nodekind t;
+	Nodekind t;
 	SrcPos pos;
 	CTy *type;
 	union {
@@ -344,15 +344,15 @@ struct Node {
 	};
 };
 
-enum Symkind {
+typedef enum {
 	SYMENUM,
 	SYMTYPE,
 	SYMGLOBAL,
 	SYMLOCAL,
-};
+} Symkind;
 
 struct Sym {
-	enum Symkind k;
+	Symkind k;
 	SrcPos *pos;
 	CTy    *type;
 	char   *name;
@@ -387,7 +387,7 @@ struct Lexer {
 
 typedef struct Tok Tok;
 struct Tok {
-	enum Tokkind k;
+	Tokkind k;
 	char   *v;
 	int     ws; /* There was whitespace before this token */
 	int     nl; /* There was a newline before this token */
@@ -409,7 +409,7 @@ void errorposf(SrcPos *, char *, ...) NORETURN;
 
 /* lex.c cpp.c */
 void  cppinit(char *);
-char *tokktostr(enum Tokkind);
+char *tokktostr(Tokkind);
 Tok  *lex(Lexer *);
 Tok  *pp(void);
 
