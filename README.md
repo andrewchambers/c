@@ -11,6 +11,9 @@
 - Painless cross compiling.
 - Just work.
 
+You should be able to get a C compiler, assembler, linker and libc for any
+supported target in less than 30 seconds just by typing make...
+
 ## Building
 
 Requires an external C compiler and gnu binutils (for now).
