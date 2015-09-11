@@ -1169,7 +1169,7 @@ pstruct(int isunion)
 
 	strct = newtype(CSTRUCT);
 	strct->Struct.members = vec();
-	strct->align = 32;
+	strct->align = 1; /* XXX zero sized structs? */
 	strct->Struct.isunion = isunion;
 
 	expect('{');
@@ -1192,6 +1192,8 @@ pstruct(int isunion)
 		expect(';');
 	}
 	expect('}');
+	if(strct->size % strct->align)
+		strct->size = strct->size + strct->align - (strct->size % strct->align);
 	return strct;
 }
 

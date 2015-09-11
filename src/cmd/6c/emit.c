@@ -6,6 +6,7 @@
 static void expr(Node *);
 static void stmt(Node *);
 static void store(CTy *t);
+static void pushstruct(CTy *t);
 
 char *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
@@ -115,13 +116,18 @@ calclocaloffsets(Node *f)
 		if(s->k != SYMLOCAL)
 			panic("internal error");
 		tsz = s->type->size;
+		/* This allows us to just copy params which have had the size rounded up. */
 		if(tsz < 8)
 			tsz = 8;
+		else if(tsz < 16)
+			tsz = 16;
 		curoffset += tsz;
 		if(curoffset % s->type->align)
-			curoffset += (curoffset - (curoffset % curoffset % s->type->align));
+			curoffset = (curoffset - (curoffset % s->type->align) + s->type->align);
 		s->Local.offset = -curoffset;
 	}
+	if(curoffset % 8)
+		curoffset = (curoffset - (curoffset % 8) + 8);
 	f->Func.localsz = curoffset;
 }
 
@@ -148,7 +154,7 @@ func(Node *f)
 		aloc = vecget(argpos, i);
 		switch(aloc->class) {
 		case ARGINT2:
-			out("movq %%%s, %d(%%rbp)\n", intargregs[aloc->r2], sym->Local.offset + 4);
+			out("movq %%%s, %d(%%rbp)\n", intargregs[aloc->r2], sym->Local.offset + 8);
 		case ARGINT1:
 			out("movq %%%s, %d(%%rbp)\n", intargregs[aloc->r1], sym->Local.offset);
 			break;
@@ -165,10 +171,15 @@ func(Node *f)
 				out("movq %d(%%rbp), %%rcx\n", aloc->offset);
 				out("leaq %d(%%rbp), %%rax\n", sym->Local.offset);
 				store(sym->type);
-			} else {
-				panic("unimplemented arg type");
+				break;
 			}
-			break;
+			if(isstruct(sym->type)) {
+				out("leaq %d(%%rbp), %%rcx\n", aloc->offset);
+				out("leaq %d(%%rbp), %%rax\n", sym->Local.offset);
+				store(sym->type);
+				break;
+			}
+			panic("unimplemented arg type");
 		default:
 			;
 		}
@@ -181,30 +192,54 @@ func(Node *f)
 static void
 call(Node *n)
 {
-	int   i, nintargs, cleanup;
-	Vec   *args, *arglocs;
+	int    i, nintargs, cleanup;
+	Vec    *args, *arglocs;
 	Node   *arg;
 	Argloc *aloc;
 
+	out("# call\n");
 	args = n->Call.args;
 	if(isptr(n->Call.funclike->type))
 		arglocs = classifyargs(n->Call.funclike->type->Ptr.subty);
 	else
 		arglocs = classifyargs(n->Call.funclike->type);
 	
-	/* Push mem args in reverse order */
-	i = args->len;
 	cleanup = 0;
+	i = args->len;
+	/* Calculate size of mem arg area. */
 	while(i-- != 0) {
 		arg  = vecget(args, i);
 		aloc = vecget(arglocs, i);
 		if(aloc->class != ARGMEM)
 			continue;
-		if(!isitype(arg->type) && !isptr(arg->type))
-			errorf("unimplemented arg type.");
-		cleanup += 8;
-		expr(arg);
-		out("pushq %%rax\n");
+		if(arg->type->size < 8)
+			cleanup += 8;
+		else
+			cleanup += arg->type->size;
+	}
+	/* Stack alignment */
+	if(cleanup % 8) {
+		out("sub $%d, %%rsp\n", cleanup % 8);
+		cleanup = (cleanup - (cleanup % 8) + 8);
+	}
+	/* Push mem args in reverse order */
+	i = args->len;
+	while(i-- != 0) {
+		arg  = vecget(args, i);
+		aloc = vecget(arglocs, i);
+		if(aloc->class != ARGMEM)
+			continue;
+		if(isitype(arg->type) || isptr(arg->type)) {
+			expr(arg);
+			out("pushq %%rax\n");
+			continue;
+		}
+		if(isstruct(arg->type)) {
+			expr(arg);
+			pushstruct(arg->type);
+			continue;
+		}
+		panic("unimlpemented artype in call");
 	}
 	/* Push int args in reverse order */
 	i = args->len;
@@ -215,12 +250,26 @@ call(Node *n)
 		switch(aloc->class) {
 		case ARGINT2:
 			nintargs += 2;
-			panic("unimplemented int reg");
+			if(isstruct(arg->type)) {
+				expr(arg);
+				out("movq 8(%%rax), %%rcx\n");
+				out("pushq %%rcx\n");
+				out("movq (%%rax), %%rcx\n");
+				out("pushq %%rcx\n");
+				break;
+			}
+			panic("unimplemented int 2 reg");
 		case ARGINT1:
 			nintargs += 1;
 			if(isitype(arg->type) || isptr(arg->type)) {
 				expr(arg);
 				out("pushq %%rax\n");
+				break;
+			}
+			if(isstruct(arg->type)) {
+				expr(arg);
+				out("movq (%%rax), %%rcx\n");
+				out("pushq %%rcx\n");
 				break;
 			}
 			panic("unimplemented int reg");
@@ -236,18 +285,6 @@ call(Node *n)
 	out("call *%%rax\n");
 	if(cleanup)
 		out("add $%d, %%rsp\n", cleanup);
-}
-
-static void
-decl(Node *n)
-{
-	int  i;
-	Sym *sym;
-
-	for(i = 0; i < n->Decl.syms->len; i++) {
-		sym = vecget(n->Decl.syms, i);
-		emitsym(sym);
-	}
 }
 
 static void
@@ -287,6 +324,8 @@ load(CTy *t)
 static void
 store(CTy *t)
 {
+	int sz, offset;
+
 	if(isitype(t) || isptr(t)) {
 		switch(t->size) {
 		case 8:
@@ -306,7 +345,58 @@ store(CTy *t)
 		}
 		return;
 	}
+	if(isstruct(t)) {
+		sz = t->size;
+		offset = 0;
+		out("pushq %%rdx\n");
+		while(sz >= 8) {
+			out("movq %d(%%rcx), %%rdx\n", offset);
+			out("movq %%rdx, %d(%%rax)\n", offset);
+			sz -= 8;
+			offset += 8;
+		}
+		while(sz >= 4) {
+			out("movl %d(%%rcx), %%edx\n", offset);
+			out("movl %%edx, %d(%%rax)\n", offset);
+			sz -= 4;
+			offset += 4;
+		}
+		while(sz) {
+			out("movb %d(%%rcx), %%dl\n", offset);
+			out("movb %%dl, %d(%%rax)\n", offset);
+			sz--;
+			offset--;
+		}
+		out("popq %%rdx\n");
+		return;
+	}
 	errorf("unimplemented store\n");
+}
+
+static void
+pushstruct(CTy *t)
+{
+	int sz;
+
+	if(!isstruct(t))
+		panic("internal error pushstruct");
+	sz = t->size;
+	out("sub $%d, %%rsp\n", sz);
+	out("movq %%rax, %%rcx\n");
+	out("movq %%rsp, %%rax\n");
+	store(t);
+}
+
+static void
+decl(Node *n)
+{
+	int  i;
+	Sym *sym;
+
+	for(i = 0; i < n->Decl.syms->len; i++) {
+		sym = vecget(n->Decl.syms, i);
+		emitsym(sym);
+	}
 }
 
 static void
