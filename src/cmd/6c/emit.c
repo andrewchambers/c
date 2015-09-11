@@ -1,6 +1,7 @@
 #include <u.h>
 #include <ds/ds.h>
 #include <cc/c.h>
+#include <gc/gc.h>
 
 static void expr(Node *);
 static void stmt(Node *);
@@ -39,6 +40,69 @@ block(Node *n)
 	}
 }
 
+
+typedef enum {
+	ARGINT1,
+	ARGINT2,
+	ARGMEM
+} Argclass;
+
+typedef struct {
+	Argclass class;
+	int offset;
+	int r1;
+	int r2;
+} Argloc;
+
+static Vec *
+classifyargs(CTy *f)
+{
+	int    i, sz, nintargs, offset;
+	Vec    *locs, *params;
+	Argloc *loc;
+	NameTy *nt;
+	
+	params = f->Func.params;
+	locs = vec();
+	offset = 16;
+	nintargs = 0;
+	for(i = 0; i < params->len; i++) {
+		nt = vecget(params, i);
+		sz = nt->type->size;
+		if(sz < 8)
+			sz = 8;
+		loc = gcmalloc(sizeof(Argloc));
+		if(nintargs >= 6)
+			goto memarg;
+		if(isitype(nt->type) || isptr(nt->type))
+			goto argint1;
+		if(isstruct(nt->type)) {
+			if(nt->type->size <= 8)
+				goto argint1;
+			if(nt->type->size <= 16 && nintargs < 5)
+				goto argint2;
+		}
+	memarg:
+		loc->class = ARGMEM;
+		loc->offset = offset;
+		offset += sz;
+		vecappend(locs, loc);
+		continue;
+	argint1:
+		loc->class = ARGINT1;
+		loc->r1 = nintargs++;
+		vecappend(locs, loc);
+		continue;
+	argint2:
+		loc->class = ARGINT2;
+		loc->r1 = nintargs++;
+		loc->r2 = nintargs++;
+		vecappend(locs, loc);
+		continue;
+	}
+	return locs;
+}
+
 static void
 calclocaloffsets(Node *f)
 {
@@ -64,9 +128,10 @@ calclocaloffsets(Node *f)
 static void
 func(Node *f)
 {
-	Vec *v;
-	Sym *sym;
-	int  i;
+	Vec    *args, *argpos;
+	Sym    *sym;
+	Argloc *aloc;
+	int    i;
 	
 	calclocaloffsets(f);
 	out(".text\n");
@@ -76,24 +141,101 @@ func(Node *f)
 	out("movq %%rsp, %%rbp\n");
 	if(f->Func.localsz)
 		out("sub $%d, %%rsp\n", f->Func.localsz);
-	v = f->Func.params;
-	for(i = 0; i < v->len; i++) {
-		sym = vecget(v, i);
-		if(sym->k != SYMLOCAL)
-			panic("internal error");
-		if(!isitype(sym->type) && !isptr(sym->type))
-			errorposf(&f->pos, "internal error - unimplemented arg type");
-		if(i < 6) {
-			out("movq %%%s, %d(%%rbp)\n", intargregs[i], sym->Local.offset);
-		} else {
-			out("movq %d(%%rbp), %%rcx\n", 16 + 8 * (i - 6));
-			out("leaq %d(%%rbp), %%rax\n", sym->Local.offset);
-			store(sym->type);
+	args = f->Func.params;
+	argpos = classifyargs(f->type);
+	for(i = 0; i < args->len; i++) {
+		sym = vecget(args, i);
+		aloc = vecget(argpos, i);
+		switch(aloc->class) {
+		case ARGINT2:
+			out("movq %%%s, %d(%%rbp)\n", intargregs[aloc->r2], sym->Local.offset + 4);
+		case ARGINT1:
+			out("movq %%%s, %d(%%rbp)\n", intargregs[aloc->r1], sym->Local.offset);
+			break;
+		default:
+			;
+		}
+	}
+	for(i = 0; i < args->len; i++) {
+		sym = vecget(args, i);
+		aloc = vecget(argpos, i);
+		switch(aloc->class) {
+		case ARGMEM:
+			if(isitype(sym->type)) {
+				out("movq %d(%%rbp), %%rcx\n", aloc->offset);
+				out("leaq %d(%%rbp), %%rax\n", sym->Local.offset);
+				store(sym->type);
+			} else {
+				panic("unimplemented arg type");
+			}
+			break;
+		default:
+			;
 		}
 	}
 	block(f->Func.body);
 	out("leave\n");
 	out("ret\n");
+}
+
+static void
+call(Node *n)
+{
+	int   i, nintargs, cleanup;
+	Vec   *args, *arglocs;
+	Node   *arg;
+	Argloc *aloc;
+
+	args = n->Call.args;
+	if(isptr(n->Call.funclike->type))
+		arglocs = classifyargs(n->Call.funclike->type->Ptr.subty);
+	else
+		arglocs = classifyargs(n->Call.funclike->type);
+	
+	/* Push mem args in reverse order */
+	i = args->len;
+	cleanup = 0;
+	while(i-- != 0) {
+		arg  = vecget(args, i);
+		aloc = vecget(arglocs, i);
+		if(aloc->class != ARGMEM)
+			continue;
+		if(!isitype(arg->type) && !isptr(arg->type))
+			errorf("unimplemented arg type.");
+		cleanup += 8;
+		expr(arg);
+		out("pushq %%rax\n");
+	}
+	/* Push int args in reverse order */
+	i = args->len;
+	nintargs = 0;
+	while(i-- != 0) {
+		arg  = vecget(args, i);
+		aloc = vecget(arglocs, i);
+		switch(aloc->class) {
+		case ARGINT2:
+			nintargs += 2;
+			panic("unimplemented int reg");
+		case ARGINT1:
+			nintargs += 1;
+			if(isitype(arg->type) || isptr(arg->type)) {
+				expr(arg);
+				out("pushq %%rax\n");
+				break;
+			}
+			panic("unimplemented int reg");
+			break;
+		default:
+			continue;
+		}
+	}
+	/* Pop int args back to registers */
+	for(i = 0; i < nintargs; i++)
+		out("popq %%%s\n", intargregs[i]);
+	expr(n->Call.funclike);
+	out("call *%%rax\n");
+	if(cleanup)
+		out("add $%d, %%rsp\n", cleanup);
 }
 
 static void
@@ -626,35 +768,6 @@ idx(Node *n)
 	out("pop %%rcx\n");
 	out("addq %%rcx, %%rax\n");
 	load(n->type);
-}
-
-static void
-call(Node *n)
-{
-	int   i, nargs, nintargs, cleanup;
-	Vec  *args;
-	Node *arg;
-
-	args = n->Call.args;
-	i = nargs = args->len;
-	/* Push args in reverse order */
-	while(i-- != 0) {
-		arg = vecget(args, i);
-		if(!isitype(arg->type) && !isptr(arg->type))
-			errorf("unimplemented arg type.");
-		expr(arg);
-		out("pushq %%rax\n");
-	}
-	nintargs = nargs;
-	if(nintargs > 6)
-		nintargs = 6;
-	for(i = 0; i < nintargs; i++)
-		out("popq %%%s\n", intargregs[i]);
-	expr(n->Call.funclike);
-	out("call *%%rax\n");
-	cleanup = 8 * (nargs - nintargs);
-	if(cleanup)
-		out("add $%d, %%rsp\n", cleanup);
 }
 
 static void
