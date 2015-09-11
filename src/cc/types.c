@@ -183,7 +183,7 @@ isarray(CTy *t)
 StructMember *
 getstructmember(CTy *t, char *n)
 {
-	int     i;
+	int i;
 	StructMember *sm;
 	
 	if(isptr(t))
