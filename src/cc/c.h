@@ -425,8 +425,6 @@ int isarray(CTy *);
 int sametype(CTy *, CTy *);
 int convrank(CTy *);
 int canrepresent(CTy *, CTy *);
-uint64 getmaxval(CTy *);
-int64 getminval(CTy *);
 StructMember *getstructmember(CTy *, char *);
 CTy *structmemberty(CTy *, char *);
 void addstructmember(SrcPos *, CTy *, char *, CTy *);
@@ -438,8 +436,31 @@ char *newlabel();
 /* foldexpr.c */
 Const *foldexpr(Node *);
 
-/* backend functions */
-void  emitinit(FILE *);
-void  emitsym(Sym *);
+/* target specific types and functions. */
+
+/* Frontend */
+
+extern CTy *cvoid;
+extern CTy *cchar;
+extern CTy *cshort;
+extern CTy *cint;
+extern CTy *clong;
+extern CTy *cllong;
+extern CTy *cuchar;
+extern CTy *cushort;
+extern CTy *cuint;
+extern CTy *culong;
+extern CTy *cullong;
+extern CTy *cfloat;
+extern CTy *cdouble;
+extern CTy *cldouble;
+
+uint64 getmaxval(CTy *);
+int64  getminval(CTy *);
+
+/* Backend */
+
+void   emitinit(FILE *);
+void   emitsym(Sym *);
 
 

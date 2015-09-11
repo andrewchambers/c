@@ -19,6 +19,7 @@ LIBO   = src/u.o $(CCO) $(GCO) $(DSO)
 LIBA   = lib/libcompiler.a
 CPPO   = src/cmd/cpp/main.o 
 _6CO   = src/cmd/6c/emit.o \
+         src/cmd/6c/frontend.o \
          src/cmd/6c/main.o 
 _6AO   = src/cmd/6a/main.o 
 all:  bin/6c \

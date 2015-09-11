@@ -256,56 +256,6 @@ isassignable(CTy *to, CTy *from)
 	return 0;
 }
 
-uint64
-getmaxval(CTy *l)
-{
-	switch(l->Prim.type) {
-	case PRIMCHAR:
-		if(l->Prim.issigned)
-			return 0x7f;
-		else
-			return 0xff;
-	case PRIMSHORT:
-		if(l->Prim.issigned)
-			return 0x7fff;
-		else
-			return  0xffff;
-	case PRIMINT:
-	case PRIMLONG:
-		if(l->Prim.issigned)
-			return 0x7fffffff;
-		else
-			return 0xffffffff;
-	case PRIMLLONG:
-		if(l->Prim.issigned)
-			return 0x7fffffffffffffff;
-		else
-			return 0xffffffffffffffff;
-	}
-	panic("internal error");
-	return 0;
-}
-
-int64
-getminval(CTy *l)
-{
-	if(!l->Prim.issigned)
-		return 0;
-	switch(l->Prim.type) {
-	case PRIMCHAR:
-		return 0xff;
-	case PRIMSHORT:
-		return 0xffff;
-	case PRIMINT:
-	case PRIMLONG:
-		return 0xffffffffl;
-	case PRIMLLONG:
-		return 0xffffffffffffffff;
-	}
-	panic("internal error");
-	return 0;
-}
-
 int
 canrepresent(CTy *l, CTy *r)
 {
@@ -313,4 +263,5 @@ canrepresent(CTy *l, CTy *r)
 		panic("internal error");
 	return getmaxval(l) <= getmaxval(r) && getminval(l) >= getminval(r);
 }
+
 

@@ -380,47 +380,6 @@ mkptr(CTy *t)
 	return p;
 }
 
-static CTy *
-mkprimtype(int type, int sig)
-{
-	CTy *t;
-	
-	t = newtype(CPRIM);
-	t->Prim.type = type;
-	t->Prim.issigned = sig;
-	switch(t->Prim.type){
-	case PRIMCHAR:
-		t->size = 1;
-		t->align = 1;
-		break;
-	case PRIMSHORT:
-		t->size = 2;
-		t->align = 2;
-		break;
-	case PRIMINT:
-		t->size = 4;
-		t->align = 4;
-		break;
-	case PRIMLONG:
-		t->size = 8;
-		t->align = 8;
-		break;
-	case PRIMLLONG:
-		t->size = 8;
-		t->align = 8;
-		break;
-	case PRIMDOUBLE:
-	case PRIMLDOUBLE:
-	case PRIMFLOAT:
-		t->size = 8;
-		t->align = 8;
-		break;
-	default:
-		panic("internal error mkprimtype %d\n", t->Prim.type);
-	}
-	return t;
-}
-
 static NameTy *
 newnamety(char *n, CTy *t)
 {
@@ -573,9 +532,9 @@ ipromote(Node *n)
 	case PRIMCHAR:
 	case PRIMSHORT:
 		if(n->type->Prim.issigned)
-			return mkcast(&n->pos, n, mkprimtype(PRIMINT, 1));
+			return mkcast(&n->pos, n, cint);
 		else
-			return mkcast(&n->pos, n, mkprimtype(PRIMINT, 0));
+			return mkcast(&n->pos, n, cuint);
 	}
 	return n;
 }
@@ -615,7 +574,9 @@ usualarithconv(Node **a, Node **b)
 		*small = mkcast(&(*small)->pos, *small, (*large)->type);
 		return (*large)->type;
 	}
-	t = mkprimtype((*large)->type->Prim.type, 0);
+	t = gcmalloc(sizeof(CTy));
+	*t = *((*large)->type);
+	t->Prim.issigned = 0;
 	*large = mkcast(&(*large)->pos, *large, t);
 	*small = mkcast(&(*small)->pos, *small, t);
 	return t;
@@ -940,52 +901,51 @@ declspecs(int *sclass)
 	done:
 	switch(bits){
 	case BITFLOAT:
-		return mkprimtype(PRIMFLOAT, 0);
+		return cfloat;
 	case BITDOUBLE:
-		return mkprimtype(PRIMDOUBLE, 0);
+		return cdouble;
 	case BITLONG|BITDOUBLE:
-		return mkprimtype(PRIMLDOUBLE, 0);
+		return cldouble;
 	case BITSIGNED|BITCHAR:
 	case BITCHAR:
-		return mkprimtype(PRIMCHAR, 1);
+		return cchar;
 	case BITUNSIGNED|BITCHAR:
-		return mkprimtype(PRIMCHAR, 0);
+		return cuchar;
 	case BITSIGNED|BITSHORT|BITINT:
 	case BITSHORT|BITINT:
 	case BITSHORT:
-		return mkprimtype(PRIMSHORT, 1);
+		return cshort;
 	case BITUNSIGNED|BITSHORT|BITINT:
 	case BITUNSIGNED|BITSHORT:
-		return mkprimtype(PRIMSHORT, 0);
+		return cushort;
 	case BITSIGNED|BITINT:
 	case BITSIGNED:
 	case BITINT:
 	case 0:
-		return mkprimtype(PRIMINT, 1);
+		return cint;
 	case BITUNSIGNED|BITINT:
 	case BITUNSIGNED:
-		return mkprimtype(PRIMINT, 0);
+		return cuint;
 	case BITSIGNED|BITLONG|BITINT:
 	case BITSIGNED|BITLONG:
 	case BITLONG|BITINT:
 	case BITLONG:
-		return mkprimtype(PRIMLONG, 1);
+		return clong;
 	case BITUNSIGNED|BITLONG|BITINT:
 	case BITUNSIGNED|BITLONG:
-		return mkprimtype(PRIMLONG, 0);
+		return culong;
 	case BITSIGNED|BITLONGLONG|BITINT:
 	case BITSIGNED|BITLONGLONG:
 	case BITLONGLONG|BITINT:
 	case BITLONGLONG:
-		return mkprimtype(PRIMLLONG, 1);
+		return cllong;
 	case BITUNSIGNED|BITLONGLONG|BITINT:
 	case BITUNSIGNED|BITLONGLONG:
-		return mkprimtype(PRIMLLONG, 0);
+		return cullong;
 	case BITVOID:
-		t = newtype(CVOID);
+		t = cvoid;
 		return t;
 	case BITENUM:
-		/* TODO */
 	case BITSTRUCT:
 	case BITIDENT:
 		return t;
@@ -2036,7 +1996,7 @@ unaryexpr(void)
 			ty = unaryexpr()->type;
 		}
 		n->Sizeof.type = ty;
-		n->type = mkprimtype(PRIMINT, 1);
+		n->type = cint;
 		return n;
 	default:
 		;
@@ -2159,13 +2119,13 @@ primaryexpr(void)
 	case TOKNUM:
 		n = mknode(NNUM, &tok->pos);
 		n->Num.v = atoll(tok->v);
-		n->type = mkprimtype(PRIMINT, 1);
+		n->type = cint;
 		next();
 		return n;
 	case TOKSTR:
 		n = mknode(NSTR, &tok->pos);
 		n->Str.v = tok->v;
-		n->type = mkptr(mkprimtype(PRIMCHAR, 1));
+		n->type = mkptr(cchar);
 		next();
 		return n;
 	case '(':
