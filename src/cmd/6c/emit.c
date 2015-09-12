@@ -242,8 +242,13 @@ call(Node *n)
 		else
 			cleanup += arg->type->size;
 	}
-	if(cleanup % 8)
+	if((stackoffset + cleanup) % 8)
 		panic("internal error, call stack alignment");
+	/* Align stack before pushing args */
+	if((stackoffset + cleanup) % 16) {
+		pushq("rax");
+		cleanup += 8;
+	}
 	/* Push mem args in reverse order */
 	i = args->len;
 	while(i-- != 0) {
