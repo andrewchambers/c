@@ -330,7 +330,9 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 	switch(sclass) {
 	case SCAUTO:
 		sym->k = SYMLOCAL;
-		vecappend(curfunc->Func.locals, sym);
+		sym->Local.slot = gcmalloc(sizeof(StkSlot));
+		sym->Local.slot->type = sym->type;
+		vecappend(curfunc->Func.stkslots, sym->Local.slot);
 		break;
 	case SCTYPEDEF:
 		sym->k = SYMTYPE;
@@ -690,7 +692,7 @@ decl()
 			curfunc->type = type;
 			curfunc->Func.name = name;
 			curfunc->Func.params = vec();
-			curfunc->Func.locals = vec();
+			curfunc->Func.stkslots = vec();
 			fbody();
 			definesym(pos, sclass, name, type, curfunc);
 			curfunc = 0;

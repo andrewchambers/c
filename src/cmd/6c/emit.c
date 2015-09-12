@@ -10,6 +10,7 @@ static void pushstruct(CTy *t);
 
 char *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 int stackoffset;
+int structretoffset;
 
 static FILE *o;
 
@@ -108,16 +109,14 @@ classifyargs(CTy *f)
 }
 
 static void
-calclocaloffsets(Node *f)
+calcslotoffsets(Node *f)
 {
 	int i, tsz, curoffset;
-	Sym *s;
+	StkSlot *s;
 
 	curoffset = 0;
-	for(i = 0; i < f->Func.locals->len; i++) {
-		s = vecget(f->Func.locals, i);
-		if(s->k != SYMLOCAL)
-			panic("internal error");
+	for(i = 0; i < f->Func.stkslots->len; i++) {
+		s = vecget(f->Func.stkslots, i);
 		tsz = s->type->size;
 		/* This allows us to just copy params which have had the size rounded up. */
 		if(tsz < 8)
@@ -127,10 +126,10 @@ calclocaloffsets(Node *f)
 		curoffset += tsz;
 		if(curoffset % s->type->align)
 			curoffset = (curoffset - (curoffset % s->type->align) + s->type->align);
-		s->Local.offset = -curoffset;
+		s->offset = -curoffset;
 	}
-	if(curoffset % 8)
-		curoffset = (curoffset - (curoffset % 8) + 8);
+	if(curoffset % 16)
+		curoffset = (curoffset - (curoffset % 16) + 16);
 	f->Func.localsz = curoffset;
 }
 
@@ -157,7 +156,7 @@ func(Node *f)
 	int    i;
 	
 	stackoffset = 0;
-	calclocaloffsets(f);
+	calcslotoffsets(f);
 	out(".text\n");
 	out(".globl %s\n", f->Func.name);
 	out("%s:\n", f->Func.name);
@@ -174,9 +173,9 @@ func(Node *f)
 		aloc = vecget(argpos, i);
 		switch(aloc->class) {
 		case ARGINT2:
-			out("movq %%%s, %d(%%rbp)\n", intargregs[aloc->r2], sym->Local.offset + 8);
+			out("movq %%%s, %d(%%rbp)\n", intargregs[aloc->r2], sym->Local.slot->offset + 8);
 		case ARGINT1:
-			out("movq %%%s, %d(%%rbp)\n", intargregs[aloc->r1], sym->Local.offset);
+			out("movq %%%s, %d(%%rbp)\n", intargregs[aloc->r1], sym->Local.slot->offset);
 			break;
 		default:
 			;
@@ -189,13 +188,13 @@ func(Node *f)
 		case ARGMEM:
 			if(isitype(sym->type)) {
 				out("movq %d(%%rbp), %%rcx\n", aloc->offset);
-				out("leaq %d(%%rbp), %%rax\n", sym->Local.offset);
+				out("leaq %d(%%rbp), %%rax\n", sym->Local.slot->offset);
 				store(sym->type);
 				break;
 			}
 			if(isstruct(sym->type)) {
 				out("leaq %d(%%rbp), %%rcx\n", aloc->offset);
-				out("leaq %d(%%rbp), %%rax\n", sym->Local.offset);
+				out("leaq %d(%%rbp), %%rax\n", sym->Local.slot->offset);
 				store(sym->type);
 				break;
 			}
@@ -471,7 +470,7 @@ addr(Node *n)
 			out("leaq %s(%%rip), %%rax\n", sym->Global.label);
 			break;
 		case SYMLOCAL:
-			out("leaq %d(%%rbp), %%rax\n", sym->Local.offset);
+			out("leaq %d(%%rbp), %%rax\n", sym->Local.slot->offset);
 			break;
 		default:
 			panic("internal error");

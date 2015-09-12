@@ -6,6 +6,7 @@ typedef struct StructMember StructMember;
 typedef struct NameTy NameTy;
 typedef struct CTy CTy;
 typedef struct Sym Sym;
+typedef struct StkSlot StkSlot;
 typedef struct Node Node;
 typedef struct Lexer Lexer;
 
@@ -218,11 +219,11 @@ struct Node {
 	CTy *type;
 	union {
 		struct {
-			int   localsz;
-			char *name;
-			Node *body;
-			Vec  *params; /* list of *Sym */
-			Vec  *locals; /* list of *Sym */
+			int     localsz;
+			char    *name;
+			Node    *body;
+			Vec     *params;   /* list of *Sym */
+			Vec     *stkslots; /* list of *Stkslot */
 		} Func;
 		struct {
 			Vec *syms;
@@ -363,12 +364,17 @@ struct Sym {
 			Node *init;
 		} Global;
 		struct {
-			int offset;
+			StkSlot *slot;
 		} Local;
 		struct {
 			int64 v;
 		} Enum;
 	};
+};
+
+struct StkSlot {
+	CTy *type;
+	int offset;
 };
 
 #define MAXTOKSZ 4096
