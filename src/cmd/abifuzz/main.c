@@ -260,7 +260,7 @@ printfunc(Testcase *t)
 		snprintf(buf, sizeof(buf), "p%d", i);
 		printcheck(buf, p);
 	}
-	printf("\treturn r;");
+	printf("\treturn r;\n");
 	printf("}\n");
 }
 
