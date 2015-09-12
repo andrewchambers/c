@@ -22,9 +22,11 @@ _6CO   = src/cmd/6c/emit.o \
          src/cmd/6c/frontend.o \
          src/cmd/6c/main.o 
 _6AO   = src/cmd/6a/main.o 
+ABIFZO = src/cmd/abifuzz/main.o
 all:  bin/6c \
       bin/6a \
-      bin/cpp
+      bin/cpp \
+      bin/abifuzz
 
 .PHONY: all clean
 
@@ -43,9 +45,13 @@ bin/cpp:  $(CPPO) $(LIBA)
 	@ mkdir -p bin
 	$(CC) $(LDFLAGS) $(CPPO) $(LIBA) -o $@
 
+bin/abifuzz:  $(ABIFZO) $(LIBA)
+	@ mkdir -p bin
+	$(CC) $(LDFLAGS) $(ABIFZO) $(LIBA) -o $@
+
 $(LIBA): $(LIBO)
 	@ mkdir -p lib
 	$(AR) rcs $(LIBA) $(LIBO)
 
 clean:
-	rm -rf $(LIBA) $(LIBO) $(CPPO) $(_6CO) $(_6AO) bin
+	rm -rf $(LIBA) $(LIBO) $(CPPO) $(_6CO) $(_6AO) $(ABIFZO) bin
