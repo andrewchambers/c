@@ -418,7 +418,6 @@ pushstruct(CTy *t)
 	out("movq %%rax, %%rcx\n");
 	out("movq %%rsp, %%rax\n");
 	store(t);
-
 }
 
 static void
