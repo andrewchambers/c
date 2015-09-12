@@ -321,7 +321,8 @@ getseed()
 	return r;
 }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
 	Testcase *t;
 	int seed;
