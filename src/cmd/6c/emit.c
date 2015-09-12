@@ -9,6 +9,7 @@ static void store(CTy *t);
 static void pushstruct(CTy *t);
 
 char *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+int stackoffset;
 
 static FILE *o;
 
@@ -72,6 +73,8 @@ classifyargs(CTy *f)
 		sz = nt->type->size;
 		if(sz < 8)
 			sz = 8;
+		if(sz % 8)
+			sz = sz - (sz % 8) + 8;
 		loc = gcmalloc(sizeof(Argloc));
 		if(nintargs >= 6)
 			goto memarg;
@@ -131,6 +134,20 @@ calclocaloffsets(Node *f)
 	f->Func.localsz = curoffset;
 }
 
+void
+pushq(char *reg)
+{
+	stackoffset += 8;
+	out("pushq %%%s\n", reg);
+}
+
+void
+popq(char *reg)
+{
+	stackoffset -= 8;
+	out("popq %%%s\n", reg);
+}
+
 static void
 func(Node *f)
 {
@@ -139,14 +156,17 @@ func(Node *f)
 	Argloc *aloc;
 	int    i;
 	
+	stackoffset = 0;
 	calclocaloffsets(f);
 	out(".text\n");
 	out(".globl %s\n", f->Func.name);
 	out("%s:\n", f->Func.name);
-	out("pushq %%rbp\n");
+	pushq("rbp");
 	out("movq %%rsp, %%rbp\n");
-	if(f->Func.localsz)
+	if(f->Func.localsz) {
 		out("sub $%d, %%rsp\n", f->Func.localsz);
+		stackoffset += f->Func.localsz;
+	}
 	args = f->Func.params;
 	argpos = classifyargs(f->type);
 	for(i = 0; i < args->len; i++) {
@@ -186,7 +206,12 @@ func(Node *f)
 	}
 	block(f->Func.body);
 	out("leave\n");
+	stackoffset -= f->Func.localsz;
+	stackoffset -= 8;
 	out("ret\n");
+	if(stackoffset != 0) {
+		panic("stack not balanced.");
+	}
 }
 
 static void
@@ -212,16 +237,13 @@ call(Node *n)
 		aloc = vecget(arglocs, i);
 		if(aloc->class != ARGMEM)
 			continue;
-		if(arg->type->size < 8)
-			cleanup += 8;
+		if(arg->type->size % 8)
+			cleanup += arg->type->size - (arg->type->size % 8) + 8;
 		else
 			cleanup += arg->type->size;
 	}
-	/* Stack alignment */
-	if(cleanup % 8) {
-		out("sub $%d, %%rsp\n", cleanup % 8);
-		cleanup = (cleanup - (cleanup % 8) + 8);
-	}
+	if(cleanup % 8)
+		panic("internal error, call stack alignment");
 	/* Push mem args in reverse order */
 	i = args->len;
 	while(i-- != 0) {
@@ -231,11 +253,12 @@ call(Node *n)
 			continue;
 		if(isitype(arg->type) || isptr(arg->type)) {
 			expr(arg);
-			out("pushq %%rax\n");
+			pushq("rax");
 			continue;
 		}
 		if(isstruct(arg->type)) {
 			expr(arg);
+			/* Struct size rounded up to 8 alignment */
 			pushstruct(arg->type);
 			continue;
 		}
@@ -253,9 +276,9 @@ call(Node *n)
 			if(isstruct(arg->type)) {
 				expr(arg);
 				out("movq 8(%%rax), %%rcx\n");
-				out("pushq %%rcx\n");
+				pushq("rcx");
 				out("movq (%%rax), %%rcx\n");
-				out("pushq %%rcx\n");
+				pushq("rcx");
 				break;
 			}
 			panic("unimplemented int 2 reg");
@@ -263,13 +286,13 @@ call(Node *n)
 			nintargs += 1;
 			if(isitype(arg->type) || isptr(arg->type)) {
 				expr(arg);
-				out("pushq %%rax\n");
+				pushq("rax");
 				break;
 			}
 			if(isstruct(arg->type)) {
 				expr(arg);
 				out("movq (%%rax), %%rcx\n");
-				out("pushq %%rcx\n");
+				pushq("rcx");
 				break;
 			}
 			panic("unimplemented int reg");
@@ -279,12 +302,16 @@ call(Node *n)
 		}
 	}
 	/* Pop int args back to registers */
-	for(i = 0; i < nintargs; i++)
+	for(i = 0; i < nintargs; i++) {
 		out("popq %%%s\n", intargregs[i]);
+		stackoffset -= 8;
+	}
 	expr(n->Call.funclike);
 	out("call *%%rax\n");
-	if(cleanup)
+	if(cleanup) {
 		out("add $%d, %%rsp\n", cleanup);
+		stackoffset -= cleanup;
+	}
 }
 
 static void
@@ -348,7 +375,7 @@ store(CTy *t)
 	if(isstruct(t)) {
 		sz = t->size;
 		offset = 0;
-		out("pushq %%rdx\n");
+		pushq("rdx");
 		while(sz >= 8) {
 			out("movq %d(%%rcx), %%rdx\n", offset);
 			out("movq %%rdx, %d(%%rax)\n", offset);
@@ -367,12 +394,15 @@ store(CTy *t)
 			sz--;
 			offset--;
 		}
-		out("popq %%rdx\n");
+		popq("rdx");
 		return;
 	}
 	errorf("unimplemented store\n");
 }
 
+/* Returns number of bytes pushed
+   The stack is kept 8 byte aligned,
+   so may push more bytes. */
 static void
 pushstruct(CTy *t)
 {
@@ -381,10 +411,14 @@ pushstruct(CTy *t)
 	if(!isstruct(t))
 		panic("internal error pushstruct");
 	sz = t->size;
+	if(sz % 8)
+		sz = sz - (sz % 8) + 8;
 	out("sub $%d, %%rsp\n", sz);
+	stackoffset += sz;
 	out("movq %%rax, %%rcx\n");
 	out("movq %%rsp, %%rax\n");
 	store(t);
+
 }
 
 static void
@@ -445,9 +479,9 @@ addr(Node *n)
 		if(sz != 1) {
 			out("imul $%d, %%rax\n", sz);
 		}
-		out("pushq %%rax\n");
+		pushq("rax");
 		expr(n->Idx.operand);
-		out("popq %%rcx\n");
+		popq("rcx");
 		out("addq %%rcx, %%rax\n");
 		break;
 	default:
@@ -548,9 +582,9 @@ assign(Node *n)
 	r = n->Assign.r;
 	if(op == '=') {
 		expr(r);
-		out("pushq %%rax\n");
+		pushq("rax");
 		addr(l);
-		out("popq %%rcx\n");
+		popq("rcx");
 		if(!isptr(l->type) && !isitype(l->type))
 			errorf("unimplemented assign\n");
 		store(l->type);
@@ -558,15 +592,15 @@ assign(Node *n)
 		return;
 	}
 	addr(l);
-	out("pushq %%rax\n");
+	pushq("rax");
 	load(l->type);
-	out("pushq %%rax\n");
+	pushq("rax");
 	expr(r);
 	out("movq %%rax, %%rcx\n");
-	out("popq %%rax\n");
+	popq("rax");
 	obinop(op, n->type);
 	out("movq %%rax, %%rcx\n");
-	out("popq %%rax\n");
+	popq("rax");
 	store(l->type);
 	out("movq %%rcx, %%rax\n");
 }
@@ -619,10 +653,10 @@ binop(Node *n)
 		return;
 	}
 	expr(n->Binop.l);
-	out("pushq %%rax\n");
+	pushq("rax");
 	expr(n->Binop.r);
 	out("movq %%rax, %%rcx\n");
-	out("popq %%rax\n");
+	popq("rax");
 	obinop(n->Binop.op, n->type);
 }
 
@@ -664,7 +698,7 @@ incdec(Node *n)
 	if(!isitype(n->type) && !isptr(n->type))
 		panic("unimplemented incdec");
 	addr(n->Incdec.operand);
-	out("pushq %%rax\n");
+	pushq("rax");
 	load(n->type);
 	if(isptr(n->type)) {
 		if(n->Incdec.op == TOKINC)
@@ -678,7 +712,7 @@ incdec(Node *n)
 			out("dec %%rax\n");
 	}
 	out("movq %%rax, %%rcx\n");
-	out("popq %%rax\n");
+	popq("rax");
 	store(n->type);
 	out("movq %%rcx, %%rax\n");
 	if(n->Incdec.post == 1) {
