@@ -13,6 +13,8 @@ typedef enum {
 	INT,
 	LONG,
 	LLONG,
+	FLOAT,
+	DOUBLE,
 	STRUCT,
 	TEND,
 } Type;
@@ -35,6 +37,12 @@ typedef struct {
 		struct {
 			long long v;
 		} Cllong;
+		struct {
+			float v;
+		} Cfloat;
+		struct {
+			double v;
+		} Cdouble;
 		struct {
 			char *name;
 			Vec  *members;
@@ -67,6 +75,12 @@ printvaltype(Val *v)
 		break;
 	case LLONG:
 		printf("long long");
+		break;
+	case FLOAT:
+		printf("float");
+		break;
+	case DOUBLE:
+		printf("double");
 		break;
 	case STRUCT:
 		printf("struct %s", v->Cstruct.name);
@@ -136,6 +150,16 @@ randval(int depth)
 		r->t = LLONG;
 		r->Cllong.v = rand();
 		break;
+	case FLOAT:
+		r = gcmalloc(sizeof(Val));
+		r->t = FLOAT;
+		r->Cfloat.v = (float)rand();
+		break;
+	case DOUBLE:
+		r = gcmalloc(sizeof(Val));
+		r->t = DOUBLE;
+		r->Cdouble.v = (double)rand();
+		break;
 	case STRUCT:
 		if(depth > MAXNEST)
 			goto again;
@@ -185,6 +209,12 @@ printinit(char *sel, Val *p)
 	case LLONG:
 		printf("\t%s = %lld;\n", sel, p->Cllong.v);
 		break;
+	case FLOAT:
+		printf("\t%s = %f;\n", sel, p->Cfloat.v);
+		break;
+	case DOUBLE:
+		printf("\t%s = %f;\n", sel, p->Cdouble.v);
+		break;
 	case STRUCT:
 		for(i = 0; i < p->Cstruct.members->len; i++) {
 			mem = vecget(p->Cstruct.members, i);
@@ -219,6 +249,12 @@ printcheck(char *sel, Val *p)
 		break;
 	case LLONG:
 		printf("\tif(%s != %lld) abort();\n", sel, p->Cllong.v);
+		break;
+	case FLOAT:
+		printf("\tif(%s != %f) abort();\n", sel, p->Cfloat.v);
+		break;
+	case DOUBLE:
+		printf("\tif(%s != %f) abort();\n", sel, p->Cdouble.v);
 		break;
 	case STRUCT:
 		for(i = 0; i < p->Cstruct.members->len; i++) {
