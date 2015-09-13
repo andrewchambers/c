@@ -4,6 +4,7 @@
 #include <gc/gc.h>
 
 static void expr(Node *);
+static void exprcleanup(Node *n);
 static void stmt(Node *);
 static void store(CTy *t);
 static void pushstruct(CTy *t);
@@ -506,6 +507,7 @@ static void
 ereturn(Node *r)
 {
 	expr(r->Return.expr);
+	/* No need to cleanup with leave */
 	out("leave\n");
 	out("ret\n");
 }
@@ -812,7 +814,7 @@ eif(Node *n)
 	char *end;
 
 	end = newlabel();
-	expr(n->If.expr);
+	exprcleanup(n->If.expr);
 	out("test %%rax, %%rax\n");
 	out("jz .%s\n", n->If.lelse);
 	stmt(n->If.iftrue);
@@ -827,16 +829,16 @@ static void
 efor(Node *n)
 {
 	if(n->For.init)
-		expr(n->For.init);
+		exprcleanup(n->For.init);
 	out(".%s:\n", n->For.lstart);
 	if(n->For.cond) {
-		expr(n->For.cond);
+		exprcleanup(n->For.cond);
 		out("test %%rax, %%rax\n");
 		out("jz .%s\n", n->For.lend);
 	}
 	stmt(n->For.stmt);
 	if(n->For.step)
-		expr(n->For.step);
+		exprcleanup(n->For.step);
 	out("jmp .%s\n", n->For.lstart);
 	out(".%s:\n", n->For.lend);
 }
@@ -845,7 +847,7 @@ static void
 ewhile(Node *n)
 {
 	out(".%s:\n", n->While.lstart);
-	expr(n->While.expr);
+	exprcleanup(n->While.expr);
 	out("test %%rax, %%rax\n");
 	out("jz .%s\n", n->While.lend);
 	stmt(n->While.stmt);
@@ -859,7 +861,7 @@ dowhile(Node *n)
 	out(".%s:\n", n->DoWhile.lstart);
 	stmt(n->DoWhile.stmt);
 	out(".%s:\n", n->DoWhile.lcond);
-	expr(n->DoWhile.expr);
+	exprcleanup(n->DoWhile.expr);
 	out("test %%rax, %%rax\n");
 	out("jz .%s\n", n->DoWhile.lend);
 	out("jmp .%s\n", n->DoWhile.lstart);
@@ -872,7 +874,7 @@ eswitch(Node *n)
 	int   i;
 	Node *c;
 
-	expr(n->Switch.expr);
+	exprcleanup(n->Switch.expr);
 	for(i = 0; i < n->Switch.cases->len; i++) {
 		c = vecget(n->Switch.cases, i);
 		out("mov $%lld, %%rcx\n", c->Case.cond);
@@ -987,6 +989,16 @@ str(Node *n)
 }
 
 static void
+exprcleanup(Node *n)
+{
+	int stack;
+
+	stack = stackoffset;
+	expr(n);
+	restorestack(stack);
+}
+
+static void
 expr(Node *n)
 {
 	switch(n->t){
@@ -1040,8 +1052,6 @@ expr(Node *n)
 static void
 stmt(Node *n)
 {
-	int startoffset;
-
 	switch(n->t){
 	case NDECL:
 		decl(n);
@@ -1080,11 +1090,8 @@ stmt(Node *n)
 		stmt(n->Labeled.stmt);
 		break;
 	case NEXPRSTMT:
-		if(n->ExprStmt.expr) {
-			startoffset = stackoffset;
-			expr(n->ExprStmt.expr);
-			restorestack(startoffset);
-		}
+		if(n->ExprStmt.expr)
+			exprcleanup(n->ExprStmt.expr);
 		break;
 	default:
 		errorf("unimplemented emit stmt %d\n", n->t);
