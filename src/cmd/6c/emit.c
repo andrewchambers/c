@@ -8,9 +8,9 @@ static void stmt(Node *);
 static void store(CTy *t);
 static void pushstruct(CTy *t);
 
-char *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
-int stackoffset;
-int structretoffset;
+char    *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+int      stackoffset;
+StkSlot *memretptr;
 
 static FILE *o;
 
@@ -57,18 +57,36 @@ typedef struct {
 	int r2;
 } Argloc;
 
-static Vec *
-classifyargs(CTy *f)
+static Argclass
+classify(CTy *t)
 {
-	int    i, sz, nintargs, offset;
-	Vec    *locs, *params;
-	Argloc *loc;
-	NameTy *nt;
+	if(isitype(t) || isptr(t))
+		return ARGINT1;
+	if(isstruct(t)) {
+		if(t->size <= 8)
+			return ARGINT1;
+		if(t->size <= 16)
+			return ARGINT2;
+		return ARGMEM;
+	}
+	panic("unimplemented classify");
+}
+
+static Vec *
+classifyargs(CTy *f, int returnstruct)
+{
+	int      i, sz, nintargs, offset;
+	Vec      *locs, *params;
+	Argclass c;
+	Argloc   *loc;
+	NameTy   *nt;
 	
 	params = f->Func.params;
 	locs = vec();
 	offset = 16;
 	nintargs = 0;
+	if(returnstruct)
+		nintargs = 1;
 	for(i = 0; i < params->len; i++) {
 		nt = vecget(params, i);
 		sz = nt->type->size;
@@ -77,17 +95,22 @@ classifyargs(CTy *f)
 		if(sz % 8)
 			sz = sz - (sz % 8) + 8;
 		loc = gcmalloc(sizeof(Argloc));
-		if(nintargs >= 6)
-			goto memarg;
-		if(isitype(nt->type) || isptr(nt->type))
+		c = classify(nt->type);
+		switch(c) {
+		case ARGINT1:
+			if(nintargs == 6)
+				goto argmem;
 			goto argint1;
-		if(isstruct(nt->type)) {
-			if(nt->type->size <= 8)
-				goto argint1;
-			if(nt->type->size <= 16 && nintargs < 5)
-				goto argint2;
+		case ARGINT2:
+			if(nintargs >= 5)
+				goto argmem;
+			goto argint2;
+		case ARGMEM:
+			goto argmem;
+		default:
+			panic("internal error classify args");
 		}
-	memarg:
+	argmem:
 		loc->class = ARGMEM;
 		loc->offset = offset;
 		offset += sz;
@@ -105,6 +128,8 @@ classifyargs(CTy *f)
 		vecappend(locs, loc);
 		continue;
 	}
+	if(nintargs > 6)
+		panic("internal error");
 	return locs;
 }
 
@@ -117,15 +142,15 @@ calcslotoffsets(Node *f)
 	curoffset = 0;
 	for(i = 0; i < f->Func.stkslots->len; i++) {
 		s = vecget(f->Func.stkslots, i);
-		tsz = s->type->size;
+		tsz = s->size;
 		/* This allows us to just copy params which have had the size rounded up. */
 		if(tsz < 8)
 			tsz = 8;
 		else if(tsz < 16)
 			tsz = 16;
 		curoffset += tsz;
-		if(curoffset % s->type->align)
-			curoffset = (curoffset - (curoffset % s->type->align) + s->type->align);
+		if(curoffset % s->align)
+			curoffset = (curoffset - (curoffset % s->align) + s->align);
 		s->offset = -curoffset;
 	}
 	if(curoffset % 16)
@@ -150,12 +175,22 @@ popq(char *reg)
 static void
 func(Node *f)
 {
-	Vec    *args, *argpos;
-	Sym    *sym;
-	Argloc *aloc;
-	int    i;
+	Vec      *args, *argpos;
+	Sym      *sym;
+	Argloc   *aloc;
+	Argclass c;
+	int      i;
 	
 	stackoffset = 0;
+	c = classify(f->type->Func.rtype);
+	if(c == ARGMEM) {
+		memretptr = gcmalloc(sizeof(StkSlot));
+		memretptr->size = 8;
+		memretptr->align = 8;
+		vecappend(f->Func.stkslots, memretptr);
+	} else {
+		memretptr = 0;
+	}
 	calcslotoffsets(f);
 	out(".text\n");
 	out(".globl %s\n", f->Func.name);
@@ -167,7 +202,9 @@ func(Node *f)
 		stackoffset += f->Func.localsz;
 	}
 	args = f->Func.params;
-	argpos = classifyargs(f->type);
+	argpos = classifyargs(f->type, c == ARGMEM);
+	if(c == ARGMEM)
+		out("movq %%rdi, %d(%%rbp)\n", memretptr->offset);
 	for(i = 0; i < args->len; i++) {
 		sym = vecget(args, i);
 		aloc = vecget(argpos, i);
@@ -204,6 +241,8 @@ func(Node *f)
 		}
 	}
 	block(f->Func.body);
+	if(c == ARGMEM)
+		out("movq %d(%%rbp), %%rax\n", memretptr->offset);
 	out("leave\n");
 	stackoffset -= f->Func.localsz;
 	stackoffset -= 8;
@@ -224,9 +263,9 @@ call(Node *n)
 	out("# call\n");
 	args = n->Call.args;
 	if(isptr(n->Call.funclike->type))
-		arglocs = classifyargs(n->Call.funclike->type->Ptr.subty);
+		arglocs = classifyargs(n->Call.funclike->type->Ptr.subty, 0);
 	else
-		arglocs = classifyargs(n->Call.funclike->type);
+		arglocs = classifyargs(n->Call.funclike->type, 0);
 	
 	cleanup = 0;
 	i = args->len;

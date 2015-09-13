@@ -298,7 +298,6 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 	if(sclass == SCAUTO || n != 0)
 		if(type->incomplete)
 			errorposf(p, "cannot use incomplete type in this context");
-
 	if(sclass == SCAUTO && isglobal())
 		errorposf(p, "defining local symbol in global scope");
 	sym = mapget(syms[nscopes - 1], name);
@@ -331,7 +330,8 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 	case SCAUTO:
 		sym->k = SYMLOCAL;
 		sym->Local.slot = gcmalloc(sizeof(StkSlot));
-		sym->Local.slot->type = sym->type;
+		sym->Local.slot->size = sym->type->size;
+		sym->Local.slot->align = sym->type->align;
 		vecappend(curfunc->Func.stkslots, sym->Local.slot);
 		break;
 	case SCTYPEDEF:

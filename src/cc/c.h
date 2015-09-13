@@ -373,7 +373,8 @@ struct Sym {
 };
 
 struct StkSlot {
-	CTy *type;
+	int size;
+	int align;
 	int offset;
 };
 
