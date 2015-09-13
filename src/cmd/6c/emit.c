@@ -158,14 +158,26 @@ calcslotoffsets(Node *f)
 	f->Func.localsz = curoffset;
 }
 
-void
+static void
+restorestack(int oldoffset)
+{
+	int diff;
+	
+	diff = stackoffset - oldoffset;
+	if(diff != 0) {
+		out("add $%d, %%rsp\n", diff);
+		stackoffset = oldoffset;
+	}
+}
+
+static void
 pushq(char *reg)
 {
 	stackoffset += 8;
 	out("pushq %%%s\n", reg);
 }
 
-void
+static void
 popq(char *reg)
 {
 	stackoffset -= 8;
@@ -255,18 +267,21 @@ func(Node *f)
 static void
 call(Node *n)
 {
-	int    i, nintargs, cleanup;
-	Vec    *args, *arglocs;
-	Node   *arg;
-	Argloc *aloc;
+	int      i, nintargs, cleanup, memretoffset, memretsz;
+	Vec      *args, *arglocs;
+	Node     *arg;
+	CTy      *fty;
+	Argloc   *aloc;
+	Argclass rcls;
 
 	out("# call\n");
 	args = n->Call.args;
 	if(isptr(n->Call.funclike->type))
-		arglocs = classifyargs(n->Call.funclike->type->Ptr.subty, 0);
+		fty = n->Call.funclike->type->Ptr.subty;
 	else
-		arglocs = classifyargs(n->Call.funclike->type, 0);
-	
+		fty = n->Call.funclike->type;
+	rcls = classify(fty->Func.rtype);
+	arglocs = classifyargs(fty, 0);
 	cleanup = 0;
 	i = args->len;
 	/* Calculate size of mem arg area. */
@@ -282,6 +297,16 @@ call(Node *n)
 	}
 	if((stackoffset + cleanup) % 8)
 		panic("internal error, call stack alignment");
+	if(rcls == ARGMEM) {
+		memretoffset = stackoffset;
+		memretsz = arg->type->size;
+		if(memretsz < 8)
+			memretsz = 8;
+		if(memretsz % 8)
+			memretsz = memretsz  - (memretsz  % 8) + 8;
+		out("sub $%d, %%rsp\n", memretsz);
+		stackoffset -= memretsz;
+	}
 	/* Align stack before pushing args */
 	if((stackoffset + cleanup) % 16) {
 		pushq("rax");
@@ -349,6 +374,8 @@ call(Node *n)
 		out("popq %%%s\n", intargregs[i]);
 		stackoffset -= 8;
 	}
+	if(rcls == ARGMEM)
+		out("lea %d(%%rbp), %%rdi\n", memretoffset); /* XXX +/- offset? */
 	expr(n->Call.funclike);
 	out("call *%%rax\n");
 	if(cleanup) {
@@ -1013,6 +1040,8 @@ expr(Node *n)
 static void
 stmt(Node *n)
 {
+	int startoffset;
+
 	switch(n->t){
 	case NDECL:
 		decl(n);
@@ -1051,8 +1080,11 @@ stmt(Node *n)
 		stmt(n->Labeled.stmt);
 		break;
 	case NEXPRSTMT:
-		if(n->ExprStmt.expr)
+		if(n->ExprStmt.expr) {
+			startoffset = stackoffset;
 			expr(n->ExprStmt.expr);
+			restorestack(startoffset);
+		}
 		break;
 	default:
 		errorf("unimplemented emit stmt %d\n", n->t);
