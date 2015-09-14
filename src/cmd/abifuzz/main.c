@@ -346,7 +346,7 @@ getseed()
 	if(!f)
 		panic("get seed failed");
 	r = 0;
-	for(i = 0; i < 4; i++) {
+	for(i = 0; i < sizeof(int); i++) {
 		c = fgetc(f);
 		if(c == EOF)
 			panic("get seed read failed");
