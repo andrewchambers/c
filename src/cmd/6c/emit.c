@@ -472,16 +472,18 @@ call(Node *n)
 		out("lea %d(%%rbp), %%rdi\n", scratcharea->offset);
 	expr(n->Call.funclike);
 	out("call *%%rax\n");
-	if(isstruct(fty->Func.rtype)) {
-		if(rcls == ARGINT1) {
-			panic("unimplement return ARGINT2");
-		} else if(rcls == ARGINT2) {
-			panic("unimplement return ARGINT2");
-		}
-	}
 	if(cleanup) {
 		out("add $%d, %%rsp\n", cleanup);
 		stackoffset -= cleanup;
+	}
+	if(isstruct(fty->Func.rtype)) {
+		if(rcls == ARGINT1) {
+			out("movq %%rax, %d(%%rbp)\n", scratcharea->offset);
+		} else if(rcls == ARGINT2) {
+			out("movq %%rax, %d(%%rbp)\n", scratcharea->offset);
+			out("movq %%rdx, %d(%%rbp)\n", scratcharea->offset + 8);
+		}
+		out("leaq %d(%%rbp), %%rax\n", scratcharea->offset);
 	}
 }
 
@@ -613,15 +615,16 @@ ereturn(Node *r)
 	if(isstruct(ty)) {
 		switch(classify(ty)) {
 		case ARGMEM:
-			out("movq %d(%%rbp), %%rcx\n", memretptr->offset);
+			out("movq %%rax, %%rcx\n");
+			out("movq %d(%%rbp), %%rax\n", memretptr->offset);
 			store(ty);
 			break;
 		case ARGINT1:
 			out("movq (%%rax), %%rax\n");
 			break;
 		case ARGINT2:
-			out("movq (%%rax), %%rax\n");
 			out("movq 8(%%rax), %%rdx\n");
+			out("movq (%%rax), %%rax\n");
 			break;
 		}
 	}
