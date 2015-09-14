@@ -357,11 +357,11 @@ struct Sym {
 	SrcPos *pos;
 	CTy    *type;
 	char   *name;
+	Node   *init;
 	union {
 		struct {
 			int   sclass;
 			char *label;
-			Node *init;
 		} Global;
 		struct {
 			StkSlot *slot;

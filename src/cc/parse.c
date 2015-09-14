@@ -310,10 +310,10 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 		case SYMGLOBAL:
 			if(sym->Global.sclass != sclass)
 				errorposf(p, "redefinition of %s with differing storage class", name);
-			if(sym->Global.init && n)
+			if(sym->init && n)
 				errorposf(p, "%s already initialized", name);
-			if(!sym->Global.init && n) {
-				sym->Global.init = n;
+			if(!sym->init && n) {
+				sym->init = n;
 				emitsym(sym);
 				removetentativesym(sym);
 			}
@@ -326,6 +326,7 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 	sym = gcmalloc(sizeof(Sym));
 	sym->name = name;
 	sym->type = type;
+	sym->init = n;
 	switch(sclass) {
 	case SCAUTO:
 		sym->k = SYMLOCAL;
@@ -341,7 +342,6 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 		sym->k = SYMGLOBAL;
 		sym->Global.label = name;
 		sym->Global.sclass = SCGLOBAL;
-		sym->Global.init = n;
 		break;
 	case SCSTATIC:
 		sym->k = SYMGLOBAL;
@@ -350,7 +350,7 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 		break;
 	}
 	if(sym->k == SYMGLOBAL) {
-		if(sym->Global.init)
+		if(sym->init)
 			emitsym(sym);
 		else
 			if(!isfunc(sym->type))

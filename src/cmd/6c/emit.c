@@ -1216,13 +1216,22 @@ emitsym(Sym *sym)
 	switch(sym->k){
 	case SYMGLOBAL:
 		if(isfunc(sym->type)) {
-			func(sym->Global.init);
+			func(sym->init);
 			return;
 		}
 		out(".data\n");
 		out(".comm %s, %d, %d\n", sym->name, sym->type->size, sym->type->align);
 		break;
 	case SYMLOCAL:
+		if(sym->init) {
+			expr(sym->init);
+			pushq("rax");
+			out("leaq %d(%%rbp), %%rax\n", sym->Local.slot->offset);
+			popq("rcx");
+			if(!isptr(sym->type) && !isitype(sym->type) && !isstruct(sym->type))
+				errorf("unimplemented init\n");
+			store(sym->type);
+		}
 		break;
 	case SYMENUM:
 	case SYMTYPE:
