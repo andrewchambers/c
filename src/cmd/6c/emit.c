@@ -462,13 +462,16 @@ call(Node *n)
 			continue;
 		}
 	}
+	if(rcls == ARGMEM) {
+		out("lea %d(%%rbp), %%rax\n", scratcharea->offset);
+		pushq("rax");
+		nintargs++;
+	}
 	/* Pop int args back to registers */
 	for(i = 0; i < nintargs; i++) {
 		out("popq %%%s\n", intargregs[i]);
 		stackoffset -= 8;
 	}
-	if(rcls == ARGMEM)
-		out("lea %d(%%rbp), %%rdi\n", scratcharea->offset);
 	expr(n->Call.funclike);
 	out("call *%%rax\n");
 	if(cleanup) {
