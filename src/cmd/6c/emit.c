@@ -567,7 +567,7 @@ store(CTy *t)
 			out("movb %d(%%rcx), %%dl\n", offset);
 			out("movb %%dl, %d(%%rax)\n", offset);
 			sz--;
-			offset--;
+			offset++;
 		}
 		popq("rdx");
 		return;
