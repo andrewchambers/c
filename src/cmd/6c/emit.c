@@ -371,7 +371,7 @@ func(Node *f)
 static void
 call(Node *n)
 {
-	int      i, nintargs, cleanup, memretoffset, memretsz;
+	int      i, nintargs, cleanup;
 	Vec      *args, *arglocs;
 	Node     *arg;
 	CTy      *fty;
@@ -385,7 +385,7 @@ call(Node *n)
 	else
 		fty = n->Call.funclike->type;
 	rcls = classify(fty->Func.rtype);
-	arglocs = classifyargs(fty, 0);
+	arglocs = classifyargs(fty, rcls == ARGMEM);
 	cleanup = 0;
 	i = args->len;
 	/* Calculate size of mem arg area. */
@@ -401,16 +401,6 @@ call(Node *n)
 	}
 	if((stackoffset + cleanup) % 8)
 		panic("internal error, call stack alignment");
-	if(rcls == ARGMEM) {
-		memretoffset = stackoffset;
-		memretsz = arg->type->size;
-		if(memretsz < 8)
-			memretsz = 8;
-		if(memretsz % 8)
-			memretsz = memretsz  - (memretsz  % 8) + 8;
-		out("sub $%d, %%rsp\n", memretsz);
-		stackoffset -= memretsz;
-	}
 	/* Align stack before pushing args */
 	if((stackoffset + cleanup) % 16) {
 		pushq("rax");
@@ -479,9 +469,16 @@ call(Node *n)
 		stackoffset -= 8;
 	}
 	if(rcls == ARGMEM)
-		out("lea %d(%%rbp), %%rdi\n", memretoffset); /* XXX +/- offset? */
+		out("lea %d(%%rbp), %%rdi\n", scratcharea->offset);
 	expr(n->Call.funclike);
 	out("call *%%rax\n");
+	if(isstruct(fty->Func.rtype)) {
+		if(rcls == ARGINT1) {
+			panic("unimplement return ARGINT2");
+		} else if(rcls == ARGINT2) {
+			panic("unimplement return ARGINT2");
+		}
+	}
 	if(cleanup) {
 		out("add $%d, %%rsp\n", cleanup);
 		stackoffset -= cleanup;
@@ -609,7 +606,25 @@ decl(Node *n)
 static void
 ereturn(Node *r)
 {
+	CTy *ty;
+	
+	ty = r->Return.expr->type;
 	expr(r->Return.expr);
+	if(isstruct(ty)) {
+		switch(classify(ty)) {
+		case ARGMEM:
+			out("movq %d(%%rbp), %%rcx\n", memretptr->offset);
+			store(ty);
+			break;
+		case ARGINT1:
+			out("movq (%%rax), %%rax\n");
+			break;
+		case ARGINT2:
+			out("movq (%%rax), %%rax\n");
+			out("movq 8(%%rax), %%rdx\n");
+			break;
+		}
+	}
 	/* No need to cleanup with leave */
 	out("leave\n");
 	out("ret\n");
@@ -759,7 +774,7 @@ assign(Node *n)
 		pushq("rax");
 		addr(l);
 		popq("rcx");
-		if(!isptr(l->type) && !isitype(l->type))
+		if(!isptr(l->type) && !isitype(l->type) && !isstruct(l->type))
 			errorf("unimplemented assign\n");
 		store(l->type);
 		out("movq %%rcx, %%rax\n");
