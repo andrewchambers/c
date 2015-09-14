@@ -5,6 +5,8 @@
 uint64
 getmaxval(CTy *l)
 {
+	if(l->t == CENUM)
+		return 0xffffffff;
 	switch(l->Prim.type) {
 	case PRIMCHAR:
 		if(l->Prim.issigned)
@@ -35,18 +37,20 @@ getmaxval(CTy *l)
 int64
 getminval(CTy *l)
 {
+	if(l->t == CENUM)
+		return -2147483648LL;
 	if(!l->Prim.issigned)
 		return 0;
 	switch(l->Prim.type) {
 	case PRIMCHAR:
-		return 0xff;
+		return -128LL;
 	case PRIMSHORT:
-		return 0xffff;
+		return -32768LL;
 	case PRIMINT:
 	case PRIMLONG:
-		return 0xffffffffl;
+		return -2147483648LL;
 	case PRIMLLONG:
-		return 0xffffffffffffffff;
+		return (int64)1 << 63;
 	}
 	panic("internal error");
 	return 0;
