@@ -180,11 +180,11 @@ calcscratcharea(Node *n)
 
 	switch(n->t) {
 	case NCALL:
-		if(isstruct(n->Call.funclike->type)) {
-			if(n->Call.funclike->type->size > scratcharea->size)
-				scratcharea->size = scratcharea->size;
-			if(n->Call.funclike->type->align > scratcharea->align)
-				scratcharea->align = n->Call.funclike->type->align;
+		if(isstruct(n->type)) {
+			if(n->type->size > scratcharea->size)
+				scratcharea->size = n->type->size;
+			if(n->type->align > scratcharea->align)
+				scratcharea->align = n->type->align;
 		}
 		for(i = 0; i < n->Call.args->len; i++)
 			calcscratcharea(vecget(n->Call.args, i));

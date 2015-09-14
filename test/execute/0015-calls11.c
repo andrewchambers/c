@@ -12,7 +12,6 @@ struct Foo
 func()
 {
 	struct Foo v;
-
 	v.a = 1;
 	v.b = 2;
 	v.c = 3;
@@ -37,7 +36,7 @@ main()
 	if(v.d != 4)
 		return 4;
 	if(v.e != 5)
-		return 5;
+		return v.e;
 	if(v.f != 6)
 		return 6;
 	return 0;
