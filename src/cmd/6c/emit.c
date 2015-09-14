@@ -46,6 +46,7 @@ block(Node *n)
 
 
 typedef enum {
+	ARGNONE,
 	ARGINT1,
 	ARGINT2,
 	ARGMEM
@@ -64,6 +65,8 @@ classify(CTy *t)
 	if(isitype(t) || isptr(t) || isvoid(t))
 		return ARGINT1;
 	if(isstruct(t)) {
+		if(t->size == 0)
+			return ARGNONE;
 		if(t->size <= 8)
 			return ARGINT1;
 		if(t->size <= 16)
@@ -101,33 +104,29 @@ classifyargs(CTy *f, int returnstruct)
 		case ARGINT1:
 			if(nintargs == 6)
 				goto argmem;
-			goto argint1;
+			loc->class = ARGINT1;
+			loc->r1 = nintargs++;
+			break;
 		case ARGINT2:
 			if(nintargs >= 5)
 				goto argmem;
-			goto argint2;
+			loc->class = ARGINT2;
+			loc->r1 = nintargs++;
+			loc->r2 = nintargs++;
+			break;
 		case ARGMEM:
-			goto argmem;
+		argmem:
+			loc->class = ARGMEM;
+			loc->offset = offset;
+			offset += sz;
+			break;
+		case ARGNONE:
+			loc->class = ARGNONE;
+			break;
 		default:
 			panic("internal error classify args");
 		}
-	argmem:
-		loc->class = ARGMEM;
-		loc->offset = offset;
-		offset += sz;
 		vecappend(locs, loc);
-		continue;
-	argint1:
-		loc->class = ARGINT1;
-		loc->r1 = nintargs++;
-		vecappend(locs, loc);
-		continue;
-	argint2:
-		loc->class = ARGINT2;
-		loc->r1 = nintargs++;
-		loc->r2 = nintargs++;
-		vecappend(locs, loc);
-		continue;
 	}
 	if(nintargs > 6)
 		panic("internal error");
@@ -614,6 +613,8 @@ ereturn(Node *r)
 	expr(r->Return.expr);
 	if(isstruct(ty)) {
 		switch(classify(ty)) {
+		case ARGNONE:
+			break;
 		case ARGMEM:
 			out("movq %%rax, %%rcx\n");
 			out("movq %d(%%rbp), %%rax\n", memretptr->offset);
