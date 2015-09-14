@@ -4,14 +4,14 @@
 #include <gc/gc.h>
 
 static void expr(Node *);
-static void exprcleanup(Node *n);
 static void stmt(Node *);
-static void store(CTy *t);
-static void pushstruct(CTy *t);
+static void store(CTy *);
+static void pushstruct(CTy *);
 
 char    *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 int      stackoffset;
 StkSlot *memretptr;
+StkSlot *scratcharea;
 
 static FILE *o;
 
@@ -160,18 +160,6 @@ calcslotoffsets(Node *f)
 }
 
 static void
-restorestack(int oldoffset)
-{
-	int diff;
-	
-	diff = stackoffset - oldoffset;
-	if(diff != 0) {
-		out("add $%d, %%rsp\n", diff);
-		stackoffset = oldoffset;
-	}
-}
-
-static void
 pushq(char *reg)
 {
 	stackoffset += 8;
@@ -185,6 +173,116 @@ popq(char *reg)
 	out("popq %%%s\n", reg);
 }
 
+void
+calcscratcharea(Node *n)
+{
+	int  i;
+
+	switch(n->t) {
+	case NCALL:
+		if(isstruct(n->Call.funclike->type)) {
+			if(n->Call.funclike->type->size > scratcharea->size)
+				scratcharea->size = scratcharea->size;
+			if(n->Call.funclike->type->align > scratcharea->align)
+				scratcharea->align = n->Call.funclike->type->align;
+		}
+		for(i = 0; i < n->Call.args->len; i++)
+			calcscratcharea(vecget(n->Call.args, i));
+		break;	
+	case NFUNC:
+		calcscratcharea(n->Func.body);
+		break;
+	case NASSIGN:
+		calcscratcharea(n->Assign.l);
+		calcscratcharea(n->Assign.r);
+		break;
+	case NBINOP:
+		calcscratcharea(n->Binop.l);
+		calcscratcharea(n->Binop.r);
+		break;
+	case NUNOP:
+		calcscratcharea(n->Unop.operand);
+		break;
+	case NINCDEC:
+		calcscratcharea(n->Incdec.operand);
+		break;
+	case NSEL:
+		calcscratcharea(n->Sel.operand);
+		break;
+	case NIDX:
+		calcscratcharea(n->Idx.operand);
+		calcscratcharea(n->Idx.idx);
+		break;
+	case NCAST:
+		calcscratcharea(n->Cast.operand);
+		break;
+	case NCOND:
+		calcscratcharea(n->Cond.cond);
+		calcscratcharea(n->Cond.iftrue);
+		calcscratcharea(n->Cond.iffalse);
+		break;
+	case NCOMMA:
+		for(i = 0; i < n->Comma.exprs->len; i++)
+			calcscratcharea(vecget(n->Comma.exprs, i));
+		break;
+	case NBLOCK:
+		for(i = 0; i < n->Block.stmts->len; i++)
+			calcscratcharea(vecget(n->Block.stmts, i));
+		break;
+	case NIF:
+		calcscratcharea(n->If.expr);
+		calcscratcharea(n->If.iftrue);
+		if(n->If.iffalse)
+			calcscratcharea(n->If.iffalse);
+		break;
+	case NFOR:
+		if(n->For.init)
+			calcscratcharea(n->For.init);
+		if(n->For.cond)
+			calcscratcharea(n->For.cond);
+		if(n->For.step)
+			calcscratcharea(n->For.step);
+		calcscratcharea(n->For.stmt);
+		break;
+	case NSWITCH:
+		calcscratcharea(n->Switch.expr);
+		calcscratcharea(n->Switch.stmt);
+		break;
+	case NDOWHILE:
+		calcscratcharea(n->DoWhile.stmt);
+		calcscratcharea(n->DoWhile.expr);
+		break;
+	case NWHILE:
+		calcscratcharea(n->While.expr);
+		calcscratcharea(n->While.stmt);
+		break;
+	case NCASE:
+		calcscratcharea(n->Case.stmt);
+		break;
+	case NLABELED:
+		calcscratcharea(n->Labeled.stmt);
+		break;
+	case NRETURN:
+		if(n->Return.expr)
+			calcscratcharea(n->Return.expr);
+		break;
+	case NDECL:
+		/* TODO: important */
+		break;
+	case NEXPRSTMT:
+		if(n->ExprStmt.expr)
+			calcscratcharea(n->ExprStmt.expr);
+	case NSIZEOF:
+	case NGOTO:
+	case NNUM:
+	case NSTR:
+	case NIDENT:
+		break;
+	default:
+		panic("unimlpemented calcscratcharea %d", n->t);
+	}
+}
+
 static void
 func(Node *f)
 {
@@ -195,6 +293,11 @@ func(Node *f)
 	int      i;
 	
 	stackoffset = 0;
+	scratcharea = gcmalloc(sizeof(StkSlot));
+	scratcharea->size = 8;
+	scratcharea->align = 8;
+	vecappend(f->Func.stkslots, scratcharea);
+	calcscratcharea(f);
 	c = classify(f->type->Func.rtype);
 	if(c == ARGMEM) {
 		memretptr = gcmalloc(sizeof(StkSlot));
@@ -814,7 +917,7 @@ eif(Node *n)
 	char *end;
 
 	end = newlabel();
-	exprcleanup(n->If.expr);
+	expr(n->If.expr);
 	out("test %%rax, %%rax\n");
 	out("jz .%s\n", n->If.lelse);
 	stmt(n->If.iftrue);
@@ -829,16 +932,16 @@ static void
 efor(Node *n)
 {
 	if(n->For.init)
-		exprcleanup(n->For.init);
+		expr(n->For.init);
 	out(".%s:\n", n->For.lstart);
 	if(n->For.cond) {
-		exprcleanup(n->For.cond);
+		expr(n->For.cond);
 		out("test %%rax, %%rax\n");
 		out("jz .%s\n", n->For.lend);
 	}
 	stmt(n->For.stmt);
 	if(n->For.step)
-		exprcleanup(n->For.step);
+		expr(n->For.step);
 	out("jmp .%s\n", n->For.lstart);
 	out(".%s:\n", n->For.lend);
 }
@@ -847,7 +950,7 @@ static void
 ewhile(Node *n)
 {
 	out(".%s:\n", n->While.lstart);
-	exprcleanup(n->While.expr);
+	expr(n->While.expr);
 	out("test %%rax, %%rax\n");
 	out("jz .%s\n", n->While.lend);
 	stmt(n->While.stmt);
@@ -861,7 +964,7 @@ dowhile(Node *n)
 	out(".%s:\n", n->DoWhile.lstart);
 	stmt(n->DoWhile.stmt);
 	out(".%s:\n", n->DoWhile.lcond);
-	exprcleanup(n->DoWhile.expr);
+	expr(n->DoWhile.expr);
 	out("test %%rax, %%rax\n");
 	out("jz .%s\n", n->DoWhile.lend);
 	out("jmp .%s\n", n->DoWhile.lstart);
@@ -874,7 +977,7 @@ eswitch(Node *n)
 	int   i;
 	Node *c;
 
-	exprcleanup(n->Switch.expr);
+	expr(n->Switch.expr);
 	for(i = 0; i < n->Switch.cases->len; i++) {
 		c = vecget(n->Switch.cases, i);
 		out("mov $%lld, %%rcx\n", c->Case.cond);
@@ -989,16 +1092,6 @@ str(Node *n)
 }
 
 static void
-exprcleanup(Node *n)
-{
-	int stack;
-
-	stack = stackoffset;
-	expr(n);
-	restorestack(stack);
-}
-
-static void
 expr(Node *n)
 {
 	switch(n->t){
@@ -1091,7 +1184,7 @@ stmt(Node *n)
 		break;
 	case NEXPRSTMT:
 		if(n->ExprStmt.expr)
-			exprcleanup(n->ExprStmt.expr);
+			expr(n->ExprStmt.expr);
 		break;
 	default:
 		errorf("unimplemented emit stmt %d\n", n->t);

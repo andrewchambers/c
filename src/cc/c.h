@@ -438,7 +438,7 @@ void addstructmember(SrcPos *, CTy *, char *, CTy *);
 
 /* parse.c */
 void  parse(void);
-char *newlabel();
+char *newlabel(void);
 
 /* foldexpr.c */
 Const *foldexpr(Node *);
