@@ -61,7 +61,7 @@ typedef struct {
 static Argclass
 classify(CTy *t)
 {
-	if(isitype(t) || isptr(t))
+	if(isitype(t) || isptr(t) || isvoid(t))
 		return ARGINT1;
 	if(isstruct(t)) {
 		if(t->size <= 8)

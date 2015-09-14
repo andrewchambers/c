@@ -421,6 +421,7 @@ Tok  *lex(Lexer *);
 Tok  *pp(void);
 
 /* types.c */
+int isvoid(CTy *);
 int isftype(CTy *);
 int isitype(CTy *);
 int isarithtype(CTy *);

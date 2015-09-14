@@ -353,7 +353,8 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 		if(sym->Global.init)
 			emitsym(sym);
 		else
-			addtentativesym(sym);
+			if(!isfunc(sym->type))
+				addtentativesym(sym);
 	}
 	if(!define(syms, name, sym))
 		panic("internal error");

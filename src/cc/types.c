@@ -127,6 +127,12 @@ isftype(CTy *t)
 }
 
 int
+isvoid(CTy *t)
+{
+	return t->t == CVOID;
+}
+
+int
 isitype(CTy *t)
 {
 	if(t->t == CENUM)
