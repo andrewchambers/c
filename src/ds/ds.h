@@ -8,12 +8,14 @@ struct ListEnt {
 
 typedef struct List List;
 struct List {
+	int     len;
 	ListEnt *head;
 };
 
 List *list();
 void listappend(List *, void *);
 void listprepend(List *, void *);
+void *listpopfront(List *);
 
 typedef struct Map Map;
 struct Map {

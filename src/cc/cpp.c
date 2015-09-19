@@ -5,8 +5,16 @@
 
 #define MAXINCLUDE 128
 
+typedef struct Macro Macro;
+struct Macro {
+	Vec *toks;
+};
+
 int    nlexers;
 Lexer *lexers[MAXINCLUDE];
+
+/* List of tokens inserted into the stream */
+List *toks;
 
 static Tok *ppnoexpand();
 static int64 ifexpr();
@@ -160,6 +168,8 @@ ppnoexpand()
 {
 	Tok *t;
 
+	if(toks->len)
+		return listpopfront(toks);
 	t = lex(lexers[nlexers - 1]);
 	if(t->k == TOKEOF && nlexers == 1)
 		return t;
@@ -189,6 +199,7 @@ void
 cppinit(char *path)
 {
 	nlexers = 0;
+	toks = list();
 	pushlex(path);
 }
 

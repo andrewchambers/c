@@ -16,6 +16,7 @@ listappend(List *l, void *v)
 {
 	ListEnt *e, *ne;
 
+	l->len++;
 	ne = gcmalloc(sizeof(ListEnt));
 	ne->v = v;
 	if(l->head == 0) {
@@ -33,8 +34,28 @@ listprepend(List *l, void *v)
 {
 	ListEnt *e;
 
+	l->len++;
 	e = gcmalloc(sizeof(ListEnt));
 	e->v = v;
 	e->next = l->head;
 	l->head = e;
+}
+
+void *
+listpopfront(List *l)
+{
+	ListEnt *e;
+
+	if(!l->len)
+		panic("pop form empty list");
+	l->len--;
+	if(l->len == 1) {
+		e = l->head;
+		l->head = 0;
+		l->len = 0;
+		return e->v;
+	}
+	e = l->head;
+	l->head = e->next;
+	return e->v;
 }
