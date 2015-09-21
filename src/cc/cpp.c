@@ -5,9 +5,21 @@
 
 #define MAXINCLUDE 128
 
+typedef enum {
+	OBJMACRO,
+	FUNCMACRO,
+	BUILTINMACRO,
+} MacroKind;
 typedef struct Macro Macro;
 struct Macro {
-	Vec  *toks;
+	MacroKind k;
+	union {
+		struct {
+			Vec  *toks;
+		} Obj;
+		struct {
+		} Func;
+	};
 };
 
 int    nlexers;
@@ -85,12 +97,13 @@ define()
 	if(lookupmacro(n))
 		errorposf(&n->pos, "redefinition of macro %s", n->v);
 	m = gcmalloc(sizeof(Macro));
-	m->toks = vec();
+	m->k = OBJMACRO;
+	m->Obj.toks = vec();
 	while(1) {
 		t = ppnoexpand();
 		if(t->k == TOKDIREND)
 			break;
-		vecappend(m->toks, t);
+		vecappend(m->Obj.toks, t);
 	}
 	mapset(macros, n->v, m);
 }
@@ -237,28 +250,57 @@ ppnoexpand()
 Tok *
 pp()
 {
-	int     i;
+	int     i, depth;
 	Macro   *m;
-	Tok     *t, *expanded;
+	Tok     *t1, *t2, *expanded;
 
-	t = ppnoexpand();
-	if(t->k == TOKDIRSTART && toks->len == 0) {
+	t1 = ppnoexpand();
+	if(t1->k == TOKDIRSTART && toks->len == 0) {
 		directive();
 		return pp();
 	}
-	m = lookupmacro(t);
-	if(m) {
-		if(strsethas(t->hs, t->v))
-			return t;
-		for(i = 0; i < m->toks->len; i++) {
+	m = lookupmacro(t1);
+	if(!m)
+		return t1;
+	switch(m->k) {
+	case FUNCMACRO:
+		t2 = pp();
+		if(t2->k != '(') {
+			listappend(toks, t2);
+			return t1;
+		}
+		depth = 1;
+		while(depth != 0) {
+			if(t2->k == TOKEOF) {
+				panic("XXX");
+			}
+			if(t2->k == '(') {
+				depth++;
+			} else if(t2->k == ')') {
+				depth--;
+			} else if(t2->k == ',') {
+				if(depth == 1) {
+
+				}
+			} else {
+
+			}
+			t2 = pp();
+		}
+		return t1;
+	case OBJMACRO:
+		if(strsethas(t1->hs, t1->v))
+			return t1;
+		for(i = 0; i < m->Obj.toks->len; i++) {
 			expanded = gcmalloc(sizeof(Tok));
-			*expanded = *(Tok*)vecget(m->toks, i);
-			expanded->hs = strsetadd(expanded->hs, t->v);
+			*expanded = *(Tok*)vecget(m->Obj.toks, i);
+			expanded->hs = strsetadd(expanded->hs, t1->v);
 			listappend(toks, expanded);
 		}
 		return pp();
+	default:
+		panic("unimplemented");
 	}
-	return t;
 }
 
 void
