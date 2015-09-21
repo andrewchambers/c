@@ -7,7 +7,7 @@
 
 typedef struct Macro Macro;
 struct Macro {
-	Vec *toks;
+	Vec  *toks;
 };
 
 int    nlexers;
@@ -15,6 +15,7 @@ Lexer *lexers[MAXINCLUDE];
 
 /* List of tokens inserted into the stream */
 List *toks;
+Map  *macros;
 
 static Tok *ppnoexpand();
 static int64 ifexpr();
@@ -52,10 +53,37 @@ include()
 	panic("unimplemented");
 }
 
+static int
+validmacrotok(Tokkind k)
+{
+	switch(k) {
+	case TOKIDENT:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
 static void
 define()
 {
-	panic("unimplemented");
+	Macro *m;
+	Tok   *n, *t;
+
+	n = ppnoexpand();
+	if(!validmacrotok(n->k))
+		errorposf(&n->pos, "invalid macro name %s", n->v);
+	m = gcmalloc(sizeof(Macro));
+	m->toks = vec();
+	while(1) {
+		t = ppnoexpand();
+		if(t->k == TOKDIREND)
+			break;
+		vecappend(m->toks, t);
+	}
+	if(mapget(macros, n->v))
+		errorposf(&n->pos, "redefinition of macro %s", n->v);
+	mapset(macros, n->v, m);
 }
 
 static void
@@ -188,7 +216,7 @@ pp()
 	Tok *t;
 
 	t = ppnoexpand();
-	if(t->k == '#' && t->nl) {
+	if(t->k == TOKDIRSTART) {
 		directive();
 		return pp();
 	}
