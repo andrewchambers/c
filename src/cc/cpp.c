@@ -239,7 +239,7 @@ pp()
 {
 	int     i;
 	Macro   *m;
-	Tok     *t;
+	Tok     *t, *expanded;
 
 	t = ppnoexpand();
 	if(t->k == TOKDIRSTART && toks->len == 0) {
@@ -248,8 +248,14 @@ pp()
 	}
 	m = lookupmacro(t);
 	if(m) {
-		for(i = 0; i < m->toks->len; i++)
-			listappend(toks, vecget(m->toks, i));
+		if(strsethas(t->hs, t->v))
+			return t;
+		for(i = 0; i < m->toks->len; i++) {
+			expanded = gcmalloc(sizeof(Tok));
+			*expanded = *(Tok*)vecget(m->toks, i);
+			expanded->hs = strsetadd(expanded->hs, t->v);
+			listappend(toks, expanded);
+		}
 		return pp();
 	}
 	return t;

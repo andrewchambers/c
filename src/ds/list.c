@@ -47,14 +47,14 @@ listpopfront(List *l)
 	ListEnt *e;
 
 	if(!l->len)
-		panic("pop form empty list");
-	l->len--;
+		panic("pop from empty list");
 	if(l->len == 1) {
 		e = l->head;
 		l->head = 0;
 		l->len = 0;
 		return e->v;
 	}
+	l->len--;
 	e = l->head;
 	l->head = e->next;
 	return e->v;

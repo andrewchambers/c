@@ -12,18 +12,16 @@ strsetadd(StrSet *ss, char *v)
 	r = gcmalloc(sizeof(StrSet));
 	r->v = v;
 	r->next = ss;
-	return ss;
+	return r;
 }
 
 int
 strsethas(StrSet *ss, char *v)
 {
-	if(!ss)
-		return 0;
-	do {
+	while(ss) {
 		if(strcmp(v, ss->v) == 0)
 			return 1;
 		ss = ss->next;
-	} while(ss);
+	}
 	return 0;
 }

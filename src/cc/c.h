@@ -399,6 +399,7 @@ struct Tok {
 	char   *v;
 	int     ws; /* There was whitespace before this token */
 	int     nl; /* There was a newline before this token */
+	StrSet *hs; /* Hideset, the list of tokens expanded to get this token */
 	SrcPos  pos;
 };
 
