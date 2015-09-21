@@ -38,6 +38,7 @@ typedef enum {
 	TOKSTAR   = '*',
 	TOKCOMMA  = ',',
 	TOKBSLASH = '\\',
+	TOKHASH   = '#',
 	TOKNUM = 256,
 	TOKIDENT,
 	TOKIF,

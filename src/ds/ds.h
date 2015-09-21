@@ -24,6 +24,7 @@ struct Map {
 
 Map  *map();
 void *mapget(Map *, char *);
+void  mapdel(Map *, char *);
 void  mapset(Map *, char *, void *);
 
 /*	StrSet is an immutable set of strings.

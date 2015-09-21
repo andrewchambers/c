@@ -33,6 +33,7 @@ pushlex(char *path)
 	l->markpos.file = path;
 	l->pos.line = 1;
 	l->pos.col = 1;
+	l->nl = 1;
 	l->f = fopen(path, "r");
 	if (!l->f)
 		errorf("error opening file %s\n", path);
@@ -64,6 +65,14 @@ validmacrotok(Tokkind k)
 	}
 }
 
+static Macro *
+lookupmacro(Tok *t)
+{
+	if(!validmacrotok(t->k))
+		return 0;
+	return mapget(macros, t->v);
+}
+
 static void
 define()
 {
@@ -73,6 +82,8 @@ define()
 	n = ppnoexpand();
 	if(!validmacrotok(n->k))
 		errorposf(&n->pos, "invalid macro name %s", n->v);
+	if(lookupmacro(n))
+		errorposf(&n->pos, "redefinition of macro %s", n->v);
 	m = gcmalloc(sizeof(Macro));
 	m->toks = vec();
 	while(1) {
@@ -81,9 +92,21 @@ define()
 			break;
 		vecappend(m->toks, t);
 	}
-	if(mapget(macros, n->v))
-		errorposf(&n->pos, "redefinition of macro %s", n->v);
 	mapset(macros, n->v, m);
+}
+
+static void
+undef()
+{
+	Tok *t;
+
+	t = ppnoexpand();
+	if(!lookupmacro(t))
+		errorposf(&t->pos, "cannot #undef macro that isn't defined");
+	mapdel(macros, t->v);
+	t = ppnoexpand();
+	if(t->k != TOKDIREND)
+		errorposf(&t->pos, "garbage at end of #undef");
 }
 
 static void
@@ -98,7 +121,6 @@ elseif()
 {
 	panic("unimplemented");
 }
-
 
 static void
 pelse()
@@ -128,15 +150,17 @@ directive()
 	dir = t->v;
 	if(strcmp(dir, "include") == 0)
 		include();
-	else if(strcmp(dir, "define")  == 0)
+	else if(strcmp(dir, "define") == 0)
 		define();
-	else if(strcmp(dir, "if")  == 0)
+	else if(strcmp(dir, "undef") == 0)
+		undef();
+	else if(strcmp(dir, "if") == 0)
 		pif();
-	else if(strcmp(dir, "elseif")  == 0)
+	else if(strcmp(dir, "elseif") == 0)
 		elseif();
-	else if(strcmp(dir, "else")  == 0)
+	else if(strcmp(dir, "else") == 0)
 		pelse();
-	else if(strcmp(dir, "endif")  == 0)
+	else if(strcmp(dir, "endif") == 0)
 		endif();
 	else
 		errorposf(&t->pos, "invalid directive %s", dir);
@@ -213,11 +237,19 @@ ppnoexpand()
 Tok *
 pp()
 {
-	Tok *t;
+	int     i;
+	Macro   *m;
+	Tok     *t;
 
 	t = ppnoexpand();
-	if(t->k == TOKDIRSTART) {
+	if(t->k == TOKDIRSTART && toks->len == 0) {
 		directive();
+		return pp();
+	}
+	m = lookupmacro(t);
+	if(m) {
+		for(i = 0; i < m->toks->len; i++)
+			listappend(toks, vecget(m->toks, i));
 		return pp();
 	}
 	return t;
@@ -228,6 +260,7 @@ cppinit(char *path)
 {
 	nlexers = 0;
 	toks = list();
+	macros = map();
 	pushlex(path);
 }
 

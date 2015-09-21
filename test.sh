@@ -11,7 +11,7 @@ do
 	echo $T PASS
 done
 
-for T in test/error/*.c
+for T in test/error/*.c test/cpperror/*.c
 do
 	PATTERNS=`grep "^PATTERN:" $T | sed s/PATTERN://g`
 	if bin/6c $T > /dev/null 2> $T.stderr

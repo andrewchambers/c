@@ -65,6 +65,7 @@ tokktostr(Tokkind t)
 	case TOKARROW:      return "->";
 	case TOKANDASS:     return "&=";
 	case TOKADDASS:     return "+=";
+	case TOKHASH:       return "#";
 	case TOKHASHHASH:   return "##";
 	case TOKDIRSTART:   return "Directive start";
 	case TOKDIREND:     return "Directive end";
@@ -94,7 +95,7 @@ tokktostr(Tokkind t)
 	case '^':           return "^";
 	case '\\':          return "\\";
 	}
-	return 0;
+	panic("internal error %d", t);
 }
 
 /* makes a token, copies v */
@@ -215,12 +216,15 @@ ungetch(Lexer *l, int c) /* avoid name conflict */
 Tok *
 lex(Lexer *l) 
 {
+	Tok *t;
 	int c, c2;
 	
 	mark(l);
 	if(l->indirective && l->nl) {
 		l->indirective = 0;
-		return mktok(l, TOKDIREND);
+		t = mktok(l, TOKDIREND);
+		l->nl = 1;
+		return t;
 	}
 	c = nextc(l);
 	if(c == EOF) {

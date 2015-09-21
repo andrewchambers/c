@@ -42,3 +42,9 @@ mapget(Map *m, char *k)
 	return 0;
 }
 
+void
+mapdel(Map *m, char *k)
+{
+	mapset(m, k, 0);
+}
+

@@ -21,7 +21,7 @@ main(int argc, char *argv[])
 		t = pp();
 		if(t->k == TOKEOF)
 			break;
-		puts(tokktostr(t->k));
+		printf("%s %s\n", tokktostr(t->k), t->v);
 	}
 	return 0;
 }
