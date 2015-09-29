@@ -251,7 +251,7 @@ ppnoexpand()
 
 /* TODO, inline? it isn't really too clear by itself */
 static void
-expandfunclike(Macro *m, Vec *params)
+expandfunclike(Macro *m, Vec *params, StrSet *hs)
 {
 	int i, j, k;
 	Tok *t1, *t2;
@@ -269,9 +269,16 @@ expandfunclike(Macro *m, Vec *params)
 				for(k = 0; k < v->len; k++) {
 					t2 = gcmalloc(sizeof(Tok));
 					*t2 = *(Tok*)(vecget(v, k));
+					t2->hs = hs;
 					/* TODO insert 1, currently reverses */
 					listprepend(toks, t2);
 				}
+			} else {
+				t2 = gcmalloc(sizeof(Tok));
+				*t2 = *t1;
+				t2->hs = hs;
+				/* TODO hidesets */
+				listprepend(toks, t2);
 			}
 		}
 	}
@@ -280,10 +287,11 @@ expandfunclike(Macro *m, Vec *params)
 Tok *
 pp()
 {
-	int   i, depth;
-	Macro *m;
-	Vec   *params, *curparam;
-	Tok   *t1, *t2, *expanded;
+	int    i, depth;
+	Macro  *m;
+	Vec    *params, *curparam;
+	Tok    *t1, *t2, *expanded;
+	StrSet *hsparen, *hsmacro;
 
 	t1 = ppnoexpand();
 	if(t1->k == TOKDIRSTART && toks->len == 0) {
@@ -293,6 +301,7 @@ pp()
 	m = lookupmacro(t1);
 	if(!m)
 		return t1;
+	hsmacro = t1->hs;
 	switch(m->k) {
 	case FUNCMACRO:
 		t2 = pp();
@@ -306,8 +315,10 @@ pp()
 			t2 = pp();
 			if(t2->k == TOKEOF)
 				errorposf(&t2->pos, "end of file in macro arguments");
-			if(t2->k == ')' && depth == 1)
+			if(t2->k == ')' && depth == 1) {
+				hsparen = t2->hs;
 				break;
+			}
 			if(params->len == 0 || (t2->k == ',' && depth == 1)) {
 				curparam = vec();
 				vecappend(params, curparam);
@@ -320,7 +331,7 @@ pp()
 		}
 		if(m->Func.argnames->len != params->len)
 			errorposf(&t1->pos, "macro invoked with incorrect number of args");
-		expandfunclike(m, params);
+		expandfunclike(m, params, strsetadd(strsetintersect(hsmacro, hsparen), t1->v));
 		return pp();
 	case OBJMACRO:
 		if(strsethas(t1->hs, t1->v))

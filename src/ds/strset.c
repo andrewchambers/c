@@ -25,3 +25,19 @@ strsethas(StrSet *ss, char *v)
 	}
 	return 0;
 }
+
+StrSet *
+strsetintersect(StrSet *ss, StrSet *other)
+{
+	char *v;
+	StrSet *r;
+
+	r = 0;
+	while(ss) {
+		v = ss->v;
+		if(strsethas(other, v))
+			r = strsetadd(r, v);
+		ss = ss->next;
+	}
+	return r;
+}

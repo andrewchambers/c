@@ -37,6 +37,7 @@ struct StrSet {
 
 StrSet *strsetadd(StrSet *, char *);
 int     strsethas(StrSet *, char *);
+StrSet *strsetintersect(StrSet *, StrSet *);
 
 typedef struct Vec Vec;
 struct Vec {
