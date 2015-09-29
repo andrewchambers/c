@@ -273,37 +273,44 @@ ppnoexpand()
 
 /* TODO, inline? it isn't really too clear by itself */
 static void
-expandfunclike(Macro *m, Vec *params, StrSet *hs)
+expandfunclike(SrcPos *pos, Macro *m, Vec *params, StrSet *hs)
 {
-	int i, j, k;
+	int i, j, k, argfound;
 	Tok *t1, *t2;
-	Vec *v;
+	Vec *v, *expanded;
 
 	if(m->k != FUNCMACRO)
 		panic("internal error");
 	if(m->Func.argnames->len != params->len)
 		panic("internal error");
+	expanded = vec();
 	for(i = 0; i < m->Func.toks->len; i++) {
 		t1 = vecget(m->Func.toks, i);
+		argfound = 0;
 		for(j = 0; j < m->Func.argnames->len; j++) {
-			if(strcmp(t1->v, vecget(m->Func.argnames, i)) == 0) {
-				v = vecget(params, i);
+			if(strcmp(t1->v, vecget(m->Func.argnames, j)) == 0) {
+				v = vecget(params, j);
 				for(k = 0; k < v->len; k++) {
 					t2 = gcmalloc(sizeof(Tok));
 					*t2 = *(Tok*)(vecget(v, k));
+					t2->pos = *pos;
 					t2->hs = hs;
-					/* TODO insert 1, currently reverses */
-					listprepend(toks, t2);
+					vecappend(expanded, t2);
 				}
-			} else {
-				t2 = gcmalloc(sizeof(Tok));
-				*t2 = *t1;
-				t2->hs = hs;
-				/* TODO hidesets */
-				listprepend(toks, t2);
+				argfound = 1;
+				break;
 			}
 		}
+		if(!argfound) {
+			t2 = gcmalloc(sizeof(Tok));
+			*t2 = *t1;
+			t2->pos = *pos;
+			t2->hs = hs;
+			vecappend(expanded, t2);
+		}
 	}
+	for(i = 0; i < expanded->len; i++)
+		listprepend(toks, vecget(expanded, expanded->len - i - 1));
 }
 
 Tok *
@@ -345,7 +352,8 @@ pp()
 				curparam = vec();
 				vecappend(params, curparam);
 			}
-			vecappend(curparam, t2);
+			if(t2->k != ',')
+				vecappend(curparam, t2);
 			if(t2->k == '(')
 				depth++;
 			if(t2->k == ')')
@@ -353,16 +361,16 @@ pp()
 		}
 		if(m->Func.argnames->len != params->len)
 			errorposf(&t1->pos, "macro invoked with incorrect number of args");
-		expandfunclike(m, params, strsetadd(strsetintersect(hsmacro, hsparen), t1->v));
+		expandfunclike(&t1->pos, m, params, strsetadd(strsetintersect(hsmacro, hsparen), t1->v));
 		return pp();
 	case OBJMACRO:
 		if(strsethas(t1->hs, t1->v))
 			return t1;
 		for(i = 0; i < m->Obj.toks->len; i++) {
 			expanded = gcmalloc(sizeof(Tok));
-			*expanded = *(Tok*)vecget(m->Obj.toks, i);
+			*expanded = *(Tok*)vecget(m->Obj.toks, m->Obj.toks->len - i - 1);
 			expanded->hs = strsetadd(expanded->hs, t1->v);
-			listappend(toks, expanded);
+			listprepend(toks, expanded);
 		}
 		return pp();
 	default:

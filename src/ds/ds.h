@@ -15,6 +15,7 @@ struct List {
 List *list();
 void listappend(List *, void *);
 void listprepend(List *, void *);
+void listinsert(List *, int, void *);
 void *listpopfront(List *);
 
 typedef struct Map Map;

@@ -41,6 +41,32 @@ listprepend(List *l, void *v)
 	l->head = e;
 }
 
+void
+listinsert(List *l, int idx, void *v)
+{
+	ListEnt *e, *newe;
+	int i;
+
+	i = 0;
+	e = l->head;
+	if(!e) {
+		listappend(l, v);
+		return;
+	}
+	while(1) {
+		if(i == idx)
+			break;
+		if(!e->next)
+			break;
+		e = e->next;
+		i++;
+	}
+	newe = gcmalloc(sizeof(ListEnt));
+	newe->v = v;
+	newe->next = e->next;
+	e->next = newe;
+}
+
 void *
 listpopfront(List *l)
 {
