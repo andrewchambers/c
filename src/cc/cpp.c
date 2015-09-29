@@ -99,13 +99,35 @@ define()
 	if(lookupmacro(n))
 		errorposf(&n->pos, "redefinition of macro %s", n->v);
 	m = gcmalloc(sizeof(Macro));
-	m->k = OBJMACRO;
-	m->Obj.toks = vec();
-	while(1) {
-		t = ppnoexpand();
-		if(t->k == TOKDIREND)
-			break;
-		vecappend(m->Obj.toks, t);
+	t = ppnoexpand();
+	if(t->k == '(' && !t->ws) {
+		m->k = FUNCMACRO;
+		m->Func.toks = vec();
+		m->Func.argnames = vec();
+		for(;;) {
+			t = ppnoexpand();
+			if(t->k != TOKIDENT)
+				errorposf(&t->pos, "invalid macro argname");
+			vecappend(m->Func.argnames, t->v);
+			t = ppnoexpand();
+			if(t->k == ')')
+				break;
+			if(t->k != ',')
+				errorposf(&t->pos, "preprocessor expected ','");
+		}
+		while(1) {
+			t = ppnoexpand();
+			if(t->k == TOKDIREND)
+				break;
+			vecappend(m->Func.toks, t);
+		}
+	} else {
+		m->k = OBJMACRO;
+		m->Obj.toks = vec();
+		while(t->k != TOKDIREND) {
+			vecappend(m->Obj.toks, t);
+			t = ppnoexpand();
+		}
 	}
 	mapset(macros, n->v, m);
 }
