@@ -18,6 +18,8 @@ struct Macro {
 			Vec  *toks;
 		} Obj;
 		struct {
+			Vec *argnames; /* vec of char * */
+			Vec *toks;
 		} Func;
 	};
 };
@@ -247,12 +249,41 @@ ppnoexpand()
 	return t;
 }
 
+/* TODO, inline? it isn't really too clear by itself */
+static void
+expandfunclike(Macro *m, Vec *params)
+{
+	int i, j, k;
+	Tok *t1, *t2;
+	Vec *v;
+
+	if(m->k != FUNCMACRO)
+		panic("internal error");
+	if(m->Func.argnames->len != params->len)
+		panic("internal error");
+	for(i = 0; i < m->Func.toks->len; i++) {
+		t1 = vecget(m->Func.toks, i);
+		for(j = 0; j < m->Func.argnames->len; j++) {
+			if(strcmp(t1->v, vecget(m->Func.argnames, i)) == 0) {
+				v = vecget(params, i);
+				for(k = 0; k < v->len; k++) {
+					t2 = gcmalloc(sizeof(Tok));
+					*t2 = *(Tok*)(vecget(v, k));
+					/* TODO insert 1, currently reverses */
+					listprepend(toks, t2);
+				}
+			}
+		}
+	}
+}
+
 Tok *
 pp()
 {
-	int     i, depth;
-	Macro   *m;
-	Tok     *t1, *t2, *expanded;
+	int   i, depth;
+	Macro *m;
+	Vec   *params, *curparam;
+	Tok   *t1, *t2, *expanded;
 
 	t1 = ppnoexpand();
 	if(t1->k == TOKDIRSTART && toks->len == 0) {
@@ -266,28 +297,31 @@ pp()
 	case FUNCMACRO:
 		t2 = pp();
 		if(t2->k != '(') {
-			listappend(toks, t2);
+			listprepend(toks, t2);
 			return t1;
 		}
+		params = vec();
 		depth = 1;
-		while(depth != 0) {
-			if(t2->k == TOKEOF) {
-				panic("XXX");
-			}
-			if(t2->k == '(') {
-				depth++;
-			} else if(t2->k == ')') {
-				depth--;
-			} else if(t2->k == ',') {
-				if(depth == 1) {
-
-				}
-			} else {
-
-			}
+		for(;;) {
 			t2 = pp();
+			if(t2->k == TOKEOF)
+				errorposf(&t2->pos, "end of file in macro arguments");
+			if(t2->k == ')' && depth == 1)
+				break;
+			if(params->len == 0 || (t2->k == ',' && depth == 1)) {
+				curparam = vec();
+				vecappend(params, curparam);
+			}
+			vecappend(curparam, t2);
+			if(t2->k == '(')
+				depth++;
+			if(t2->k == ')')
+				depth--;
 		}
-		return t1;
+		if(m->Func.argnames->len != params->len)
+			errorposf(&t1->pos, "macro invoked with incorrect number of args");
+		expandfunclike(m, params);
+		return pp();
 	case OBJMACRO:
 		if(strsethas(t1->hs, t1->v))
 			return t1;
