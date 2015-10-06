@@ -1445,6 +1445,7 @@ isdeclstart(Tok *t)
 	if(istypestart(t))
 		return 1;
 	switch(tok->k) {
+	case TOKEXTERN:
 	case TOKREGISTER:
 	case TOKSTATIC:
 	case TOKAUTO:
