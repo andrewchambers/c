@@ -6,12 +6,10 @@
 static void expr(Node *);
 static void stmt(Node *);
 static void store(CTy *);
-static void pushstruct(CTy *);
 
 char    *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 int      stackoffset;
 StkSlot *memretptr;
-StkSlot *scratcharea;
 
 static FILE *o;
 
@@ -42,95 +40,6 @@ block(Node *n)
 	for(i = 0; i < v->len ; i++) {
 		stmt(vecget(v, i));
 	}
-}
-
-
-typedef enum {
-	ARGNONE,
-	ARGINT1,
-	ARGINT2,
-	ARGMEM
-} Argclass;
-
-typedef struct {
-	Argclass class;
-	int offset;
-	int r1;
-	int r2;
-} Argloc;
-
-static Argclass
-classify(CTy *t)
-{
-	if(isitype(t) || isptr(t) || isvoid(t))
-		return ARGINT1;
-	if(isstruct(t)) {
-		if(t->size == 0)
-			return ARGNONE;
-		if(t->size <= 8)
-			return ARGINT1;
-		if(t->size <= 16)
-			return ARGINT2;
-		return ARGMEM;
-	}
-	panic("unimplemented classify");
-}
-
-static Vec *
-classifyargs(CTy *f, int returnstruct)
-{
-	int      i, sz, nintargs, offset;
-	Vec      *locs, *params;
-	Argclass c;
-	Argloc   *loc;
-	NameTy   *nt;
-	
-	params = f->Func.params;
-	locs = vec();
-	offset = 16;
-	nintargs = 0;
-	if(returnstruct)
-		nintargs = 1;
-	for(i = 0; i < params->len; i++) {
-		nt = vecget(params, i);
-		sz = nt->type->size;
-		if(sz < 8)
-			sz = 8;
-		if(sz % 8)
-			sz = sz - (sz % 8) + 8;
-		loc = gcmalloc(sizeof(Argloc));
-		c = classify(nt->type);
-		switch(c) {
-		case ARGINT1:
-			if(nintargs == 6)
-				goto argmem;
-			loc->class = ARGINT1;
-			loc->r1 = nintargs++;
-			break;
-		case ARGINT2:
-			if(nintargs >= 5)
-				goto argmem;
-			loc->class = ARGINT2;
-			loc->r1 = nintargs++;
-			loc->r2 = nintargs++;
-			break;
-		case ARGMEM:
-		argmem:
-			loc->class = ARGMEM;
-			loc->offset = offset;
-			offset += sz;
-			break;
-		case ARGNONE:
-			loc->class = ARGNONE;
-			break;
-		default:
-			panic("internal error classify args");
-		}
-		vecappend(locs, loc);
-	}
-	if(nintargs > 6)
-		panic("internal error");
-	return locs;
 }
 
 static void
@@ -172,322 +81,83 @@ popq(char *reg)
 	out("popq %%%s\n", reg);
 }
 
-void
-calcscratcharea(Node *n)
-{
-	int  i;
-
-	switch(n->t) {
-	case NCALL:
-		if(isstruct(n->type)) {
-			if(n->type->size > scratcharea->size)
-				scratcharea->size = n->type->size;
-			if(n->type->align > scratcharea->align)
-				scratcharea->align = n->type->align;
-		}
-		for(i = 0; i < n->Call.args->len; i++)
-			calcscratcharea(vecget(n->Call.args, i));
-		break;	
-	case NFUNC:
-		calcscratcharea(n->Func.body);
-		break;
-	case NASSIGN:
-		calcscratcharea(n->Assign.l);
-		calcscratcharea(n->Assign.r);
-		break;
-	case NBINOP:
-		calcscratcharea(n->Binop.l);
-		calcscratcharea(n->Binop.r);
-		break;
-	case NUNOP:
-		calcscratcharea(n->Unop.operand);
-		break;
-	case NINCDEC:
-		calcscratcharea(n->Incdec.operand);
-		break;
-	case NSEL:
-		calcscratcharea(n->Sel.operand);
-		break;
-	case NIDX:
-		calcscratcharea(n->Idx.operand);
-		calcscratcharea(n->Idx.idx);
-		break;
-	case NCAST:
-		calcscratcharea(n->Cast.operand);
-		break;
-	case NCOND:
-		calcscratcharea(n->Cond.cond);
-		calcscratcharea(n->Cond.iftrue);
-		calcscratcharea(n->Cond.iffalse);
-		break;
-	case NCOMMA:
-		for(i = 0; i < n->Comma.exprs->len; i++)
-			calcscratcharea(vecget(n->Comma.exprs, i));
-		break;
-	case NBLOCK:
-		for(i = 0; i < n->Block.stmts->len; i++)
-			calcscratcharea(vecget(n->Block.stmts, i));
-		break;
-	case NIF:
-		calcscratcharea(n->If.expr);
-		calcscratcharea(n->If.iftrue);
-		if(n->If.iffalse)
-			calcscratcharea(n->If.iffalse);
-		break;
-	case NFOR:
-		if(n->For.init)
-			calcscratcharea(n->For.init);
-		if(n->For.cond)
-			calcscratcharea(n->For.cond);
-		if(n->For.step)
-			calcscratcharea(n->For.step);
-		calcscratcharea(n->For.stmt);
-		break;
-	case NSWITCH:
-		calcscratcharea(n->Switch.expr);
-		calcscratcharea(n->Switch.stmt);
-		break;
-	case NDOWHILE:
-		calcscratcharea(n->DoWhile.stmt);
-		calcscratcharea(n->DoWhile.expr);
-		break;
-	case NWHILE:
-		calcscratcharea(n->While.expr);
-		calcscratcharea(n->While.stmt);
-		break;
-	case NCASE:
-		calcscratcharea(n->Case.stmt);
-		break;
-	case NLABELED:
-		calcscratcharea(n->Labeled.stmt);
-		break;
-	case NRETURN:
-		if(n->Return.expr)
-			calcscratcharea(n->Return.expr);
-		break;
-	case NDECL:
-		/* TODO: important */
-		break;
-	case NEXPRSTMT:
-		if(n->ExprStmt.expr)
-			calcscratcharea(n->ExprStmt.expr);
-	case NSIZEOF:
-	case NGOTO:
-	case NNUM:
-	case NSTR:
-	case NIDENT:
-		break;
-	default:
-		panic("unimlpemented calcscratcharea %d", n->t);
-	}
-}
-
 static void
 func(Node *f)
 {
-	Vec      *args, *argpos;
-	Sym      *sym;
-	Argloc   *aloc;
-	Argclass c;
-	int      i;
+	Vec *v;
+	Sym *sym;
+	int  i;
 	
-	stackoffset = 0;
-	scratcharea = gcmalloc(sizeof(StkSlot));
-	scratcharea->size = 8;
-	scratcharea->align = 8;
-	vecappend(f->Func.stkslots, scratcharea);
-	calcscratcharea(f);
-	c = classify(f->type->Func.rtype);
-	if(c == ARGMEM) {
-		memretptr = gcmalloc(sizeof(StkSlot));
-		memretptr->size = 8;
-		memretptr->align = 8;
-		vecappend(f->Func.stkslots, memretptr);
-	} else {
-		memretptr = 0;
-	}
 	calcslotoffsets(f);
 	out(".text\n");
 	out(".globl %s\n", f->Func.name);
 	out("%s:\n", f->Func.name);
-	pushq("rbp");
+	out("pushq %%rbp\n");
 	out("movq %%rsp, %%rbp\n");
-	if(f->Func.localsz) {
+	if (f->Func.localsz)
 		out("sub $%d, %%rsp\n", f->Func.localsz);
-		stackoffset += f->Func.localsz;
-	}
-	args = f->Func.params;
-	argpos = classifyargs(f->type, c == ARGMEM);
-	if(c == ARGMEM)
-		out("movq %%rdi, %d(%%rbp)\n", memretptr->offset);
-	for(i = 0; i < args->len; i++) {
-		sym = vecget(args, i);
-		aloc = vecget(argpos, i);
-		switch(aloc->class) {
-		case ARGINT2:
-			out("movq %%%s, %d(%%rbp)\n", intargregs[aloc->r2], sym->Local.slot->offset + 8);
-		case ARGINT1:
-			out("movq %%%s, %d(%%rbp)\n", intargregs[aloc->r1], sym->Local.slot->offset);
-			break;
-		default:
-			;
-		}
-	}
-	for(i = 0; i < args->len; i++) {
-		sym = vecget(args, i);
-		aloc = vecget(argpos, i);
-		switch(aloc->class) {
-		case ARGMEM:
-			if(isitype(sym->type)) {
-				out("movq %d(%%rbp), %%rcx\n", aloc->offset);
-				out("leaq %d(%%rbp), %%rax\n", sym->Local.slot->offset);
-				store(sym->type);
-				break;
-			}
-			if(isstruct(sym->type)) {
-				out("leaq %d(%%rbp), %%rcx\n", aloc->offset);
-				out("leaq %d(%%rbp), %%rax\n", sym->Local.slot->offset);
-				store(sym->type);
-				break;
-			}
-			panic("unimplemented arg type");
-		default:
-			;
+	v = f->Func.params;
+	for(i = 0; i < v->len; i++) {
+		sym = vecget(v, i);
+		if(!isitype(sym->type) && !isptr(sym->type))
+			errorposf(&f->pos, "unimplemented arg type");
+		if(i < 6) {
+			out("movq %%%s, %d(%%rbp)\n", intargregs[i], sym->Local.slot->offset);
+		} else {
+			out("movq %d(%%rbp), %%rcx\n", 16 + 8 * (i - 6));
+			out("leaq %d(%%rbp), %%rax\n", sym->Local.slot->offset);
+			store(sym->type);
 		}
 	}
 	block(f->Func.body);
-	if(c == ARGMEM)
-		out("movq %d(%%rbp), %%rax\n", memretptr->offset);
 	out("leave\n");
-	stackoffset -= f->Func.localsz;
-	stackoffset -= 8;
 	out("ret\n");
-	if(stackoffset != 0) {
-		panic("stack not balanced.");
-	}
 }
+
 
 static void
 call(Node *n)
 {
-	int      i, nintargs, cleanup;
-	Vec      *args, *arglocs;
-	Node     *arg;
-	CTy      *fty;
-	Argloc   *aloc;
-	Argclass rcls;
+	int i, nargs, nintargs, cleanup;
+	Vec  *args;
+	Node *arg;
 
-	out("# call\n");
 	args = n->Call.args;
-	if(isptr(n->Call.funclike->type))
-		fty = n->Call.funclike->type->Ptr.subty;
-	else
-		fty = n->Call.funclike->type;
-	rcls = classify(fty->Func.rtype);
-	arglocs = classifyargs(fty, rcls == ARGMEM);
-	cleanup = 0;
-	i = args->len;
-	/* Calculate size of mem arg area. */
+	i = nargs = args->len;
+	/* Push args in reverse order */
 	while(i-- != 0) {
-		arg  = vecget(args, i);
-		aloc = vecget(arglocs, i);
-		if(aloc->class != ARGMEM)
-			continue;
-		if(arg->type->size % 8)
-			cleanup += arg->type->size - (arg->type->size % 8) + 8;
-		else
-			cleanup += arg->type->size;
+		arg = vecget(args, i);
+		if(!isitype(arg->type) && !isptr(arg->type))
+			errorf("unimplemented arg type.");
+		expr(arg);
+		out("pushq %%rax\n");
 	}
-	if((stackoffset + cleanup) % 8)
-		panic("internal error, call stack alignment");
-	/* Align stack before pushing args */
-	if((stackoffset + cleanup) % 16) {
-		pushq("rax");
-		cleanup += 8;
-	}
-	/* Push mem args in reverse order */
-	i = args->len;
-	while(i-- != 0) {
-		arg  = vecget(args, i);
-		aloc = vecget(arglocs, i);
-		if(aloc->class != ARGMEM)
-			continue;
-		if(isitype(arg->type) || isptr(arg->type)) {
-			expr(arg);
-			pushq("rax");
-			continue;
-		}
-		if(isstruct(arg->type)) {
-			expr(arg);
-			/* Struct size rounded up to 8 alignment */
-			pushstruct(arg->type);
-			continue;
-		}
-		panic("unimlpemented artype in call");
-	}
-	/* Push int args in reverse order */
-	i = args->len;
-	nintargs = 0;
-	while(i-- != 0) {
-		arg  = vecget(args, i);
-		aloc = vecget(arglocs, i);
-		switch(aloc->class) {
-		case ARGINT2:
-			nintargs += 2;
-			if(isstruct(arg->type)) {
-				expr(arg);
-				out("movq 8(%%rax), %%rcx\n");
-				pushq("rcx");
-				out("movq (%%rax), %%rcx\n");
-				pushq("rcx");
-				break;
-			}
-			panic("unimplemented int 2 reg");
-		case ARGINT1:
-			nintargs += 1;
-			if(isitype(arg->type) || isptr(arg->type)) {
-				expr(arg);
-				pushq("rax");
-				break;
-			}
-			if(isstruct(arg->type)) {
-				expr(arg);
-				out("movq (%%rax), %%rcx\n");
-				pushq("rcx");
-				break;
-			}
-			panic("unimplemented int reg");
-			break;
-		default:
-			continue;
-		}
-	}
-	if(rcls == ARGMEM) {
-		out("lea %d(%%rbp), %%rax\n", scratcharea->offset);
-		pushq("rax");
-		nintargs++;
-	}
-	/* Pop int args back to registers */
-	for(i = 0; i < nintargs; i++) {
+	nintargs = nargs;
+	if(nintargs > 6)
+		nintargs = 6;
+	for(i = 0; i < nintargs; i++)
 		out("popq %%%s\n", intargregs[i]);
-		stackoffset -= 8;
-	}
 	expr(n->Call.funclike);
 	out("call *%%rax\n");
-	if(cleanup) {
+	cleanup = 8 * (nargs - nintargs);
+	if(cleanup)
 		out("add $%d, %%rsp\n", cleanup);
-		stackoffset -= cleanup;
-	}
-	if(isstruct(fty->Func.rtype)) {
-		if(rcls == ARGINT1) {
-			out("movq %%rax, %d(%%rbp)\n", scratcharea->offset);
-		} else if(rcls == ARGINT2) {
-			out("movq %%rax, %d(%%rbp)\n", scratcharea->offset);
-			out("movq %%rdx, %d(%%rbp)\n", scratcharea->offset + 8);
-		}
-		out("leaq %d(%%rbp), %%rax\n", scratcharea->offset);
-	}
 }
+
+static void
+ereturn(Node *r)
+{
+	CTy *ty;
+	
+	ty = r->Return.expr->type;
+	if(!isitype(ty) && !isptr(ty))
+		errorposf(&r->pos, "unimplemented return type");
+	expr(r->Return.expr);
+	/* No need to cleanup with leave */
+	out("leave\n");
+	out("ret\n");
+}
+
 
 static void
 load(CTy *t)
@@ -575,26 +245,6 @@ store(CTy *t)
 	errorf("unimplemented store\n");
 }
 
-/* Returns number of bytes pushed
-   The stack is kept 8 byte aligned,
-   so may push more bytes. */
-static void
-pushstruct(CTy *t)
-{
-	int sz;
-
-	if(!isstruct(t))
-		panic("internal error pushstruct");
-	sz = t->size;
-	if(sz % 8)
-		sz = sz - (sz % 8) + 8;
-	out("sub $%d, %%rsp\n", sz);
-	stackoffset += sz;
-	out("movq %%rax, %%rcx\n");
-	out("movq %%rsp, %%rax\n");
-	store(t);
-}
-
 static void
 decl(Node *n)
 {
@@ -606,37 +256,6 @@ decl(Node *n)
 		emitsym(sym);
 	}
 }
-
-static void
-ereturn(Node *r)
-{
-	CTy *ty;
-	
-	ty = r->Return.expr->type;
-	expr(r->Return.expr);
-	if(isstruct(ty)) {
-		switch(classify(ty)) {
-		case ARGNONE:
-			break;
-		case ARGMEM:
-			out("movq %%rax, %%rcx\n");
-			out("movq %d(%%rbp), %%rax\n", memretptr->offset);
-			store(ty);
-			break;
-		case ARGINT1:
-			out("movq (%%rax), %%rax\n");
-			break;
-		case ARGINT2:
-			out("movq 8(%%rax), %%rdx\n");
-			out("movq (%%rax), %%rax\n");
-			break;
-		}
-	}
-	/* No need to cleanup with leave */
-	out("leave\n");
-	out("ret\n");
-}
-
 
 static void
 addr(Node *n)
@@ -1242,3 +861,4 @@ emitsym(Sym *sym)
 		panic("internal error");
 	}
 }
+

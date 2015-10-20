@@ -30,7 +30,7 @@ all:  bin/6c \
 
 .PHONY: all clean
 
-%.o: %.c $(HFILES)
+.c.o: $(HFILES)
 	$(CC) $(CFLAGS) -Isrc/ -o $@ -c $<
 
 bin/6c: $(_6CO) $(LIBA)
@@ -55,3 +55,4 @@ $(LIBA): $(LIBO)
 
 clean:
 	rm -rf $(LIBA) $(LIBO) $(CPPO) $(_6CO) $(_6AO) $(ABIFZO) bin
+
