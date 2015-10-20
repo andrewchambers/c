@@ -3,7 +3,7 @@ make -Bs
 
 for T in test/execute/*.c test/cpp/*.c test/bugs/*.c
 do
-	if ! ( bin/6c $T > $T.s && bin/6a $T.s $T.o && gcc $T.o -o $T.bin && $T.bin )
+	if ! ( bin/6c $T > $T.s && bin/6a $T.s $T.o && gcc $T.o -o $T.bin && $T.bin > /dev/null )
 	then
 		echo $T FAIL
 		exit 1
