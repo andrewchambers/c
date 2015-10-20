@@ -1,5 +1,5 @@
 
-CFLAGS  = -g -Wall
+CFLAGS  = -std=c89 -g -Wall -D_BSD_SOURCE
 
 # NOTE if one of these headers does not exist, the wildcard rule fails.
 HFILES = src/u.h src/cc/c.h src/ds/ds.h src/gc/gc.h
