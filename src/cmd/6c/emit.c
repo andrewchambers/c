@@ -31,6 +31,18 @@ out(char *fmt, ...)
 }
 
 static void
+outi(char *fmt, ...)
+{
+	va_list va;
+
+	va_start(va, fmt);
+	fprintf(o, "  ");
+	if(vfprintf(o, fmt, va) < 0)
+		errorf("Error printing\n");
+	va_end(va);
+}
+
+static void
 block(Node *n)
 {
 	Vec *v;
@@ -71,14 +83,14 @@ static void
 pushq(char *reg)
 {
 	stackoffset += 8;
-	out("pushq %%%s\n", reg);
+	outi("pushq %%%s\n", reg);
 }
 
 static void
 popq(char *reg)
 {
 	stackoffset -= 8;
-	out("popq %%%s\n", reg);
+	outi("popq %%%s\n", reg);
 }
 
 static void
@@ -89,29 +101,30 @@ func(Node *f)
 	int  i;
 	
 	calcslotoffsets(f);
+	out("\n");
 	out(".text\n");
 	out(".globl %s\n", f->Func.name);
 	out("%s:\n", f->Func.name);
-	out("pushq %%rbp\n");
-	out("movq %%rsp, %%rbp\n");
+	outi("pushq %%rbp\n");
+	outi("movq %%rsp, %%rbp\n");
 	if (f->Func.localsz)
-		out("sub $%d, %%rsp\n", f->Func.localsz);
+		outi("sub $%d, %%rsp\n", f->Func.localsz);
 	v = f->Func.params;
 	for(i = 0; i < v->len; i++) {
 		sym = vecget(v, i);
 		if(!isitype(sym->type) && !isptr(sym->type))
 			errorposf(&f->pos, "unimplemented arg type");
 		if(i < 6) {
-			out("movq %%%s, %d(%%rbp)\n", intargregs[i], sym->Local.slot->offset);
+			outi("movq %%%s, %d(%%rbp)\n", intargregs[i], sym->Local.slot->offset);
 		} else {
-			out("movq %d(%%rbp), %%rcx\n", 16 + 8 * (i - 6));
-			out("leaq %d(%%rbp), %%rax\n", sym->Local.slot->offset);
+			outi("movq %d(%%rbp), %%rcx\n", 16 + 8 * (i - 6));
+			outi("leaq %d(%%rbp), %%rax\n", sym->Local.slot->offset);
 			store(sym->type);
 		}
 	}
 	block(f->Func.body);
-	out("leave\n");
-	out("ret\n");
+	outi("leave\n");
+	outi("ret\n");
 }
 
 
@@ -130,7 +143,7 @@ call(Node *n)
 		if(!isitype(arg->type) && !isptr(arg->type))
 			errorf("unimplemented arg type.");
 		expr(arg);
-		out("pushq %%rax\n");
+		outi("pushq %%rax\n");
 	}
 	nintargs = nargs;
 	if(nintargs > 6)
@@ -138,10 +151,10 @@ call(Node *n)
 	for(i = 0; i < nintargs; i++)
 		out("popq %%%s\n", intargregs[i]);
 	expr(n->Call.funclike);
-	out("call *%%rax\n");
+	outi("call *%%rax\n");
 	cleanup = 8 * (nargs - nintargs);
 	if(cleanup)
-		out("add $%d, %%rsp\n", cleanup);
+		outi("add $%d, %%rsp\n", cleanup);
 }
 
 static void
@@ -154,8 +167,8 @@ ereturn(Node *r)
 		errorposf(&r->pos, "unimplemented return type");
 	expr(r->Return.expr);
 	/* No need to cleanup with leave */
-	out("leave\n");
-	out("ret\n");
+	outi("leave\n");
+	outi("ret\n");
 }
 
 
@@ -165,16 +178,16 @@ load(CTy *t)
 	if(isitype(t) || isptr(t)) {
 		switch(t->size) {
 		case 8:
-			out("movq (%%rax), %%rax\n");
+			outi("movq (%%rax), %%rax\n");
 			break;
 		case 4:
-			out("movslq (%%rax), %%rax\n");
+			outi("movslq (%%rax), %%rax\n");
 			break;
 		case 2:
-			out("movswq (%%rax), %%rax\n");
+			outi("movswq (%%rax), %%rax\n");
 			break;
 		case 1:
-			out("movsbq (%%rax), %%rax\n");
+			outi("movsbq (%%rax), %%rax\n");
 			break;
 		default:
 			panic("internal error\n");
@@ -196,21 +209,19 @@ load(CTy *t)
 static void
 store(CTy *t)
 {
-	int sz, offset;
-
 	if(isitype(t) || isptr(t)) {
 		switch(t->size) {
 		case 8:
-			out("movq %%rcx, (%%rax)\n");
+			outi("movq %%rcx, (%%rax)\n");
 			break;
 		case 4:
-			out("movl %%ecx, (%%rax)\n");
+			outi("movl %%ecx, (%%rax)\n");
 			break;
 		case 2:
-			out("movw %%cx, (%%rax)\n");
+			outi("movw %%cx, (%%rax)\n");
 			break;
 		case 1:
-			out("movb %%cl, (%%rax)\n");
+			outi("movb %%cl, (%%rax)\n");
 			break;
 		default:
 			panic("internal error\n");
@@ -218,28 +229,16 @@ store(CTy *t)
 		return;
 	}
 	if(isstruct(t)) {
-		sz = t->size;
-		offset = 0;
-		pushq("rdx");
-		while(sz >= 8) {
-			out("movq %d(%%rcx), %%rdx\n", offset);
-			out("movq %%rdx, %d(%%rax)\n", offset);
-			sz -= 8;
-			offset += 8;
-		}
-		while(sz >= 4) {
-			out("movl %d(%%rcx), %%edx\n", offset);
-			out("movl %%edx, %d(%%rax)\n", offset);
-			sz -= 4;
-			offset += 4;
-		}
-		while(sz) {
-			out("movb %d(%%rcx), %%dl\n", offset);
-			out("movb %%dl, %d(%%rax)\n", offset);
-			sz--;
-			offset++;
-		}
-		popq("rdx");
+		pushq("rdi");
+		pushq("rsi");
+		pushq("rcx");
+		outi("movq %%rcx, %%rsi\n");
+		outi("movq %%rax, %%rdi\n");
+		outi("movq $%d, %%rcx\n", t->size);
+		outi("rep movsb\n");
+		popq("rcx");
+		popq("rsi");
+		popq("rdi");
 		return;
 	}
 	errorf("unimplemented store\n");
@@ -273,16 +272,16 @@ addr(Node *n)
 		sm = getstructmember(n->Sel.operand->type, n->Sel.name);
 		if(!sm)
 			panic("internal error");
-		out("addq $%d, %%rax\n", sm->offset);
+		outi("addq $%d, %%rax\n", sm->offset);
 		break;
 	case NIDENT:
 		sym = n->Ident.sym;
 		switch(sym->k) {
 		case SYMGLOBAL:
-			out("leaq %s(%%rip), %%rax\n", sym->Global.label);
+			outi("leaq %s(%%rip), %%rax\n", sym->Global.label);
 			break;
 		case SYMLOCAL:
-			out("leaq %d(%%rbp), %%rax\n", sym->Local.slot->offset);
+			outi("leaq %d(%%rbp), %%rax\n", sym->Local.slot->offset);
 			break;
 		default:
 			panic("internal error");
@@ -292,12 +291,12 @@ addr(Node *n)
 		expr(n->Idx.idx);
 		sz = n->type->size;
 		if(sz != 1) {
-			out("imul $%d, %%rax\n", sz);
+			outi("imul $%d, %%rax\n", sz);
 		}
 		pushq("rax");
 		expr(n->Idx.operand);
 		popq("rcx");
-		out("addq %%rcx, %%rax\n");
+		outi("addq %%rcx, %%rax\n");
 		break;
 	default:
 		errorf("unimplemented addr\n");
@@ -313,37 +312,37 @@ obinop(int op, CTy *t)
 
 	switch(op) {
 	case '+':
-		out("addq %%rcx, %%rax\n");
+		outi("addq %%rcx, %%rax\n");
 		break;
 	case '-':
-		out("subq %%rcx, %%rax\n");
+		outi("subq %%rcx, %%rax\n");
 		break;
 	case '*':
-		out("imul %%rcx, %%rax\n");
+		outi("imul %%rcx, %%rax\n");
 		break;
 	case '/':
-		out("cqto\n");
-		out("idiv %%rcx\n");
+		outi("cqto\n");
+		outi("idiv %%rcx\n");
 		break;
 	case '%':
-		out("cqto\n");
-		out("idiv %%rcx\n");
-		out("mov %%rdx, %%rax\n");
+		outi("cqto\n");
+		outi("idiv %%rcx\n");
+		outi("mov %%rdx, %%rax\n");
 		break;
 	case '|':
-		out("or %%rcx, %%rax\n");
+		outi("or %%rcx, %%rax\n");
 		break;
 	case '&':
-		out("and %%rcx, %%rax\n");
+		outi("and %%rcx, %%rax\n");
 		break;
 	case '^':
-		out("xor %%rcx, %%rax\n");
+		outi("xor %%rcx, %%rax\n");
 		break;
 	case TOKSHR:
-		out("sar %%cl, %%rax\n");
+		outi("sar %%cl, %%rax\n");
 		break;
 	case TOKSHL:
-		out("sal %%cl, %%rax\n");
+		outi("sal %%cl, %%rax\n");
 		break;
 	case TOKEQL:
 	case TOKNEQ:
@@ -373,12 +372,12 @@ obinop(int op, CTy *t)
 			opc = "jle";
 			break;
 		}
-		out("cmp %%rcx, %%rax\n");
-		out("%s .%s\n", opc, lset);
-		out("movq $0, %%rax\n");
-		out("jmp .%s\n", lafter);
+		outi("cmp %%rcx, %%rax\n");
+		outi("%s .%s\n", opc, lset);
+		outi("movq $0, %%rax\n");
+		outi("jmp .%s\n", lafter);
 		out(".%s:\n", lset);
-		out("movq $1, %%rax\n");
+		outi("movq $1, %%rax\n");
 		out(".%s:\n", lafter);
 		break;
 	default:
@@ -403,7 +402,7 @@ assign(Node *n)
 		if(!isptr(l->type) && !isitype(l->type) && !isstruct(l->type))
 			errorf("unimplemented assign\n");
 		store(l->type);
-		out("movq %%rcx, %%rax\n");
+		outi("movq %%rcx, %%rax\n");
 		return;
 	}
 	addr(l);
@@ -411,13 +410,13 @@ assign(Node *n)
 	load(l->type);
 	pushq("rax");
 	expr(r);
-	out("movq %%rax, %%rcx\n");
+	outi("movq %%rax, %%rcx\n");
 	popq("rax");
 	obinop(op, n->type);
-	out("movq %%rax, %%rcx\n");
+	outi("movq %%rax, %%rcx\n");
 	popq("rax");
 	store(l->type);
-	out("movq %%rcx, %%rax\n");
+	outi("movq %%rcx, %%rax\n");
 }
 
 static void
@@ -431,32 +430,32 @@ shortcircuit(Node *n)
 
 	expr(n->Binop.l);
 	if(n->Binop.op == TOKLAND) {
-		out("testq %%rax, %%rax\n");
-		out("jz .%s\n", f);
+		outi("testq %%rax, %%rax\n");
+		outi("jz .%s\n", f);
 	} else if(n->Binop.op == TOKLOR) {
-		out("testq %%rax, %%rax\n");
-		out("jnz .%s\n", t);
+		outi("testq %%rax, %%rax\n");
+		outi("jnz .%s\n", t);
 	} else {
 		panic("internal error");
 	}
 	expr(n->Binop.r);
 	if(n->Binop.op == TOKLAND) {
-		out("testq %%rax, %%rax\n");
-		out("jz .%s\n", f);
-		out("jmp .%s\n", t);
+		outi("testq %%rax, %%rax\n");
+		outi("jz .%s\n", f);
+		outi("jmp .%s\n", t);
 	} else if(n->Binop.op == TOKLOR) {
-		out("testq %%rax, %%rax\n");
-		out("jnz .%s\n", t);
-		out("jmp .%s\n", f);
+		outi("testq %%rax, %%rax\n");
+		outi("jnz .%s\n", t);
+		outi("jmp .%s\n", f);
 	} else {
 		panic("internal error");
 	}
 	out(".%s:\n", t);
-	out("mov $1, %%rax\n");
-	out("jmp .%s\n", e);
+	outi("mov $1, %%rax\n");
+	outi("jmp .%s\n", e);
 	out(".%s:\n", f);
-	out("xor %%rax, %%rax\n");
-	out("jmp .%s\n", e);
+	outi("xor %%rax, %%rax\n");
+	outi("jmp .%s\n", e);
 	out(".%s:\n", e);
 }
 
@@ -470,7 +469,7 @@ binop(Node *n)
 	expr(n->Binop.l);
 	pushq("rax");
 	expr(n->Binop.r);
-	out("movq %%rax, %%rcx\n");
+	outi("movq %%rax, %%rcx\n");
 	popq("rax");
 	obinop(n->Binop.op, n->type);
 }
@@ -492,14 +491,14 @@ unop(Node *n)
 		break;
 	case '!':
 		expr(n->Unop.operand);
-		out("xorq %%rcx, %%rcx\n");
-		out("testq %%rax, %%rax\n");
-		out("setz %%cl\n");
-		out("movq %%rcx, %%rax\n");
+		outi("xorq %%rcx, %%rcx\n");
+		outi("testq %%rax, %%rax\n");
+		outi("setz %%cl\n");
+		outi("movq %%rcx, %%rax\n");
 		break;
 	case '-':
 		expr(n->Unop.operand);
-		out("neg %%rax\n");
+		outi("neg %%rax\n");
 		break;
 	case TOKINC:
 	default:
@@ -517,24 +516,24 @@ incdec(Node *n)
 	load(n->type);
 	if(isptr(n->type)) {
 		if(n->Incdec.op == TOKINC)
-			out("add $%d, %%rax\n", n->type->Ptr.subty->size);
+			outi("add $%d, %%rax\n", n->type->Ptr.subty->size);
 		else
-			out("add $%d, %%rax\n", -n->type->Ptr.subty->size);
+			outi("add $%d, %%rax\n", -n->type->Ptr.subty->size);
 	} else {
 		if(n->Incdec.op == TOKINC)
-			out("inc %%rax\n");
+			outi("inc %%rax\n");
 		else
-			out("dec %%rax\n");
+			outi("dec %%rax\n");
 	}
-	out("movq %%rax, %%rcx\n");
+	outi("movq %%rax, %%rcx\n");
 	popq("rax");
 	store(n->type);
-	out("movq %%rcx, %%rax\n");
+	outi("movq %%rcx, %%rax\n");
 	if(n->Incdec.post == 1) {
 		if(n->Incdec.op == TOKINC)
-			out("dec %%rax\n");
+			outi("dec %%rax\n");
 		else
-			out("inc %%rax\n");
+			outi("inc %%rax\n");
 	}
 }
 
@@ -545,7 +544,7 @@ ident(Node *n)
 
 	sym = n->Ident.sym;
 	if(sym->k == SYMENUM) {
-		out("movq $%d, %%rax\n", sym->Enum.v);
+		outi("movq $%d, %%rax\n", sym->Enum.v);
 		return;
 	}
 	addr(n);
@@ -559,10 +558,10 @@ eif(Node *n)
 
 	end = newlabel();
 	expr(n->If.expr);
-	out("test %%rax, %%rax\n");
-	out("jz .%s\n", n->If.lelse);
+	outi("test %%rax, %%rax\n");
+	outi("jz .%s\n", n->If.lelse);
 	stmt(n->If.iftrue);
-	out("jmp .%s\n", end);
+	outi("jmp .%s\n", end);
 	out(".%s:\n", n->If.lelse);
 	if(n->If.iffalse)
 		stmt(n->If.iffalse);
@@ -577,13 +576,13 @@ efor(Node *n)
 	out(".%s:\n", n->For.lstart);
 	if(n->For.cond) {
 		expr(n->For.cond);
-		out("test %%rax, %%rax\n");
-		out("jz .%s\n", n->For.lend);
+		outi("test %%rax, %%rax\n");
+		outi("jz .%s\n", n->For.lend);
 	}
 	stmt(n->For.stmt);
 	if(n->For.step)
 		expr(n->For.step);
-	out("jmp .%s\n", n->For.lstart);
+	outi("jmp .%s\n", n->For.lstart);
 	out(".%s:\n", n->For.lend);
 }
 
@@ -592,10 +591,10 @@ ewhile(Node *n)
 {
 	out(".%s:\n", n->While.lstart);
 	expr(n->While.expr);
-	out("test %%rax, %%rax\n");
-	out("jz .%s\n", n->While.lend);
+	outi("test %%rax, %%rax\n");
+	outi("jz .%s\n", n->While.lend);
 	stmt(n->While.stmt);
-	out("jmp .%s\n", n->While.lstart);
+	outi("jmp .%s\n", n->While.lstart);
 	out(".%s:\n", n->While.lend);
 }
 
@@ -606,9 +605,9 @@ dowhile(Node *n)
 	stmt(n->DoWhile.stmt);
 	out(".%s:\n", n->DoWhile.lcond);
 	expr(n->DoWhile.expr);
-	out("test %%rax, %%rax\n");
-	out("jz .%s\n", n->DoWhile.lend);
-	out("jmp .%s\n", n->DoWhile.lstart);
+	outi("test %%rax, %%rax\n");
+	outi("jz .%s\n", n->DoWhile.lend);
+	outi("jmp .%s\n", n->DoWhile.lstart);
 	out(".%s:\n", n->DoWhile.lend);
 }
 
@@ -621,14 +620,14 @@ eswitch(Node *n)
 	expr(n->Switch.expr);
 	for(i = 0; i < n->Switch.cases->len; i++) {
 		c = vecget(n->Switch.cases, i);
-		out("mov $%lld, %%rcx\n", c->Case.cond);
-		out("cmp %%rax, %%rcx\n");
-		out("je .%s\n", c->Case.l);
+		outi("mov $%lld, %%rcx\n", c->Case.cond);
+		outi("cmp %%rax, %%rcx\n");
+		outi("je .%s\n", c->Case.l);
 	}
 	if(n->Switch.ldefault) {
-		out("jmp .%s\n", n->Switch.ldefault);
+		outi("jmp .%s\n", n->Switch.ldefault);
 	} else {
-		out("jmp .%s\n", n->Switch.lend);
+		outi("jmp .%s\n", n->Switch.lend);
 	}
 	stmt(n->Switch.stmt);
 	out(".%s:\n", n->Switch.lend);
@@ -644,10 +643,10 @@ cond(Node *n)
 	expr(n->Cond.cond);
 	lfalse = newlabel();
 	lend = newlabel();
-	out("test %%rax, %%rax\n");
-	out("jz .%s\n", lfalse);
+	outi("test %%rax, %%rax\n");
+	outi("jz .%s\n", lfalse);
 	expr(n->Cond.iftrue);
-	out("jmp .%s\n", lend);
+	outi("jmp .%s\n", lend);
 	out(".%s:\n", lfalse);
 	expr(n->Cond.iffalse);
 	out(".%s:\n", lend);
@@ -687,7 +686,7 @@ sel(Node *n)
 	t = n->Sel.operand->type;
 	offset = getstructmember(t, n->Sel.name)->offset;
 	if(offset != 0) {
-		out("add $%d, %%rax\n", offset);
+		outi("add $%d, %%rax\n", offset);
 	}
 	load(n->type);
 }
@@ -700,12 +699,12 @@ idx(Node *n)
 	expr(n->Idx.idx);
 	sz = n->type->size;
 	if(sz != 1) {
-		out("imul $%d, %%rax\n", sz);
+		outi("imul $%d, %%rax\n", sz);
 	}
-	out("push %%rax\n");
+	outi("push %%rax\n");
 	expr(n->Idx.operand);
-	out("pop %%rcx\n");
-	out("addq %%rcx, %%rax\n");
+	outi("pop %%rcx\n");
+	outi("addq %%rcx, %%rax\n");
 	load(n->type);
 }
 
@@ -729,7 +728,7 @@ str(Node *n)
 	out(".%s:\n", l);
 	out(".string %s\n", n->Str.v);
 	out(".text\n");
-	out("leaq .%s(%%rip), %%rax\n", l);
+	outi("leaq .%s(%%rip), %%rax\n", l);
 }
 
 static void
@@ -746,10 +745,10 @@ expr(Node *n)
 		str(n);
 		break;
 	case NSIZEOF:
-		out("movq $%lld, %%rax\n", n->Sizeof.type->size);
+		outi("movq $%lld, %%rax\n", n->Sizeof.type->size);
 		break;
 	case NNUM:
-		out("movq $%lld, %%rax\n", n->Num.v);
+		outi("movq $%lld, %%rax\n", n->Num.v);
 		break;
 	case NIDENT:
 		ident(n);
@@ -813,7 +812,7 @@ stmt(Node *n)
 		eswitch(n);
 		break;
 	case NGOTO:
-		out("jmp .%s\n", n->Goto.l);
+		outi("jmp .%s\n", n->Goto.l);
 		break;
 	case NCASE:
 		out(".%s:\n", n->Case.l);
@@ -849,7 +848,7 @@ emitsym(Sym *sym)
 		if(sym->init) {
 			expr(sym->init);
 			pushq("rax");
-			out("leaq %d(%%rbp), %%rax\n", sym->Local.slot->offset);
+			outi("leaq %d(%%rbp), %%rax\n", sym->Local.slot->offset);
 			popq("rcx");
 			if(!isptr(sym->type) && !isitype(sym->type) && !isstruct(sym->type))
 				errorf("unimplemented init\n");
