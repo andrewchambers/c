@@ -1,7 +1,7 @@
 #include <u.h>
 #include <gc/gc.h>
 #include <ds/ds.h>
-#include "c.h"
+#include "cc.h"
 
 #define MAXINCLUDE 128
 

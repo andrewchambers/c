@@ -1,6 +1,6 @@
 #include "u.h"
 #include "ds/ds.h"
-#include "cc/c.h"
+#include "cc/cc.h"
 
 uint64
 getmaxval(CTy *l)

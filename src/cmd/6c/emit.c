@@ -1,6 +1,6 @@
 #include <u.h>
 #include <ds/ds.h>
-#include <cc/c.h>
+#include <cc/cc.h>
 #include <gc/gc.h>
 
 static void expr(Node *);
@@ -309,7 +309,9 @@ obinop(int op, CTy *t)
 	char *lset;
 	char *lafter;
 	char *opc;
-
+	
+	if(!isitype(t))
+		errorf("unimplemented binary operator type");
 	switch(op) {
 	case '+':
 		outi("addq %%rcx, %%rax\n");

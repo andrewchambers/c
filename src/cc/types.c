@@ -1,7 +1,7 @@
 #include <u.h>
 #include <ds/ds.h>
 #include <gc/gc.h>
-#include "c.h"
+#include "cc.h"
 
 int
 convrank(CTy *t)
@@ -36,6 +36,8 @@ convrank(CTy *t)
 int 
 compatiblestruct(CTy *l, CTy *r)
 {
+	if(l || r)
+		errorf("unimplemented compatiblestruct");
 	/* TODO */
 	return 0;
 }

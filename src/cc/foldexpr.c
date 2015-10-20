@@ -1,7 +1,7 @@
 #include <u.h>
 #include <gc/gc.h>
 #include <ds/ds.h>
-#include "c.h"
+#include "cc.h"
 
 static Const *
 mkconst(char *p, int64 v)

@@ -1,7 +1,7 @@
 #include <u.h>
 #include <gc/gc.h>
 #include <ds/ds.h>
-#include "c.h"
+#include "cc.h"
 
 static Const *constexpr(void);
 static Node  *stmt(void);
@@ -51,9 +51,9 @@ static CTy   *declaratortail(CTy *);
 static Node  *ipromote(Node *);
 static CTy   *usualarithconv(Node **, Node **);
 static Node  *mkcast(SrcPos *, Node *, CTy *);
-static void   expect(int);
+static void   expect(Tokkind);
 static int    islval(Node *);
-static int    isassignop(int);
+static int    isassignop(Tokkind);
 
 
 Tok *tok;
@@ -593,7 +593,7 @@ next(void)
 }
 
 static void
-expect(int kind) 
+expect(Tokkind kind)
 {
 	if(tok->k != kind)
 		errorposf(&tok->pos,"expected %s, got %s", 
@@ -743,7 +743,7 @@ fbody(void)
 
 static int
 issclasstok(Tok *t) {
-	switch(tok->k) {
+	switch(t->k) {
 	case TOKEXTERN:
 	case TOKSTATIC:
 	case TOKREGISTER:
@@ -1411,7 +1411,7 @@ istypename(char *n)
 {
 	Sym *sym;
 
-	sym = lookup(syms, nexttok->v);
+	sym = lookup(syms, n);
 	if(sym && sym->k == SYMTYPE)
 		return 1;
 	return 0;
@@ -1709,7 +1709,7 @@ expr(void)
 }
 
 static int
-isassignop(int k)
+isassignop(Tokkind k)
 {
 	switch(k) {
 	case '=':
@@ -1721,8 +1721,9 @@ isassignop(int k)
 	case TOKORASS:
 	case TOKANDASS:
 		return 1;
+	default:
+		return 0;
 	}
-	return 0;
 }
 
 static Node *
