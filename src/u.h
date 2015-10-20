@@ -3,19 +3,28 @@
 /* This is the only header in the code base
    which is allowed to include other headers.
    Keep the list small. */
+
+/* What were they thinking? Remove crap for self hosting. */
+#ifdef REMOVE_GLIBC_CRAP_FROM_HEADERS
+	#define __attribute__(X)
+	#define __asm__(X)
+	#define __extension__
+	#define __restrict
+#endif
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
 
+#define NORETURN __attribute__((__noreturn__));
+
 typedef int64_t  int64;
 typedef int32_t  int32;
 typedef uint64_t uint64;
 typedef uint32_t uint32;
 typedef unsigned int uint;
-
-#define NORETURN __attribute__((__noreturn__));
 
 void panic(char *fmt, ...) NORETURN;
 
