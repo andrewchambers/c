@@ -1,13 +1,15 @@
 
 int g;
 
-int effect()
+int
+effect()
 {
 	g = 1;
 	return 1;
 }
 
-int main()
+int
+main()
 {
     int x;
     

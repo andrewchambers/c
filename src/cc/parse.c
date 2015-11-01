@@ -644,10 +644,11 @@ params(CTy *fty)
 		if(tok->k != ',')
 			break;
 		next();
-	}
-	if(tok->k == TOKELLIPSIS) {
-		fty->Func.isvararg = 1;
-		next();
+		if(tok->k == TOKELLIPSIS) {
+			fty->Func.isvararg = 1;
+			next();
+			break;
+		}
 	}
 }
 
@@ -2012,6 +2013,42 @@ unaryexpr(void)
 }
 
 static Node *
+call(Node *funclike)
+{
+	Node   *n;
+	CTy    *fty;
+	SrcPos *pos ;
+
+	pos = &tok->pos;
+	expect('(');
+	n = mknode(NCALL, &tok->pos);
+	n->Call.funclike = funclike;
+	n->Call.args = vec();
+	if(isfunc(funclike->type))
+		fty = funclike->type;
+	else if (isfuncptr(funclike->type))
+		fty = funclike->type->Ptr.subty;
+	else
+		errorposf(pos, "cannot call non function");
+	n->type = fty->Func.rtype;
+	if(tok->k != ')') {
+		for(;;) {
+			vecappend(n->Call.args, assignexpr());
+			if(tok->k != ',') {
+				break;
+			}
+			next();
+		}
+	}
+	expect(')');
+	if(n->Call.args->len < fty->Func.params->len)
+		errorposf(pos, "function called with too few args");
+	if(n->Call.args->len > fty->Func.params->len && !fty->Func.isvararg)
+		errorposf(pos, "function called with too many args");
+	return n;
+}
+
+static Node *
 postexpr(void)
 {
 	int   done;
@@ -2070,27 +2107,7 @@ postexpr(void)
 			n1 = n2;
 			break;
 		case '(':
-			n2 = mknode(NCALL, &tok->pos);
-			n2->Call.funclike = n1;
-			n2->Call.args = vec();
-			if(isfunc(n1->type))
-				n2->type = n1->type->Func.rtype;
-			else if (isfuncptr(n1->type))
-				n2->type = n1->type->Ptr.subty->Func.rtype;
-			else
-				errorposf(&tok->pos, "cannot call non function");
-			next();
-			if(tok->k != ')') {
-				for(;;) {
-					vecappend(n2->Call.args, assignexpr());
-					if(tok->k != ',') {
-						break;
-					}
-					next();
-				}
-			}
-			expect(')');
-			n1 = n2;
+			n1 = call(n1);
 			break;
 		case TOKINC:
 			n1 = mkincdec(&tok->pos, TOKINC, 1, n1);
