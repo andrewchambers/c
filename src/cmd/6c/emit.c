@@ -105,10 +105,12 @@ func(Node *f)
 	out(".text\n");
 	out(".globl %s\n", f->Func.name);
 	out("%s:\n", f->Func.name);
-	outi("pushq %%rbp\n");
+	pushq("rbp");
 	outi("movq %%rsp, %%rbp\n");
-	if (f->Func.localsz)
+	if (f->Func.localsz) {
 		outi("sub $%d, %%rsp\n", f->Func.localsz);
+		stackoffset += f->Func.localsz;
+	}
 	v = f->Func.params;
 	for(i = 0; i < v->len; i++) {
 		sym = vecget(v, i);
@@ -143,18 +145,20 @@ call(Node *n)
 		if(!isitype(arg->type) && !isptr(arg->type))
 			errorf("unimplemented arg type.");
 		expr(arg);
-		outi("pushq %%rax\n");
+		pushq("rax");
 	}
 	nintargs = nargs;
 	if(nintargs > 6)
 		nintargs = 6;
 	for(i = 0; i < nintargs; i++)
-		out("popq %%%s\n", intargregs[i]);
+		popq(intargregs[i]);
 	expr(n->Call.funclike);
 	outi("call *%%rax\n");
 	cleanup = 8 * (nargs - nintargs);
-	if(cleanup)
+	if(cleanup) {
 		outi("add $%d, %%rsp\n", cleanup);
+		stackoffset -= cleanup;
+	}
 }
 
 static void
