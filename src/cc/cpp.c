@@ -24,12 +24,14 @@ struct Macro {
 	};
 };
 
-int    nlexers;
+int	nlexers;
 Lexer *lexers[MAXINCLUDE];
 
+static Vec *includedirs;
+
 /* List of tokens inserted into the stream */
-List *toks;
-Map  *macros;
+static List *toks;
+static Map  *macros;
 
 static Tok *ppnoexpand();
 static int64 ifexpr();
@@ -65,7 +67,21 @@ poplex()
 static void
 include()
 {
-	panic("unimplemented");
+	int   n;
+	Tok  *t;
+	char *path;
+
+	t = ppnoexpand();
+	if(t->k != TOKSTR)
+		errorposf(&t->pos, "#include expects a string");
+	path = gcstrdup(t->v);
+	n = strlen(path);
+	path[n - 1] = 0;
+	path++;
+	t = ppnoexpand();
+	if(t->k != TOKDIREND)
+		errorposf(&t->pos, "garbage at end of #include (%s)", tokktostr(t->k));
+	pushlex(path);
 }
 
 static int
@@ -316,10 +332,10 @@ expandfunclike(SrcPos *pos, Macro *m, Vec *params, StrSet *hs)
 Tok *
 pp()
 {
-	int    i, depth;
+	int	i, depth;
 	Macro  *m;
-	Vec    *params, *curparam;
-	Tok    *t1, *t2, *expanded;
+	Vec	*params, *curparam;
+	Tok	*t1, *t2, *expanded;
 	StrSet *hsparen, *hsmacro;
 
 	t1 = ppnoexpand();
@@ -379,8 +395,9 @@ pp()
 }
 
 void
-cppinit(char *path)
+cppinit(char *path, Vec *includes)
 {
+	includedirs = includes;
 	nlexers = 0;
 	toks = list();
 	macros = map();

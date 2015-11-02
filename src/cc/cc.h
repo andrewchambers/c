@@ -417,7 +417,7 @@ void errorf(char *, ...) NORETURN;
 void errorposf(SrcPos *, char *, ...) NORETURN;
 
 /* lex.c cpp.c */
-void  cppinit(char *);
+void  cppinit(char *, Vec *);
 char *tokktostr(Tokkind);
 Tok  *lex(Lexer *);
 Tok  *pp(void);
@@ -470,7 +470,7 @@ int64  getminval(CTy *);
 
 /* Backend */
 
-void   emitinit(FILE *);
-void   emitsym(Sym *);
+void  emitinit(FILE *);
+void  emitsym(Sym *);
 
 

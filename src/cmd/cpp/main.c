@@ -16,7 +16,7 @@ main(int argc, char *argv[])
 
 	if(argc != 2)
 		usage();
-	cppinit(argv[1]);
+	cppinit(argv[1], vec());
 	while(1) {
 		t = pp();
 		if(t->k == TOKEOF)
