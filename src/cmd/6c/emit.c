@@ -11,12 +11,35 @@ char    *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 int      stackoffset;
 StkSlot *memretptr;
 
+typedef enum {
+	DSTR,
+} DataKind;
+
+typedef struct {
+	DataKind k;
+	char     *label;
+	union {
+		struct {
+			char *v;
+		} Str;
+	};
+} Data;
+
+Vec *data;
+
 static FILE *o;
 
 void
 emitinit(FILE *out)
 {
 	o = out;
+	data = vec();
+}
+
+static void
+penddata(Data *d)
+{
+	vecappend(data, d);
 }
 
 static void
@@ -728,12 +751,14 @@ static void
 str(Node *n)
 {
 	char *l;
+	Data *d;
 
 	l = newlabel();
-	out(".data\n");
-	out(".%s:\n", l);
-	out(".string %s\n", n->Str.v);
-	out(".text\n");
+	d = gcmalloc(sizeof(Data));
+	d->label = l;
+	d->k = DSTR;
+	d->Str.v = n->Str.v;
+	penddata(d);
 	outi("leaq .%s(%%rip), %%rax\n", l);
 }
 
@@ -864,6 +889,27 @@ emitsym(Sym *sym)
 	case SYMENUM:
 	case SYMTYPE:
 		panic("internal error");
+	}
+}
+
+void
+emitend()
+{
+	Data *d;
+	int  i;
+	
+	for(i = 0; i < data->len; i++) {
+		d = vecget(data, i);
+		out(".data\n");
+		out(".%s:\n", d->label);
+		switch(d->k) {
+		case DSTR:
+			out(".string %s\n", d->Str.v);
+			break;
+		default:
+			panic("Unknown data type");
+		}
+		out("\n");
 	}
 }
 

@@ -472,5 +472,6 @@ int64  getminval(CTy *);
 
 void  emitinit(FILE *);
 void  emitsym(Sym *);
+void  emitend();
 
 

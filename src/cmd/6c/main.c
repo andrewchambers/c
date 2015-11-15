@@ -38,5 +38,6 @@ main(int argc, char *argv[])
 	cppinit(cfile, includedirs);
 	emitinit(stdout);
 	parse();
+	emitend();
 	return 0;
 }
