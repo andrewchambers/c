@@ -13,6 +13,9 @@ StkSlot *memretptr;
 
 typedef enum {
 	DSTR,
+	DOBJ,
+	DNUM,
+	DZERO,
 } DataKind;
 
 typedef struct {
@@ -22,10 +25,20 @@ typedef struct {
 		struct {
 			char *v;
 		} Str;
+		struct {
+			int   sz;
+			int64 v;
+		} Num;
+		struct {
+			Vec *v;
+		} Obj;
+		struct {
+			int sz;
+		} Zero;
 	};
 } Data;
 
-Vec *data;
+Vec *pendingdata;
 
 static FILE *o;
 
@@ -33,13 +46,13 @@ void
 emitinit(FILE *out)
 {
 	o = out;
-	data = vec();
+	pendingdata = vec();
 }
 
 static void
 penddata(Data *d)
 {
-	vecappend(data, d);
+	vecappend(pendingdata, d);
 }
 
 static void
@@ -870,7 +883,7 @@ emitsym(Sym *sym)
 	case SYMGLOBAL:
 		if(isfunc(sym->type)) {
 			func(sym->init);
-			return;
+			break;
 		}
 		out(".data\n");
 		out(".comm %s, %d, %d\n", sym->name, sym->type->size, sym->type->align);
@@ -890,26 +903,58 @@ emitsym(Sym *sym)
 	case SYMTYPE:
 		panic("internal error");
 	}
+	out("\n");
+}
+
+static void
+data(Data *d)
+{
+	int i;
+
+	if(d->label)
+		out(".%s:\n", d->label);
+	switch(d->k) {
+	case DSTR:
+		out(".string %s\n", d->Str.v);
+		break;
+	case DNUM:
+		switch(d->Num.sz) {
+		case 8:
+			out(".qword");
+			break;
+		case 4:
+			out(".dword");
+			break;
+		case 2:
+			out(".word");
+			break;
+		case 1:
+			out(".byte");
+			break;
+		default:
+			panic("bad number size\n");
+		}
+		out("%lld\n", d->Num.v);
+		break;
+	case DOBJ:
+		for(i = 0; i < d->Obj.v->len; i++)
+			data(vecget(d->Obj.v, i));
+		break;
+	case DZERO:
+	default:
+		panic("Unknown data type");
+	}
+	out("\n");
 }
 
 void
 emitend()
 {
-	Data *d;
 	int  i;
 	
-	for(i = 0; i < data->len; i++) {
-		d = vecget(data, i);
-		out(".data\n");
-		out(".%s:\n", d->label);
-		switch(d->k) {
-		case DSTR:
-			out(".string %s\n", d->Str.v);
-			break;
-		default:
-			panic("Unknown data type");
-		}
-		out("\n");
-	}
+	out("# Emit Data\n");
+	out(".data\n\n");
+	for(i = 0; i < pendingdata->len; i++)
+		data(vecget(pendingdata, i));
 }
 
