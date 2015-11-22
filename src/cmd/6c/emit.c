@@ -9,7 +9,6 @@ static void store(CTy *);
 
 char    *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 int      stackoffset;
-StkSlot *memretptr;
 
 typedef enum {
 	DSTR,
