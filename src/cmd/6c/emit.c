@@ -29,13 +29,56 @@ typedef struct {
 			int64 v;
 		} Num;
 		struct {
-			Vec *v;
+			Vec *vals;
 		} Obj;
 		struct {
 			int sz;
 		} Zero;
 	};
 } Data;
+
+/* XXX this should be in the frontend. */
+static Data *
+inittodata(CTy *t, Node *n)
+{
+	int idx, i, j;
+	Data *d, *subd;
+	CTy  *subty;
+	
+	d = gcmalloc(sizeof(Data));
+	idx = 0;
+	if(isitype(n->type) || isptr(n->type)) {
+		if(n->t != NNUM)
+			errorposf(&n->pos, "expected integer initializer");
+		if(isptr(n->type)) {
+			if(n->Num.v != 0)
+				errorposf(&n->pos, "pointers currently only accepts 0 initializers");
+		}
+		d->k = DNUM;
+		d->Num.sz = t->size;
+		d->Num.v = n->Num.v;
+		return d;
+	}
+	if(isarray(t)) {
+		d->k = DOBJ; 
+		d->Obj.vals = vec();
+		if(n->t != NINIT)
+			errorposf(&n->pos, "expected '{' style initializer for an array");
+		subty = t->Arr.subty;
+		for(i = 0; i < n->Init.inits->len; i++) {
+			subd = inittodata(subty, vecget(n->Init.inits, i));
+			if(subd->k == DOBJ) {
+				/* Flatten nested obj */
+				for(j = 0; j < subd->Obj.vals->len; j++)
+					vecappend(d->Obj.vals, vecget(subd->Obj.vals, j));
+			} else {
+				vecappend(d->Obj.vals, subd);
+			}
+		}		
+		return d;
+	}
+	panic("unimplemented");
+}
 
 Vec *pendingdata;
 
@@ -936,8 +979,8 @@ data(Data *d)
 		out("%lld\n", d->Num.v);
 		break;
 	case DOBJ:
-		for(i = 0; i < d->Obj.v->len; i++)
-			data(vecget(d->Obj.v, i));
+		for(i = 0; i < d->Obj.vals->len; i++)
+			data(vecget(d->Obj.vals, i));
 		break;
 	case DZERO:
 	default:
