@@ -213,6 +213,11 @@ typedef enum {
 	NEXPRSTMT
 } Nodekind;
 
+typedef struct {
+	int offset;
+	Node *n;
+} InitMember;
+
 struct Node {
 	/* type tag, one of the N* types */
 	Nodekind t;

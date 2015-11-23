@@ -37,7 +37,7 @@ static Node  *postexpr(void);
 static Node  *primaryexpr(void);
 static Node  *declorstmt(void);
 static Node  *decl(void);
-static Node  *declinit(void);
+static Node  *declinit(CTy *);
 static void   fbody(void);
 static CTy   *declspecs(int *);
 
@@ -981,7 +981,7 @@ declarator(CTy *basety, char **name, Node **init)
 			if(!init)
 				errorposf(&tok->pos, "unexpected initializer");
 			next();
-			*init = declinit();
+			*init = declinit(t);
 		} else {
 			if(init)
 				*init = 0;
@@ -1519,10 +1519,60 @@ stmt(void)
 }
 
 static Node *
-declinit(void)
+declinit(CTy *t)
 {
-	Node *n;
+	InitMember *initmemb;
+	Node   *n, *subinit;
+	CTy    *subty;
+	SrcPos *initpos;
+	int     i;
+	int     idx;
+	int     offset;
 
+	initpos = &tok->pos;
+	if(isitype(t))
+		return assignexpr();
+
+	if(isarray(t)) {
+		n = mknode(NINIT, initpos);
+		n->type = t;
+		n->Init.inits = vec();
+		subty = t->Arr.subty;
+		idx = 0;
+		offset = 0;
+		expect('{');
+		for(;;) {
+			if(tok->k == '}')
+				break;
+			subinit = declinit(subty);
+			/* Flatten nested inits */
+			if(subinit->t == NINIT) {
+				for(i = 0; i < subinit->Init.inits->len; i++) {
+					initmemb = vecget(subinit->Init.inits, i);
+					initmemb->offset = offset;
+					vecappend(n->Init.inits, initmemb);
+				}
+			} else {
+				initmemb = gcmalloc(sizeof(InitMember));
+				initmemb->offset = offset;
+				initmemb->n = subinit;
+				vecappend(n->Init.inits, initmemb);
+			}
+			idx += 1;
+			offset = idx * subty->size;
+			if(tok->k != ',')
+				break;
+			next();
+			/* XXX sort init members and check for overlap. */
+		}
+		expect('}');
+		/* XXX this needs to be largest index, not current index. */
+		if (idx * subty->size != t->size)
+			errorposf(initpos, "array initializer wrong size for type");
+		return n;
+	}
+	panic("unimplemented");
+	/*
 	if(tok->k != '{')
 		return assignexpr();
 	expect('{');
@@ -1537,14 +1587,12 @@ declinit(void)
 			constexpr();
 			expect(']');
 			expect('=');
-			/* TODO */
 			vecappend(n->Init.inits, declinit());
 			break;
 		case '.':
 			next();
 			expect(TOKIDENT);
 			expect('=');
-			/* TODO */
 			vecappend(n->Init.inits, declinit());
 			break;
 		default:
@@ -1557,6 +1605,7 @@ declinit(void)
 	}
 	expect('}');
 	return n;
+	*/
 }
 
 static Node *
