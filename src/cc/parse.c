@@ -2045,6 +2045,10 @@ castexpr(void)
 		expect('(');
 		ty = typename();
 		expect(')');
+		if(tok->k == '{') {
+			o = declinit(ty);
+			return o;
+		}
 		o = unaryexpr();
 		return mkcast(&t->pos, o, ty);
 	}
