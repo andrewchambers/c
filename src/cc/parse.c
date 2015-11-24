@@ -1548,10 +1548,8 @@ declinit(CTy *t)
 	/* XXX check and insert casts */
 
 	initpos = &tok->pos;
-	if(isitype(t) || isptr(t))
-		return assignexpr();
-
-	if(isarray(t) || isstruct(t)) {
+	if((isarray(t) || isstruct(t))
+		&& tok->k == '{') {
 		/* XXX factor to function */
 		/* XXX duplicate code for struct/array, or combine logic? */
 		n = mknode(NINIT, initpos);
@@ -1614,41 +1612,7 @@ declinit(CTy *t)
 		}
 		return n;
 	}
-	panic("unimplemented");
-	/*
-	if(tok->k != '{')
-		return assignexpr();
-	expect('{');
-	n = mknode(NINIT, &tok->pos);
-	n->Init.inits = vec();
-	for(;;) {
-		if(tok->k == '}')
-			break;
-		switch(tok->k){
-		case '[':
-			next();
-			constexpr();
-			expect(']');
-			expect('=');
-			vecappend(n->Init.inits, declinit());
-			break;
-		case '.':
-			next();
-			expect(TOKIDENT);
-			expect('=');
-			vecappend(n->Init.inits, declinit());
-			break;
-		default:
-			vecappend(n->Init.inits, declinit());
-			break;
-		}
-		if(tok->k != ',')
-			break;
-		next();
-	}
-	expect('}');
-	return n;
-	*/
+	return assignexpr();
 }
 
 static Node *
