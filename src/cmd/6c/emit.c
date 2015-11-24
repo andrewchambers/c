@@ -886,7 +886,13 @@ emititype(Node *prim)
 		out(".quad %d\n", prim->Num.v);
 		return;
 	case 4:
-		out(".dword %d\n", prim->Num.v);
+		out(".long %d\n", prim->Num.v);
+		return;
+	case 2:
+		out(".short %d\n", prim->Num.v);
+		return;
+	case 1:
+		out(".byte %d\n", prim->Num.v);
 		return;
 	default:
 		panic("unimplemented");
@@ -901,7 +907,7 @@ emitglobal(char *name, Node *init)
 	int i;
 
 	out(".data\n");
-	out("_%s:\n", name);
+	out("%s:\n", name);
 	if(isitype(init->type)) {
 		emititype(init);
 		return;
@@ -955,8 +961,6 @@ emitsym(Sym *sym)
 static void
 data(Data *d)
 {
-	int i;
-
 	if(d->label)
 		out(".%s:\n", d->label);
 	switch(d->k) {
@@ -964,29 +968,9 @@ data(Data *d)
 		out(".string %s\n", d->Str.v);
 		break;
 	case DNUM:
-		switch(d->Num.sz) {
-		case 8:
-			out(".qword");
-			break;
-		case 4:
-			out(".dword");
-			break;
-		case 2:
-			out(".word");
-			break;
-		case 1:
-			out(".byte");
-			break;
-		default:
-			panic("bad number size\n");
-		}
-		out("%lld\n", d->Num.v);
-		break;
 	case DOBJ:
-		for(i = 0; i < d->Obj.vals->len; i++)
-			data(vecget(d->Obj.vals, i));
-		break;
 	case DZERO:
+		panic("deprecated");
 	default:
 		panic("Unknown data type");
 	}
