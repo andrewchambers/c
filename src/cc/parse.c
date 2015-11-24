@@ -1521,29 +1521,48 @@ stmt(void)
 static Node *
 declinit(CTy *t)
 {
-	InitMember *initmemb;
+	InitMember   *initmemb;
+	StructMember *structmember;
 	Node   *n, *subinit;
 	CTy    *subty;
 	SrcPos *initpos;
 	int     i;
 	int     idx;
+	int     largestidx;
 	int     offset;
+	int     prevstructmemboffset;
+	/* XXX check and insert casts */
 
 	initpos = &tok->pos;
 	if(isitype(t))
 		return assignexpr();
 
-	if(isarray(t)) {
+	if(isarray(t) || isstruct(t)) {
+		/* XXX factor to function */
+		/* XXX duplicate code for struct/array, or combine logic? */
 		n = mknode(NINIT, initpos);
 		n->type = t;
 		n->Init.inits = vec();
-		subty = t->Arr.subty;
 		idx = 0;
+		largestidx = 0;
 		offset = 0;
+		prevstructmemboffset = 0;
 		expect('{');
 		for(;;) {
 			if(tok->k == '}')
 				break;
+			if(isarray(t)) {
+				subty = t->Arr.subty;
+				offset = idx * subty->size;
+			} else {
+				structmember = getstructmemberidx(t, idx);
+				if(!structmember) {
+					errorposf(initpos, "too many elements in struct initializer");
+				}
+				subty = structmember->type;
+				offset = offset + structmember->offset - prevstructmemboffset;
+				prevstructmemboffset = structmember->offset;
+			}
 			subinit = declinit(subty);
 			/* Flatten nested inits */
 			if(subinit->t == NINIT) {
@@ -1559,16 +1578,19 @@ declinit(CTy *t)
 				vecappend(n->Init.inits, initmemb);
 			}
 			idx += 1;
-			offset = idx * subty->size;
+			if(idx > largestidx) {
+				largestidx = idx;
+			}
 			if(tok->k != ',')
 				break;
 			next();
 			/* XXX sort init members and check for overlap. */
 		}
 		expect('}');
-		/* XXX this needs to be largest index, not current index. */
-		if (idx * subty->size != t->size)
-			errorposf(initpos, "array initializer wrong size for type");
+		if(isarray(t)) {
+			if(largestidx != t->Arr.dim)
+				errorposf(initpos, "array initializer wrong size for type");
+		}
 		return n;
 	}
 	panic("unimplemented");

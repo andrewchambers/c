@@ -906,13 +906,14 @@ emitglobal(char *name, Node *init)
 		emititype(init);
 		return;
 	}
-	if(isarray(init->type)) {
+	if(isarray(init->type) || isstruct(init->type)) {
 		for(i = 0; i < init->Init.inits->len ; i++) {
 			initmemb = vecget(init->Init.inits, i);
 			emititype(initmemb->n);
 		}
 		return;
 	}
+	panic("internal error");
 }
 
 

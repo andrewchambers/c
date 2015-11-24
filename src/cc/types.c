@@ -206,6 +206,18 @@ getstructmember(CTy *t, char *n)
 	return 0;
 }
 
+StructMember *
+getstructmemberidx(CTy *t, int idx)
+{
+	if(isptr(t))
+		t = t->Ptr.subty;
+	if(!isstruct(t))
+		panic("internal error");
+	if(idx >= t->Struct.members->len)
+		return 0;
+	return vecget(t->Struct.members, idx);
+}
+
 void
 addstructmember(SrcPos *pos, CTy *t, char *name, CTy *membt)
 {
