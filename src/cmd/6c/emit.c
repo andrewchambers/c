@@ -877,22 +877,43 @@ stmt(Node *n)
 static void
 emititype(Node *prim)
 {
-	if(!isitype(prim->type))
+	Const *c;
+
+	if(!isitype(prim->type) && !isptr(prim->type))
 		panic("internal error %d");
-	if(prim->t != NNUM)
-		errorposf(&prim->pos, "invalid initializer for integer type");
+	c = foldexpr(prim);
+	if(!c)
+		errorposf(&prim->pos, "not a constant expression");
+	if(c->p) {
+		switch(prim->type->size) {
+		case 8:
+			out(".quad %s + %d\n", c->p, c->v);
+			return;
+		case 4:
+			out(".long %s + %d\n", c->p, c->v);
+			return;
+		case 2:
+			out(".short %s + %d\n", c->p, c->v);
+			return;
+		case 1:
+			out(".byte %s + %d\n", c->p, c->v);
+			return;
+		default:
+			panic("unimplemented");
+		}
+	}
 	switch(prim->type->size) {
 	case 8:
-		out(".quad %d\n", prim->Num.v);
+		out(".quad %d\n", c->v);
 		return;
 	case 4:
-		out(".long %d\n", prim->Num.v);
+		out(".long %d\n", c->v);
 		return;
 	case 2:
-		out(".short %d\n", prim->Num.v);
+		out(".short %d\n", c->v);
 		return;
 	case 1:
-		out(".byte %d\n", prim->Num.v);
+		out(".byte %d\n", c->v);
 		return;
 	default:
 		panic("unimplemented");
@@ -908,7 +929,7 @@ emitglobal(char *name, Node *init)
 
 	out(".data\n");
 	out("%s:\n", name);
-	if(isitype(init->type)) {
+	if(isitype(init->type) || isptr(init->type)) {
 		emititype(init);
 		return;
 	}

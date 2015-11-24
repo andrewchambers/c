@@ -1534,7 +1534,7 @@ declinit(CTy *t)
 	/* XXX check and insert casts */
 
 	initpos = &tok->pos;
-	if(isitype(t))
+	if(isitype(t) || isptr(t))
 		return assignexpr();
 
 	if(isarray(t) || isstruct(t)) {
