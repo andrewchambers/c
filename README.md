@@ -1,9 +1,8 @@
-# A smaller, faster C compiler suite.
-[![Join the chat at https://gitter.im/andrewchambers/c](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/andrewchambers/c?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+# A small, fast C compiler suite.
 
+- Small.
 - Fast.
 - Consistent.
-- Small.
 - High quality.
 - Low complexity.
 - No dependencies.
@@ -12,7 +11,7 @@
 - Just work.
 
 You should be able to get a C compiler, assembler, linker and libc for any
-supported target in less than 30 seconds just by typing make...
+supported target in less than 30 seconds.
 
 ## Building
 
@@ -61,7 +60,7 @@ See tests for what works.
 
 ## Contributing
 
-Contributors welcome, preferrably discuss on gitter before starting something.
+Contributors welcome, preferrably discuss on irc before starting something.
 Even contributing self contained test cases is useful.
 
 ### Code layout
