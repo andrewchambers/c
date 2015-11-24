@@ -217,6 +217,24 @@ getstructmember(CTy *t, char *n)
 	return 0;
 }
 
+int
+memberoffset(CTy *ty, int idx)
+{
+	StructMember *sm;
+
+	if(idx < 0)
+		panic("internal error");
+	if(isstruct(ty)) {
+		sm = getstructmemberidx(ty, idx);
+		if(!sm)
+			panic("internal error");
+		return sm->offset;
+	}
+	if(isarray(ty))
+		return idx * ty->Arr.subty->size;
+	panic("internal error");
+}
+
 StructMember *
 getstructmemberidx(CTy *t, int idx)
 {

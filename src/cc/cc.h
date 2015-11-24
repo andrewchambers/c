@@ -441,6 +441,7 @@ int isarray(CTy *);
 int sametype(CTy *, CTy *);
 int convrank(CTy *);
 int canrepresent(CTy *, CTy *);
+int memberoffset(CTy *ty, int idx);
 StructMember *getstructmember(CTy *, char *);
 StructMember *getstructmemberidx(CTy *t, int idx);
 CTy *structmemberty(CTy *, char *);

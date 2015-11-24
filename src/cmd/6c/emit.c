@@ -752,6 +752,7 @@ str(Node *n)
 	d->init = n;
 	penddata(d);
 	outi("leaq %s(%%rip), %%rax\n", l);
+	outi("movq (%%rax), %%rax\n", l);
 }
 
 static void
@@ -905,7 +906,8 @@ static void
 data(Data *d)
 {
 	InitMember *initmemb;
-	int i;
+	int   i, offset;
+	char *l;
 	
 	if(!d->init) {
 		out(".comm %s, %d, %d\n", d->label, d->type->size, d->type->align);
@@ -914,20 +916,29 @@ data(Data *d)
 	out("%s:\n", d->label);
 	if(ischarptr(d->type))
 	if(d->init->t == NSTR) {
+		l = newlabel();
+		out(".quad %s\n", l);
+		out("%s:\n", l);
 		out(".string %s\n", d->init->Str.v);
 		return;
 	}
-	if(isitype(d->init->type) || isptr(d->init->type)) {
+	if(isitype(d->type) || isptr(d->type)) {
 		itypedata(d->init);
 		return;
 	}
-	if(isarray(d->init->type) || isstruct(d->init->type)) {
+	if(isarray(d->type) || isstruct(d->type)) {
 		if(d->init->t != NINIT)
 			errorposf(&d->init->pos, "array/struct expects a '{' style initializer");
+		offset = 0;
 		for(i = 0; i < d->init->Init.inits->len ; i++) {
 			initmemb = vecget(d->init->Init.inits, i);
+			if(initmemb->offset != offset)
+				out(".fill %d, 1, 0\n", initmemb->offset - offset);
 			itypedata(initmemb->n);
+			offset = initmemb->offset + initmemb->n->type->size;
 		}
+		if(offset < d->type->size)
+			out(".fill %d, 1, 0\n", d->type->size - offset);
 		return;
 	}
 	panic("internal error");

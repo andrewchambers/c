@@ -1038,6 +1038,7 @@ declaratortail(CTy *basety)
 			next();
 			if(tok->k != ']') {
 				p = &tok->pos;
+				/* XXX check for int type? */
 				c = constexpr();
 				if(c->p)
 					errorposf(p, "pointer derived constant in array size");
@@ -1539,7 +1540,8 @@ declinit(CTy *t)
 	StructMember *structmember;
 	Node   *n, *subinit;
 	CTy    *subty;
-	SrcPos *initpos;
+	SrcPos *initpos, *selpos;
+	Const  *arrayidx;
 	int     i;
 	int     idx;
 	int     largestidx;
@@ -1557,35 +1559,42 @@ declinit(CTy *t)
 		n->Init.inits = vec();
 		idx = 0;
 		largestidx = 0;
-		offset = 0;
-		prevstructmemboffset = 0;
 		expect('{');
 		for(;;) {
 			if(tok->k == '}')
 				break;
 			if(isarray(t)) {
 				subty = t->Arr.subty;
-				offset = idx * subty->size;
+				if(tok->k == '[') {
+					selpos = &tok->pos;
+					expect('[');
+					arrayidx = constexpr();
+					expect(']');
+					if(arrayidx->p != 0)
+						errorposf(selpos, "pointer derived constants not allowed in initializer selector");
+					if(arrayidx->v < 0)
+						errorposf(selpos, "negative initializer index not allowed");
+					idx = arrayidx->v;
+					if(largestidx < idx)
+						largestidx = idx;
+				}
 			} else {
 				structmember = getstructmemberidx(t, idx);
-				if(!structmember) {
+				if(!structmember)
 					errorposf(initpos, "too many elements in struct initializer");
-				}
 				subty = structmember->type;
-				offset = offset + structmember->offset - prevstructmemboffset;
-				prevstructmemboffset = structmember->offset;
 			}
 			subinit = declinit(subty);
 			/* Flatten nested inits */
 			if(subinit->t == NINIT) {
 				for(i = 0; i < subinit->Init.inits->len; i++) {
 					initmemb = vecget(subinit->Init.inits, i);
-					initmemb->offset = offset;
+					initmemb->offset = memberoffset(t, idx) + initmemb->offset;
 					vecappend(n->Init.inits, initmemb);
 				}
 			} else {
 				initmemb = gcmalloc(sizeof(InitMember));
-				initmemb->offset = offset;
+				initmemb->offset = memberoffset(t, idx);
 				initmemb->n = subinit;
 				vecappend(n->Init.inits, initmemb);
 			}
