@@ -1,5 +1,3 @@
-#!/bin/sh
-
 set -e
 make -Bs
 
@@ -15,12 +13,13 @@ done
 
 for T in test/error/*.c test/cpperror/*.c
 do
+	PATTERNS=`grep "^PATTERN:" $T | sed s/PATTERN://g`
 	if bin/6c $T > /dev/null 2> $T.stderr
 	then
 		echo $T FAIL
 		exit 1
 	fi
-	for P in `sed -n '/^PATTERN:/s/PATTERN://gp' $T`
+	for P in $PATTERNS
 	do
 		if ! grep -q $P $T.stderr
 		then
