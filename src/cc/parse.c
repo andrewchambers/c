@@ -1542,6 +1542,7 @@ declinit(CTy *t)
 	CTy    *subty;
 	SrcPos *initpos, *selpos;
 	Const  *arrayidx;
+	char   *selname;
 	int     i;
 	int     idx;
 	int     largestidx;
@@ -1578,7 +1579,17 @@ declinit(CTy *t)
 						largestidx = idx;
 				}
 			} else {
-				structmember = getstructmemberidx(t, idx);
+				if(tok->k == '.') {
+					selpos = &tok->pos;
+					selname = tok->v;
+					expect('.');
+					expect(NIDENT);
+					expect('=');
+					idx = structmemberidxfromname(t, selname);
+					if(idx < 0)
+						errorposf(selpos, "struct has no member called %s", selname);
+				}
+				structmember = structmemberfromidx(t, idx);
 				if(!structmember)
 					errorposf(initpos, "too many elements in struct initializer");
 				subty = structmember->type;

@@ -95,7 +95,7 @@ tokktostr(Tokkind t)
 	case '^':           return "^";
 	case '\\':          return "\\";
 	}
-	panic("internal error %d", t);
+	panic("internal error converting token to string: %d", t);
 }
 
 /* makes a token, copies v */

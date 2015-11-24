@@ -199,44 +199,37 @@ isarray(CTy *t)
 	return t->t == CARR;
 }
 
-StructMember *
-getstructmember(CTy *t, char *n)
+int
+structmemberidxfromname(CTy *t, char *name)
 {
 	int i;
 	StructMember *sm;
-	
+
 	if(isptr(t))
 		t = t->Ptr.subty;
 	if(!isstruct(t))
 		panic("internal error");
 	for(i = 0; i < t->Struct.members->len; i++) {
 		sm = vecget(t->Struct.members, i);
-		if(strcmp(n, sm->name) == 0)
-			return sm;
+		if(strcmp(name, sm->name) == 0)
+			return i;
 	}
-	return 0;
-}
-
-int
-memberoffset(CTy *ty, int idx)
-{
-	StructMember *sm;
-
-	if(idx < 0)
-		panic("internal error");
-	if(isstruct(ty)) {
-		sm = getstructmemberidx(ty, idx);
-		if(!sm)
-			panic("internal error");
-		return sm->offset;
-	}
-	if(isarray(ty))
-		return idx * ty->Arr.subty->size;
-	panic("internal error");
+	return -1;
 }
 
 StructMember *
-getstructmemberidx(CTy *t, int idx)
+structmemberfromname(CTy *ty, char *n)
+{
+	int i;
+	
+	i = structmemberidxfromname(ty, n);
+	if(i < 0)
+		return 0;
+	return structmemberfromidx(ty, i);
+}
+
+StructMember *
+structmemberfromidx(CTy *t, int idx)
 {
 	if(isptr(t))
 		t = t->Ptr.subty;
@@ -290,10 +283,28 @@ structmemberty(CTy *t, char *n)
 {
 	StructMember *sm;
 
-	sm = getstructmember(t, n);
+	sm = structmemberfromname(t, n);
 	if(!sm)
 		return 0;
 	return sm->type;
+}
+
+int
+memberoffset(CTy *ty, int idx)
+{
+	StructMember *sm;
+
+	if(idx < 0)
+		panic("internal error");
+	if(isstruct(ty)) {
+		sm = structmemberfromidx(ty, idx);
+		if(!sm)
+			panic("internal error");
+		return sm->offset;
+	}
+	if(isarray(ty))
+		return idx * ty->Arr.subty->size;
+	panic("internal error");
 }
 
 int

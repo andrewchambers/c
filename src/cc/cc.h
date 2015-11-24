@@ -442,8 +442,9 @@ int sametype(CTy *, CTy *);
 int convrank(CTy *);
 int canrepresent(CTy *, CTy *);
 int memberoffset(CTy *ty, int idx);
-StructMember *getstructmember(CTy *, char *);
-StructMember *getstructmemberidx(CTy *t, int idx);
+StructMember *structmemberfromname(CTy *, char *);
+StructMember *structmemberfromidx(CTy *, int );
+int structmemberidxfromname(CTy *, char *);
 CTy *structmemberty(CTy *, char *);
 void addstructmember(SrcPos *, CTy *, char *, CTy *);
 
