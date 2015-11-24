@@ -10,32 +10,12 @@ static void store(CTy *);
 char    *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 int      stackoffset;
 
-typedef enum {
-	DSTR,
-	DOBJ,
-	DNUM,
-	DZERO,
-} DataKind;
-
-typedef struct {
-	DataKind k;
-	char  *label;
-	union {
-		struct {
-			char *v;
-		} Str;
-		struct {
-			int   sz;
-			int64 v;
-		} Num;
-		struct {
-			Vec *vals;
-		} Obj;
-		struct {
-			int sz;
-		} Zero;
-	};
-} Data;
+typedef struct Data Data;
+struct Data {
+	char *label;
+	CTy  *type;
+	Node *init;
+};
 
 Vec *pendingdata;
 
@@ -414,12 +394,12 @@ obinop(int op, CTy *t)
 			break;
 		}
 		outi("cmp %%rcx, %%rax\n");
-		outi("%s .%s\n", opc, lset);
+		outi("%s %s\n", opc, lset);
 		outi("movq $0, %%rax\n");
-		outi("jmp .%s\n", lafter);
-		out(".%s:\n", lset);
+		outi("jmp %s\n", lafter);
+		out("%s:\n", lset);
 		outi("movq $1, %%rax\n");
-		out(".%s:\n", lafter);
+		out("%s:\n", lafter);
 		break;
 	default:
 		errorf("unimplemented binop %d\n", op);
@@ -472,32 +452,32 @@ shortcircuit(Node *n)
 	expr(n->Binop.l);
 	if(n->Binop.op == TOKLAND) {
 		outi("testq %%rax, %%rax\n");
-		outi("jz .%s\n", f);
+		outi("jz %s\n", f);
 	} else if(n->Binop.op == TOKLOR) {
 		outi("testq %%rax, %%rax\n");
-		outi("jnz .%s\n", t);
+		outi("jnz %s\n", t);
 	} else {
 		panic("internal error");
 	}
 	expr(n->Binop.r);
 	if(n->Binop.op == TOKLAND) {
 		outi("testq %%rax, %%rax\n");
-		outi("jz .%s\n", f);
-		outi("jmp .%s\n", t);
+		outi("jz %s\n", f);
+		outi("jmp %s\n", t);
 	} else if(n->Binop.op == TOKLOR) {
 		outi("testq %%rax, %%rax\n");
-		outi("jnz .%s\n", t);
-		outi("jmp .%s\n", f);
+		outi("jnz %s\n", t);
+		outi("jmp %s\n", f);
 	} else {
 		panic("internal error");
 	}
-	out(".%s:\n", t);
+	out("%s:\n", t);
 	outi("mov $1, %%rax\n");
-	outi("jmp .%s\n", e);
-	out(".%s:\n", f);
+	outi("jmp %s\n", e);
+	out("%s:\n", f);
 	outi("xor %%rax, %%rax\n");
-	outi("jmp .%s\n", e);
-	out(".%s:\n", e);
+	outi("jmp %s\n", e);
+	out("%s:\n", e);
 }
 
 static void
@@ -600,13 +580,13 @@ eif(Node *n)
 	end = newlabel();
 	expr(n->If.expr);
 	outi("test %%rax, %%rax\n");
-	outi("jz .%s\n", n->If.lelse);
+	outi("jz %s\n", n->If.lelse);
 	stmt(n->If.iftrue);
-	outi("jmp .%s\n", end);
-	out(".%s:\n", n->If.lelse);
+	outi("jmp %s\n", end);
+	out("%s:\n", n->If.lelse);
 	if(n->If.iffalse)
 		stmt(n->If.iffalse);
-	out(".%s:\n", end);
+	out("%s:\n", end);
 }
 
 static void
@@ -614,42 +594,42 @@ efor(Node *n)
 {
 	if(n->For.init)
 		expr(n->For.init);
-	out(".%s:\n", n->For.lstart);
+	out("%s:\n", n->For.lstart);
 	if(n->For.cond) {
 		expr(n->For.cond);
 		outi("test %%rax, %%rax\n");
-		outi("jz .%s\n", n->For.lend);
+		outi("jz %s\n", n->For.lend);
 	}
 	stmt(n->For.stmt);
 	if(n->For.step)
 		expr(n->For.step);
-	outi("jmp .%s\n", n->For.lstart);
-	out(".%s:\n", n->For.lend);
+	outi("jmp %s\n", n->For.lstart);
+	out("%s:\n", n->For.lend);
 }
 
 static void
 ewhile(Node *n)
 {
-	out(".%s:\n", n->While.lstart);
+	out("%s:\n", n->While.lstart);
 	expr(n->While.expr);
 	outi("test %%rax, %%rax\n");
-	outi("jz .%s\n", n->While.lend);
+	outi("jz %s\n", n->While.lend);
 	stmt(n->While.stmt);
-	outi("jmp .%s\n", n->While.lstart);
-	out(".%s:\n", n->While.lend);
+	outi("jmp %s\n", n->While.lstart);
+	out("%s:\n", n->While.lend);
 }
 
 static void
 dowhile(Node *n)
 {
-	out(".%s:\n", n->DoWhile.lstart);
+	out("%s:\n", n->DoWhile.lstart);
 	stmt(n->DoWhile.stmt);
-	out(".%s:\n", n->DoWhile.lcond);
+	out("%s:\n", n->DoWhile.lcond);
 	expr(n->DoWhile.expr);
 	outi("test %%rax, %%rax\n");
-	outi("jz .%s\n", n->DoWhile.lend);
-	outi("jmp .%s\n", n->DoWhile.lstart);
-	out(".%s:\n", n->DoWhile.lend);
+	outi("jz %s\n", n->DoWhile.lend);
+	outi("jmp %s\n", n->DoWhile.lstart);
+	out("%s:\n", n->DoWhile.lend);
 }
 
 static void
@@ -663,15 +643,15 @@ eswitch(Node *n)
 		c = vecget(n->Switch.cases, i);
 		outi("mov $%lld, %%rcx\n", c->Case.cond);
 		outi("cmp %%rax, %%rcx\n");
-		outi("je .%s\n", c->Case.l);
+		outi("je %s\n", c->Case.l);
 	}
 	if(n->Switch.ldefault) {
-		outi("jmp .%s\n", n->Switch.ldefault);
+		outi("jmp %s\n", n->Switch.ldefault);
 	} else {
-		outi("jmp .%s\n", n->Switch.lend);
+		outi("jmp %s\n", n->Switch.lend);
 	}
 	stmt(n->Switch.stmt);
-	out(".%s:\n", n->Switch.lend);
+	out("%s:\n", n->Switch.lend);
 }
 
 static void
@@ -685,12 +665,12 @@ cond(Node *n)
 	lfalse = newlabel();
 	lend = newlabel();
 	outi("test %%rax, %%rax\n");
-	outi("jz .%s\n", lfalse);
+	outi("jz %s\n", lfalse);
 	expr(n->Cond.iftrue);
-	outi("jmp .%s\n", lend);
-	out(".%s:\n", lfalse);
+	outi("jmp %s\n", lend);
+	out("%s:\n", lfalse);
 	expr(n->Cond.iffalse);
-	out(".%s:\n", lend);
+	out("%s:\n", lend);
 }
 
 static void
@@ -768,10 +748,10 @@ str(Node *n)
 	l = newlabel();
 	d = gcmalloc(sizeof(Data));
 	d->label = l;
-	d->k = DSTR;
-	d->Str.v = n->Str.v;
+	d->type = n->type;
+	d->init = n;
 	penddata(d);
-	outi("leaq .%s(%%rip), %%rax\n", l);
+	outi("leaq %s(%%rip), %%rax\n", l);
 }
 
 static void
@@ -855,14 +835,14 @@ stmt(Node *n)
 		eswitch(n);
 		break;
 	case NGOTO:
-		outi("jmp .%s\n", n->Goto.l);
+		outi("jmp %s\n", n->Goto.l);
 		break;
 	case NCASE:
-		out(".%s:\n", n->Case.l);
+		out("%s:\n", n->Case.l);
 		stmt(n->Case.stmt);
 		break;
 	case NLABELED:
-		out(".%s:\n", n->Labeled.l);
+		out("%s:\n", n->Labeled.l);
 		stmt(n->Labeled.stmt);
 		break;
 	case NEXPRSTMT:
@@ -875,7 +855,7 @@ stmt(Node *n)
 }
 
 static void
-emititype(Node *prim)
+itypedata(Node *prim)
 {
 	Const *c;
 
@@ -922,21 +902,31 @@ emititype(Node *prim)
 }
 
 static void
-emitglobal(char *name, Node *init)
+data(Data *d)
 {
 	InitMember *initmemb;
 	int i;
-
-	out(".data\n");
-	out("%s:\n", name);
-	if(isitype(init->type) || isptr(init->type)) {
-		emititype(init);
+	
+	if(!d->init) {
+		out(".comm %s, %d, %d\n", d->label, d->type->size, d->type->align);
 		return;
 	}
-	if(isarray(init->type) || isstruct(init->type)) {
-		for(i = 0; i < init->Init.inits->len ; i++) {
-			initmemb = vecget(init->Init.inits, i);
-			emititype(initmemb->n);
+	out("%s:\n", d->label);
+	if(ischarptr(d->type))
+	if(d->init->t == NSTR) {
+		out(".string %s\n", d->init->Str.v);
+		return;
+	}
+	if(isitype(d->init->type) || isptr(d->init->type)) {
+		itypedata(d->init);
+		return;
+	}
+	if(isarray(d->init->type) || isstruct(d->init->type)) {
+		if(d->init->t != NINIT)
+			errorposf(&d->init->pos, "array/struct expects a '{' style initializer");
+		for(i = 0; i < d->init->Init.inits->len ; i++) {
+			initmemb = vecget(d->init->Init.inits, i);
+			itypedata(initmemb->n);
 		}
 		return;
 	}
@@ -947,6 +937,8 @@ emitglobal(char *name, Node *init)
 void
 emitsym(Sym *sym)
 {
+	Data *gdata;
+
 	out("# emit sym %s\n", sym->name);
 	switch(sym->k){
 	case SYMGLOBAL:
@@ -954,12 +946,11 @@ emitsym(Sym *sym)
 			func(sym->init);
 			break;
 		}
-		if(sym->init) {
-			emitglobal(sym->name, sym->init);
-			break;
-		}
-		out(".data\n");
-		out(".comm %s, %d, %d\n", sym->name, sym->type->size, sym->type->align);
+		gdata = gcmalloc(sizeof(Data));
+		gdata->label = sym->name;
+		gdata->type = sym->type;
+		gdata->init = sym->init;
+		penddata(gdata);
 		break;
 	case SYMLOCAL:
 		if(sym->init) {
@@ -979,31 +970,11 @@ emitsym(Sym *sym)
 	out("\n");
 }
 
-static void
-data(Data *d)
-{
-	if(d->label)
-		out(".%s:\n", d->label);
-	switch(d->k) {
-	case DSTR:
-		out(".string %s\n", d->Str.v);
-		break;
-	case DNUM:
-	case DOBJ:
-	case DZERO:
-		panic("deprecated");
-	default:
-		panic("Unknown data type");
-	}
-	out("\n");
-}
-
 void
 emitend()
 {
 	int  i;
 	
-	out("# Emit Data\n");
 	out(".data\n\n");
 	for(i = 0; i < pendingdata->len; i++)
 		data(vecget(pendingdata, i));

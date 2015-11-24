@@ -165,6 +165,17 @@ isptr(CTy *t)
 }
 
 int
+ischarptr(CTy *t)
+{
+	if(!isptr(t))
+		return 0;
+	if(t->Ptr.subty->t != CPRIM)
+		return 0;
+	return t->Ptr.subty->Prim.type == PRIMCHAR;
+}
+
+
+int
 isfunc(CTy *t)
 {
 	return t->t == CFUNC;

@@ -433,6 +433,7 @@ int isftype(CTy *);
 int isitype(CTy *);
 int isarithtype(CTy *);
 int isptr(CTy *);
+int ischarptr(CTy *t);
 int isfunc(CTy *);
 int isfuncptr(CTy *);
 int isstruct(CTy *);

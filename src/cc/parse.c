@@ -85,7 +85,7 @@ newlabel(void)
 	char *s;
 	int   n;
 
-	n = snprintf(0, 0, "L%d", labelcount);
+	n = snprintf(0, 0, ".L%d", labelcount);
 	if(n < 0)
 		panic("internal error");
 	n += 1;
