@@ -1518,10 +1518,24 @@ stmt(void)
 	}
 }
 
+static int
+compareinits(const void *lvoid, const void *rvoid)
+{
+	const InitMember *l, *r;
+	
+	l = lvoid;
+	r = rvoid;
+	if(l->offset > r->offset)
+		return 1;
+	if(l->offset < r->offset)
+		return -1;
+	return 0;
+}
+
 static Node *
 declinit(CTy *t)
 {
-	InitMember   *initmemb;
+	InitMember   *initmemb, *nextinitmemb;
 	StructMember *structmember;
 	Node   *n, *subinit;
 	CTy    *subty;
@@ -1584,7 +1598,14 @@ declinit(CTy *t)
 			if(tok->k != ',')
 				break;
 			next();
-			/* XXX sort init members and check for overlap. */
+			qsort(n->Init.inits->d, n->Init.inits->len, sizeof(void*), compareinits);
+			for(i = 0; i < n->Init.inits->len - 1; i++) {
+				initmemb = vecget(n->Init.inits, i);
+				nextinitmemb = vecget(n->Init.inits, i + 1);
+				if(nextinitmemb->offset < initmemb->offset + initmemb->n->type->size) {
+					errorposf(&initmemb->n->pos, "fields in init overlaps with another field");
+				}
+			}
 		}
 		expect('}');
 		if(isarray(t)) {
