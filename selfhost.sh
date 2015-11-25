@@ -3,21 +3,21 @@
 set -e
 
 GCCSRC="src/cc/lex.c
-	src/cc/parse.c
-	src/cc/types.c
 	src/cc/dbg.c
 	src/cc/cpp.c
 	src/cc/foldexpr.c
 	src/cc/error.c
 	src/panic.c
-	src/cmd/6c/main.c
 	src/cmd/6c/emit.c
 	src/cmd/6c/frontend.c
+	src/gc/gc.c
+	src/cc/types.c
+	src/cmd/6c/main.c
+	src/cc/parse.c"
+SELFHOSTSRC="src/ds/list.c
 	src/ds/map.c
 	src/ds/vec.c
-	src/ds/strset.c
-	src/gc/gc.c"
-SELFHOSTSRC="src/ds/list.c"
+	src/ds/strset.c"
 SELFHOSTOBJDIR=lib/selfhostobj
 
 mkdir -p $SELFHOSTOBJDIR
@@ -37,4 +37,4 @@ do
 done
 
 mkdir -p bin/
-gcc $SELFHOSTOBJDIR/*.o -o bin/gen1
+gcc $SELFHOSTOBJDIR/*.o -o bin/selfhosted

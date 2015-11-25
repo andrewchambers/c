@@ -54,8 +54,16 @@ foldbinop(Node *n)
 			if(r->v == 0)
 				return 0;
 			return mkconst(0, l->v / r->v);
+		case TOKSHL:
+			if(l->p || r->p)
+				return 0;
+			return mkconst(0, l->v << r->v);
+		case '|':
+			if(l->p || r->p)
+				return 0;
+			return mkconst(0, l->v | r->v);
 		default:
-			panic("unimplemented fold binop %d", n->Binop.op);
+			errorposf(&n->pos, "unimplemented fold binop %d", n->Binop.op);
 		}
 	}
 	panic("unimplemented fold binop");
@@ -70,7 +78,7 @@ foldaddr(Node *n)
 
 	if(n->Unop.operand->t == NINIT) {
 		l = newlabel();
-		penddata(l, n->Unop.operand->type, n->Unop.operand);
+		penddata(l, n->Unop.operand->type, n->Unop.operand, 0);
 		return mkconst(l, 0);
 	}
 	if(n->Unop.operand->t != NIDENT)

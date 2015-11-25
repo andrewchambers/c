@@ -90,7 +90,7 @@ newlabel(void)
 		panic("internal error");
 	n += 1;
 	s = gcmalloc(n);
-	if(snprintf(s, n, "L%d", labelcount) < 0)
+	if(snprintf(s, n, ".L%d", labelcount) < 0)
 		panic("internal error");
 	labelcount++;
 	return s;
@@ -435,9 +435,16 @@ mkbinop(SrcPos *p, int op, Node *l, Node *r)
 	Node *n;
 	CTy  *t;
 	
-	l = ipromote(l);
-	r = ipromote(r);
-	t = usualarithconv(&l, &r);
+	t = 0;
+	if(!isptr(l->type))
+		l = ipromote(l);
+	if(!isptr(r->type))
+		r = ipromote(r);
+	if(!isptr(l->type) && !isptr(r->type))
+		t = usualarithconv(&l, &r);
+	/* Other relationals? */
+	if(op == TOKEQL || op == TOKNEQ)
+		t = cint;
 	n = mknode(NBINOP, p);
 	n->Binop.op = op;
 	n->Binop.l = l;
@@ -504,7 +511,8 @@ mkunop(SrcPos *p, int op, Node *o)
 		n->type = o->type->Ptr.subty;
 		break;
 	default:
-		o = ipromote(o);
+		if(isitype(o->type))
+			o = ipromote(o);
 		n->type = o->type;
 		break;
 	}
@@ -633,6 +641,10 @@ params(CTy *fty)
 	fty->Func.isvararg = 0;
 	if(tok->k == ')')
 		return;
+	if(tok->k == TOKVOID && nexttok->k == ')') {
+		next();
+		return;
+	}
 	for(;;) {
 		pos = &tok->pos;
 		t = declspecs(&sclass);

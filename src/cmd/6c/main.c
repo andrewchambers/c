@@ -3,7 +3,7 @@
 #include <cc/cc.h>
 
 void
-usage(void)
+usage()
 {
 	puts("Usage: 6c file.c");
 	exit(1);

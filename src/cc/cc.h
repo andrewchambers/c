@@ -419,6 +419,7 @@ struct Data {
 	char *label;
 	CTy  *type;
 	Node *init;
+	int   isglobal;
 };
 
 /* dbg.c */
@@ -488,7 +489,7 @@ int64  getminval(CTy *);
 
 void  emitinit(FILE *);
 void  emitsym(Sym *);
-void  penddata(char *, CTy *, Node *);
+void  penddata(char *, CTy *, Node *, int);
 void  emitend();
 
 

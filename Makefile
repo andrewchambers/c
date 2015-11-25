@@ -26,9 +26,25 @@ all:  bin/6c \
       bin/cpp \
       bin/abifuzz
 
-.PHONY: all clean test
+.PHONY: all clean test selfhost
 
-test: all
+test:
+	make clean
+	make all
+	./test.sh
+	
+selfhost:
+	make clean
+	make all
+	./test.sh
+	./selfhost.sh
+	mv ./bin/selfhosted ./bin/6c
+	./test.sh
+	./selfhost.sh
+	mv ./bin/selfhosted ./bin/6c
+	./test.sh
+	./selfhost.sh
+	mv ./bin/selfhosted ./bin/6c
 	./test.sh
 
 .c.o: $(HFILES)

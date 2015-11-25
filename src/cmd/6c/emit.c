@@ -10,8 +10,6 @@ static void store(CTy *);
 char    *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 int      stackoffset;
 
-
-
 Vec *pendingdata;
 
 static FILE *o;
@@ -24,7 +22,7 @@ emitinit(FILE *out)
 }
 
 void
-penddata(char *label, CTy *ty, Node *init)
+penddata(char *label, CTy *ty, Node *init, int isglobal)
 {
 	Data *d;
 
@@ -32,6 +30,7 @@ penddata(char *label, CTy *ty, Node *init)
 	d->label = label;
 	d->type = ty;
 	d->init = init;
+	d->isglobal = isglobal;
 	vecappend(pendingdata, d);
 }
 
@@ -110,7 +109,7 @@ popq(char *reg)
 }
 
 static void
-func(Node *f)
+func(Node *f, char *label, int isglobal)
 {
 	Vec *v;
 	Sym *sym;
@@ -119,8 +118,10 @@ func(Node *f)
 	calcslotoffsets(f);
 	out("\n");
 	out(".text\n");
-	out(".globl %s\n", f->Func.name);
-	out("%s:\n", f->Func.name);
+	out("# function %s\n", f->Func.name);
+	if(isglobal)
+		out(".globl %s\n", label);
+	out("%s:\n", label);
 	pushq("rbp");
 	outi("movq %%rsp, %%rbp\n");
 	if (f->Func.localsz) {
@@ -130,7 +131,7 @@ func(Node *f)
 	v = f->Func.params;
 	for(i = 0; i < v->len; i++) {
 		sym = vecget(v, i);
-		if(!isitype(sym->type) && !isptr(sym->type))
+		if(!isitype(sym->type) && !isptr(sym->type) && !isarray(sym->type))
 			errorposf(&f->pos, "unimplemented arg type");
 		if(i < 6) {
 			outi("movq %%%s, %d(%%rbp)\n", intargregs[i], sym->Local.slot->offset);
@@ -158,8 +159,8 @@ call(Node *n)
 	/* Push args in reverse order */
 	while(i-- != 0) {
 		arg = vecget(args, i);
-		if(!isitype(arg->type) && !isptr(arg->type))
-			errorf("unimplemented arg type.");
+		if(!isitype(arg->type) && !isptr(arg->type) && !isarray(arg->type) && !isfunc(arg->type))
+			errorposf(&arg->pos, "unimplemented arg type\n");
 		expr(arg);
 		pushq("rax");
 	}
@@ -182,10 +183,12 @@ ereturn(Node *r)
 {
 	CTy *ty;
 	
-	ty = r->Return.expr->type;
-	if(!isitype(ty) && !isptr(ty))
-		errorposf(&r->pos, "unimplemented return type");
-	expr(r->Return.expr);
+	if(r->Return.expr) {
+		ty = r->Return.expr->type;
+		if(!isitype(ty) && !isptr(ty))
+			errorposf(&r->pos, "unimplemented return type");
+		expr(r->Return.expr);
+	}
 	/* No need to cleanup with leave */
 	outi("leave\n");
 	outi("ret\n");
@@ -330,8 +333,8 @@ obinop(int op, CTy *t)
 	char *lafter;
 	char *opc;
 	
-	if(!isitype(t))
-		errorf("unimplemented binary operator type");
+	if(!isitype(t) && !isptr(t))
+		panic("unimplemented binary operator type\n");
 	switch(op) {
 	case '+':
 		outi("addq %%rcx, %%rax\n");
@@ -434,6 +437,7 @@ assign(Node *n)
 	expr(r);
 	outi("movq %%rax, %%rcx\n");
 	popq("rax");
+	/* XXX this type is not correct for comparison ops works anyway, but should be changed*/
 	obinop(op, n->type);
 	outi("movq %%rax, %%rcx\n");
 	popq("rax");
@@ -746,7 +750,7 @@ str(Node *n)
 	char *l;
 
 	l = newlabel();
-	penddata(l, n->type, n);
+	penddata(l, n->type, n, 0);
 	outi("leaq %s(%%rip), %%rax\n", l);
 	outi("movq (%%rax), %%rax\n", l);
 }
@@ -948,10 +952,10 @@ emitsym(Sym *sym)
 	switch(sym->k){
 	case SYMGLOBAL:
 		if(isfunc(sym->type)) {
-			func(sym->init);
+			func(sym->init, sym->Global.label, sym->Global.sclass == SCGLOBAL);
 			break;
 		}
-		penddata(sym->name, sym->type, sym->init);
+		penddata(sym->Global.label, sym->type, sym->init, sym->Global.sclass == SCGLOBAL);
 		break;
 	case SYMLOCAL:
 		if(sym->init) {
