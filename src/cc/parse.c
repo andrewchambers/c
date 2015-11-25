@@ -204,10 +204,9 @@ islval(Node *n)
 			return 1;
 		return 0;
 	case NIDENT:
-		return 1;
 	case NIDX:
-		return 1;
 	case NSEL:
+	case NINIT:
 		return 1;
 	default:
 		return 0;

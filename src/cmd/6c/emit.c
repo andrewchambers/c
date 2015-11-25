@@ -10,12 +10,7 @@ static void store(CTy *);
 char    *intargregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 int      stackoffset;
 
-typedef struct Data Data;
-struct Data {
-	char *label;
-	CTy  *type;
-	Node *init;
-};
+
 
 Vec *pendingdata;
 
@@ -28,9 +23,15 @@ emitinit(FILE *out)
 	pendingdata = vec();
 }
 
-static void
-penddata(Data *d)
+void
+penddata(char *label, CTy *ty, Node *init)
 {
+	Data *d;
+
+	d = gcmalloc(sizeof(Data));
+	d->label = label;
+	d->type = ty;
+	d->init = init;
 	vecappend(pendingdata, d);
 }
 
@@ -743,14 +744,9 @@ static void
 str(Node *n)
 {
 	char *l;
-	Data *d;
 
 	l = newlabel();
-	d = gcmalloc(sizeof(Data));
-	d->label = l;
-	d->type = n->type;
-	d->init = n;
-	penddata(d);
+	penddata(l, n->type, n);
 	outi("leaq %s(%%rip), %%rax\n", l);
 	outi("movq (%%rax), %%rax\n", l);
 }
@@ -948,8 +944,6 @@ data(Data *d)
 void
 emitsym(Sym *sym)
 {
-	Data *gdata;
-
 	out("# emit sym %s\n", sym->name);
 	switch(sym->k){
 	case SYMGLOBAL:
@@ -957,11 +951,7 @@ emitsym(Sym *sym)
 			func(sym->init);
 			break;
 		}
-		gdata = gcmalloc(sizeof(Data));
-		gdata->label = sym->name;
-		gdata->type = sym->type;
-		gdata->init = sym->init;
-		penddata(gdata);
+		penddata(sym->name, sym->type, sym->init);
 		break;
 	case SYMLOCAL:
 		if(sym->init) {

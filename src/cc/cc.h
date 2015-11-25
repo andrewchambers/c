@@ -414,6 +414,13 @@ struct Const {
 	int64  v;
 };
 
+typedef struct Data Data;
+struct Data {
+	char *label;
+	CTy  *type;
+	Node *init;
+};
+
 /* dbg.c */
 void dumpty(CTy *);
 
@@ -481,6 +488,7 @@ int64  getminval(CTy *);
 
 void  emitinit(FILE *);
 void  emitsym(Sym *);
+void  penddata(char *, CTy *, Node *);
 void  emitend();
 
 

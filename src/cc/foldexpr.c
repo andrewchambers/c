@@ -65,8 +65,14 @@ foldbinop(Node *n)
 static Const *
 foldaddr(Node *n)
 {
-	Sym *sym;
+	char *l;
+	Sym  *sym;
 
+	if(n->Unop.operand->t == NINIT) {
+		l = newlabel();
+		penddata(l, n->Unop.operand->type, n->Unop.operand);
+		return mkconst(l, 0);
+	}
 	if(n->Unop.operand->t != NIDENT)
 		return 0;
 	sym = n->Unop.operand->Ident.sym;
