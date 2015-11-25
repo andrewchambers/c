@@ -1546,7 +1546,6 @@ declinit(CTy *t)
 	int     i;
 	int     idx;
 	int     largestidx;
-	int     offset;
 	/* XXX check and insert casts */
 	initpos = &tok->pos;
 	if((isarray(t) || isstruct(t))
@@ -1581,13 +1580,13 @@ declinit(CTy *t)
 			} else {
 				if(tok->k == '.') {
 					selpos = &tok->pos;
-					selname = tok->v;
 					expect('.');
-					expect(NIDENT);
+					selname = tok->v;
+					expect(TOKIDENT);
 					expect('=');
 					idx = structmemberidxfromname(t, selname);
 					if(idx < 0)
-						errorposf(selpos, "struct has no member called %s", selname);
+						errorposf(selpos, "struct has no member '%s'", selname);
 				}
 				structmember = structmemberfromidx(t, idx);
 				if(!structmember)
