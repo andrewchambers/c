@@ -30,5 +30,5 @@ gcmalloc(int n)
 void
 gc()
 {
-	abort();
+	panic("gc unimplemented");
 }

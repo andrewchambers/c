@@ -23,7 +23,8 @@ $ make
 
 ## Testing
 ```
-$ bash test.sh
+$ make test
+$ make selfhost # partial self hosting
 ```
 
 ## Plan
