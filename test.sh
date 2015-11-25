@@ -1,11 +1,13 @@
 #!/bin/sh
 
 set -e
-make -Bs
 
 for T in test/execute/*.c test/cpp/*.c test/bugs/*.c
 do
-	if ! ( bin/6c $T > $T.s && bin/6a $T.s $T.o && gcc $T.o -o $T.bin && $T.bin > /dev/null )
+	if ! ( bin/6c $T > $T.s &&
+           gcc -c $T.s -o $T.o &&
+           gcc $T.o -o $T.bin && 
+           $T.bin > /dev/null )
 	then
 		echo $T FAIL
 		exit 1

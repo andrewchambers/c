@@ -1,0 +1,2 @@
+This directory contains stubbed headers to aid in bootstrapping the compiler.
+It should be removed when the compiler can handle a real C library.

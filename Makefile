@@ -15,20 +15,21 @@ DSO    = src/ds/list.o \
          src/ds/map.o \
          src/ds/vec.o \
          src/ds/strset.o
-LIBO   = src/u.o $(CCO) $(GCO) $(DSO)
+LIBO   = src/panic.o $(CCO) $(GCO) $(DSO)
 LIBA   = lib/libcompiler.a
 CPPO   = src/cmd/cpp/main.o 
 _6CO   = src/cmd/6c/emit.o \
          src/cmd/6c/frontend.o \
          src/cmd/6c/main.o 
-_6AO   = src/cmd/6a/main.o 
 ABIFZO = src/cmd/abifuzz/main.o
 all:  bin/6c \
-      bin/6a \
       bin/cpp \
       bin/abifuzz
 
-.PHONY: all clean
+.PHONY: all clean test
+
+test: all
+	./test.sh
 
 .c.o: $(HFILES)
 	$(CC) $(CFLAGS) -Isrc/ -o $@ -c $<
@@ -36,10 +37,6 @@ all:  bin/6c \
 bin/6c: $(_6CO) $(LIBA)
 	@ mkdir -p bin
 	$(CC) $(LDFLAGS) $(_6CO) $(LIBA) -o $@
-
-bin/6a: $(_6AO) $(LIBA)
-	@ mkdir -p bin
-	$(CC) $(LDFLAGS) $(_6AO) $(LIBA) -o $@
 
 bin/cpp:  $(CPPO) $(LIBA)
 	@ mkdir -p bin
@@ -54,5 +51,5 @@ $(LIBA): $(LIBO)
 	$(AR) rcs $(LIBA) $(LIBO)
 
 clean:
-	rm -rf $(LIBA) $(LIBO) $(CPPO) $(_6CO) $(_6AO) $(ABIFZO) bin
+	rm -rf $(LIBO) $(CPPO) $(_6CO) $(ABIFZO) lib bin
 
