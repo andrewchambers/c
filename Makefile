@@ -4,7 +4,6 @@ CFLAGS  = -std=c89 -g -Wall -Wextra -D_DEFAULT_SOURCE
 # NOTE if one of these headers does not exist, the wildcard rule fails.
 HFILES = src/u.h src/cc/cc.h src/ds/ds.h src/gc/gc.h
 CCO    = src/cc/cpp.o \
-         src/cc/dbg.o \
          src/cc/lex.o \
          src/cc/parse.o \
          src/cc/types.o \

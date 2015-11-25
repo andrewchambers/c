@@ -3,7 +3,6 @@
 set -e
 
 GCCSRC="src/cc/lex.c
-	src/cc/dbg.c
 	src/cc/cpp.c
 	src/cc/foldexpr.c
 	src/cc/error.c
