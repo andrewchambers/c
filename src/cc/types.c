@@ -199,45 +199,30 @@ isarray(CTy *t)
 	return t->t == CARR;
 }
 
-int
-structmemberidxfromname(CTy *t, char *name)
+StructField *
+structfieldfromname(CTy *t, char *name)
 {
-	int i;
+	panic("unimplemented");
+	return 0;
+}
+
+StructField *
+structfieldfromidx(CTy *ty, int idx)
+{
+	panic("unimplemented");
+	return 0;
+}
+
+static void
+newstructmember(char *name, int offset, CTy *membt)
+{
 	StructMember *sm;
 
-	if(isptr(t))
-		t = t->Ptr.subty;
-	if(!isstruct(t))
-		panic("internal error");
-	for(i = 0; i < t->Struct.members->len; i++) {
-		sm = vecget(t->Struct.members, i);
-		if(strcmp(name, sm->name) == 0)
-			return i;
-	}
-	return -1;
-}
-
-StructMember *
-structmemberfromname(CTy *ty, char *n)
-{
-	int i;
-	
-	i = structmemberidxfromname(ty, n);
-	if(i < 0)
-		return 0;
-	return structmemberfromidx(ty, i);
-}
-
-StructMember *
-structmemberfromidx(CTy *t, int idx)
-{
-	if(isptr(t))
-		t = t->Ptr.subty;
-	if(!isstruct(t))
-		panic("internal error");
-	if(idx >= t->Struct.members->len)
-		return 0;
-	return vecget(t->Struct.members, idx);
+	sm = gcmalloc(sizeof(StructMember));
+	sm->name = name;
+	sm->type = membt;
+	sm->offset = offset;
+	return sm;
 }
 
 void
@@ -246,70 +231,63 @@ addstructmember(SrcPos *pos, CTy *t, char *name, CTy *membt)
 	StructMember *sm, *subsm;
 	int i, sz;
 
-	sm = gcmalloc(sizeof(StructMember));
-	sm->name = name;
-	sm->type = membt;
-	if(!isstruct(t))
-		panic("internal error");
-	if(sm->name == 0 && isstruct(sm->type)) {
-		for(i = 0; i < sm->type->Struct.members->len; i++) {
-			subsm = vecget(sm->type->Struct.members, i);
-			addstructmember(pos, t, subsm->name, subsm->type);
-		}
-		return;
-	}
-	if(sm->name) {
-		for(i = 0; i < t->Struct.members->len; i++) {
-			subsm = vecget(t->Struct.members, i);
-			if(subsm->name)
-			if(strcmp(sm->name, subsm->name) == 0)
-				errorposf(pos ,"struct already has a member named %s", sm->name);
-		}
-	}
-	if(t->align < membt->align)
-		t->align = membt->align;
-	if(t->Struct.isunion) {
-		if(t->size < sm->type->size)
-			t->size = sm->type->size;
-		sm->offset = 0;
-	} else {
-		sz = t->size;
-		if(sz % membt->align)
-			sz = sz + membt->align - (sz % membt->align);
-		sm->offset = sz;
-		sz += sm->type->size;
-		t->size = sz;
-	}
+	newstructmember(name, -1, t);
 	vecappend(t->Struct.members, sm);
 }
 
-CTy *
-structmemberty(CTy *t, char *n)
+static int
+align(int v, int a)
 {
-	StructMember *sm;
-
-	sm = structmemberfromname(t, n);
-	if(!sm)
-		return 0;
-	return sm->type;
+	if(v % a)
+		return v + a - (v % a);
+	return v;
 }
 
-int
-memberoffset(CTy *ty, int idx)
+static void
+finalizestruct(CTy *t)
 {
-	StructMember *sm;
-
-	if(idx < 0)
-		panic("internal error");
-	if(isstruct(ty)) {
-		sm = structmemberfromidx(ty, idx);
-		if(!sm)
-			panic("internal error");
-		return sm->offset;
+	StructMember *sm, *subfield;
+	int i, j, k, curoffset;
+	Vec *curv, Vec *subfields;
+	
+	if(t->isunion) {
+		panic("...");
 	}
-	if(isarray(ty))
-		return idx * ty->Arr.subty->size;
-	panic("internal error");
+	
+	/* calc alignment */
+	for(i = 0 ; i < t->Struct.Members->len; i++) {
+		sm = vecget(t->Struct.members, i);
+		t->align = align(t->align ,sm->type->align);
+	}
+	/* calc member offsets */
+	curoffset = 0;
+	for(i = 0 ; i < t->Struct.Members->len; i++) {
+		sm = vecget(t->Struct.members, i);
+		curoffset = align(curoffset, sm->type->align);
+		sm->offset = curoffset;
+		curoffset += sm->type->size;
+	}
+	/* Calc name export fields */
+	for(i = 0; i < t->Struct.Members->len; i++) {
+		sm = vecget(t->Struct.members, i);
+		curv = vec();
+		vecappend(t->Struct.fields, curv);
+		if((isstruct(sm->type) && sm->name) || !isstruct(sm->type)) {
+			vecappend(curv, newstructmember(sm->name, sm->offset, sm->type));
+			continue;
+		}
+		/* isstruct && !sm->name */
+		if(sm->type->Struct.isunion) {
+			panic("...");
+		}
+		for(j = 0; j < sm->type->Struct.fields->len; j++) {
+			subfields = vecget(sm->type->Struct.fields, j);
+			for(k = 0; k < subfields->len; k++) {
+				subfield = vecget(subfields, k);
+				vecappend()
+			}
+		}
+	}
 }
 
 int
