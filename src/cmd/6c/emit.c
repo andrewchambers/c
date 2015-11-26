@@ -292,7 +292,7 @@ addr(Node *n)
 		break;
 	case NSEL:
 		expr(n->Sel.operand);
-		sm = structmemberfromname(n->Sel.operand->type, n->Sel.name);
+		sm = structfieldfromname(n->Sel.operand->type, n->Sel.name);
 		if(!sm)
 			panic("internal error");
 		outi("addq $%d, %%rax\n", sm->offset);
@@ -710,7 +710,7 @@ sel(Node *n)
 
 	expr(n->Sel.operand);
 	t = n->Sel.operand->type;
-	offset = structmemberfromname(t, n->Sel.name)->offset;
+	offset = structfieldfromname(t, n->Sel.name)->offset;
 	if(offset != 0) {
 		outi("add $%d, %%rax\n", offset);
 	}

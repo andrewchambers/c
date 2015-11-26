@@ -163,6 +163,7 @@ struct CTy {
 			int   isunion;
 			char *name;
 			Vec  *members;
+			Vec  *exports;
 		} Struct;
 		struct {
 			Vec  *members;
@@ -449,10 +450,11 @@ int isarray(CTy *);
 int sametype(CTy *, CTy *);
 int convrank(CTy *);
 int canrepresent(CTy *, CTy *);
-int memberoffset(CTy *ty, int idx);
 StructMember *structfieldfromname(CTy *, char *);
+int structfieldidxfromname(CTy *, char *);
 StructMember *structfieldfromidx(CTy *, int );
 void addtostruct(SrcPos *, CTy *, char *, CTy *);
+void finalizestruct(CTy *);
 
 /* parse.c */
 void  parse(void);

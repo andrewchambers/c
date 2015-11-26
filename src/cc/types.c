@@ -199,21 +199,71 @@ isarray(CTy *t)
 	return t->t == CARR;
 }
 
-StructField *
+StructMember *
 structfieldfromname(CTy *t, char *name)
 {
-	panic("unimplemented");
+	StructMember *sm;
+	int i;
+	
+	for(i = 0; i < t->Struct.exports->len; i++) {
+		sm = vecget(t->Struct.exports, i);
+		if(!sm->name)
+			continue;
+		if(strcmp(name, sm->name) == 0)
+			return sm;
+	}
 	return 0;
 }
 
-StructField *
-structfieldfromidx(CTy *ty, int idx)
+StructMember *
+structfieldfromidx(CTy *t, int idx)
 {
-	panic("unimplemented");
+	StructMember *sm, *nextsm;
+	int i, curidx, nexti;
+	
+	curidx = 0;
+	i = 0;
+	while(i < t->Struct.exports->len) {
+		sm = vecget(t->Struct.exports, i);
+		if(curidx == idx)
+			return sm;
+		nexti = i;
+		for(;;) {
+			if(nexti == t->Struct.exports->len)
+				break;
+			nextsm = vecget(t->Struct.exports, nexti);
+			if(nextsm->offset != sm->offset)
+				break;
+			nexti++;
+		}
+		curidx++;
+		i = nexti;
+	}
 	return 0;
 }
 
-static void
+int 
+structfieldidxfromname(CTy *t, char *name)
+{
+	StructMember *sm, *sm2;
+	int i;
+	
+	sm = structfieldfromname(t, name);
+	if(!sm)
+		return -1;
+	i = 0;
+	while(1) {
+		sm2 = structfieldfromidx(t, i);
+		if(!sm2)
+			return -1;
+		if(sm->offset == sm2->offset)
+			return i;
+		i++;
+	}
+	return 0;
+}
+
+static StructMember *
 newstructmember(char *name, int offset, CTy *membt)
 {
 	StructMember *sm;
@@ -226,15 +276,12 @@ newstructmember(char *name, int offset, CTy *membt)
 }
 
 void
-addstructmember(SrcPos *pos, CTy *t, char *name, CTy *membt)
+addtostruct(SrcPos *pos, CTy *t, char *name, CTy *membt)
 {
-	StructMember *sm, *subsm;
-	int i, sz;
-
-	newstructmember(name, -1, t);
-	vecappend(t->Struct.members, sm);
+	vecappend(t->Struct.members, newstructmember(name, -1, t));
 }
 
+/* TODO: put somewhere else, use in backend too */
 static int
 align(int v, int a)
 {
@@ -243,51 +290,40 @@ align(int v, int a)
 	return v;
 }
 
-static void
+void
 finalizestruct(CTy *t)
 {
-	StructMember *sm, *subfield;
-	int i, j, k, curoffset;
-	Vec *curv, Vec *subfields;
+	StructMember *sm, *subsm;
+	int i, j, curoffset;
 	
-	if(t->isunion) {
+	if(t->Struct.isunion)
 		panic("...");
-	}
-	
 	/* calc alignment */
-	for(i = 0 ; i < t->Struct.Members->len; i++) {
+	for(i = 0 ; i < t->Struct.members->len; i++) {
 		sm = vecget(t->Struct.members, i);
 		t->align = align(t->align ,sm->type->align);
 	}
 	/* calc member offsets */
 	curoffset = 0;
-	for(i = 0 ; i < t->Struct.Members->len; i++) {
+	for(i = 0 ; i < t->Struct.members->len; i++) {
 		sm = vecget(t->Struct.members, i);
 		curoffset = align(curoffset, sm->type->align);
 		sm->offset = curoffset;
 		curoffset += sm->type->size;
 	}
-	/* Calc name export fields */
-	for(i = 0; i < t->Struct.Members->len; i++) {
+	/* Calc export fields */
+	for(i = 0; i < t->Struct.members->len; i++) {
 		sm = vecget(t->Struct.members, i);
-		curv = vec();
-		vecappend(t->Struct.fields, curv);
-		if((isstruct(sm->type) && sm->name) || !isstruct(sm->type)) {
-			vecappend(curv, newstructmember(sm->name, sm->offset, sm->type));
+		if(sm->name || !isstruct(sm->type)) {
+			vecappend(t->Struct.exports, newstructmember(sm->name, sm->offset, sm->type));
 			continue;
 		}
-		/* isstruct && !sm->name */
-		if(sm->type->Struct.isunion) {
-			panic("...");
-		}
-		for(j = 0; j < sm->type->Struct.fields->len; j++) {
-			subfields = vecget(sm->type->Struct.fields, j);
-			for(k = 0; k < subfields->len; k++) {
-				subfield = vecget(subfields, k);
-				vecappend()
-			}
+		for(j = 0; j < sm->type->Struct.exports->len ; j++) {
+			subsm = vecget(sm->type->Struct.exports, j);
+			vecappend(t->Struct.exports, newstructmember(subsm->name, subsm->offset + sm->offset, subsm->type));
 		}
 	}
+	t->size = align(t->size, t->align);
 }
 
 int

@@ -1184,10 +1184,10 @@ pstruct(int isunion)
 	CTy    *t, *basety;
 
 	strct = newtype(CSTRUCT);
-	strct->Struct.members = vec();
 	strct->align = 1; /* XXX zero sized structs? */
 	strct->Struct.isunion = isunion;
-
+	strct->Struct.exports = vec();
+	strct->Struct.members = vec();
 	expect('{');
 	while(tok->k != '}') {
 		basety = declspecs(&sclass);
@@ -1199,8 +1199,8 @@ pstruct(int isunion)
 				constexpr();
 			}
 			if(t->incomplete)
-				errorposf(p, "cannot have incomplete type inside struct/union");
-			addstructmember(p, strct, name, t);
+				errorposf(p, "incomplete type inside struct/union");
+			addtostruct(p, strct, name, t);
 			if(tok->k != ',')
 				break;
 			next();
@@ -1208,8 +1208,7 @@ pstruct(int isunion)
 		expect(';');
 	}
 	expect('}');
-	if(strct->size % strct->align)
-		strct->size = strct->size + strct->align - (strct->size % strct->align);
+	finalizestruct(strct);
 	return strct;
 }
 
@@ -1544,6 +1543,21 @@ compareinits(const void *lvoid, const void *rvoid)
 	return 0;
 }
 
+static int 
+memberoffset(CTy *t, int idx)
+{
+	StructMember *sm;
+
+	if(!isstruct(t) && !isarray(t))
+		panic("internal error");
+	if(isarray(t))
+		return t->Arr.subty->size * idx;
+	sm = structfieldfromidx(t, idx);
+	if(!sm)
+		return -1;
+	return sm->offset;
+}
+
 static Node *
 declinit(CTy *t)
 {
@@ -1557,6 +1571,7 @@ declinit(CTy *t)
 	int     i;
 	int     idx;
 	int     largestidx;
+	
 	/* XXX check and insert casts */
 	initpos = &tok->pos;
 	if((isarray(t) || isstruct(t))
@@ -1595,11 +1610,11 @@ declinit(CTy *t)
 					selname = tok->v;
 					expect(TOKIDENT);
 					expect('=');
-					idx = structmemberidxfromname(t, selname);
+					idx = structfieldidxfromname(t, selname);
 					if(idx < 0)
 						errorposf(selpos, "struct has no member '%s'", selname);
 				}
-				structmember = structmemberfromidx(t, idx);
+				structmember = structfieldfromidx(t, idx);
 				if(!structmember)
 					errorposf(initpos, "too many elements in struct initializer");
 				subty = structmember->type;
@@ -2141,6 +2156,7 @@ postexpr(void)
 	int   done;
 	Tok  *t;
 	Node *n1, *n2, *n3;
+	StructMember *sm;
 
 	n1 = primaryexpr();
 	done = 0;
@@ -2171,9 +2187,10 @@ postexpr(void)
 			next();
 			n2->Sel.name = tok->v;
 			n2->Sel.operand = n1;
-			n2->type = structmemberty(n1->type, tok->v);
-			if(!n2->type)
+			sm = structfieldfromname(n1->type, tok->v);
+			if(!sm)
 				errorposf(&tok->pos, "struct has no member %s", tok->v);
+			n2->type = sm->type;
 			expect(TOKIDENT);
 			n1 = n2;
 			break;
@@ -2187,9 +2204,10 @@ postexpr(void)
 			n2->Sel.name = tok->v;
 			n2->Sel.operand = n1;
 			n2->Sel.arrow = 1;
-			n2->type = structmemberty(n1->type->Ptr.subty, tok->v);
-			if(!n2->type)
+			sm = structfieldfromname(n1->type->Ptr.subty, tok->v);
+			if(!sm)
 				errorposf(&tok->pos, "struct pointer has no member %s", tok->v);
+			n2->type = sm->type;
 			expect(TOKIDENT);
 			n1 = n2;
 			break;
