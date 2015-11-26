@@ -244,7 +244,7 @@ void
 addstructmember(SrcPos *pos, CTy *t, char *name, CTy *membt)
 {
 	StructMember *sm, *subsm;
-	int i, align, sz;
+	int i, sz;
 
 	sm = gcmalloc(sizeof(StructMember));
 	sm->name = name;
@@ -266,15 +266,20 @@ addstructmember(SrcPos *pos, CTy *t, char *name, CTy *membt)
 				errorposf(pos ,"struct already has a member named %s", sm->name);
 		}
 	}
-	if(membt->align < t->align)
+	if(t->align < membt->align)
 		t->align = membt->align;
-	sz = t->size;
-	align = membt->align;
-	if(sz % align)
-		sz = sz + align - (sz % align);
-	sm->offset = sz;
-	sz += sm->type->size;
-	t->size = sz;
+	if(t->Struct.isunion) {
+		if(t->size < sm->type->size)
+			t->size = sm->type->size;
+		sm->offset = 0;
+	} else {
+		sz = t->size;
+		if(sz % membt->align)
+			sz = sz + membt->align - (sz % membt->align);
+		sm->offset = sz;
+		sz += sm->type->size;
+		t->size = sz;
+	}
 	vecappend(t->Struct.members, sm);
 }
 
