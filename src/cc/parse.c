@@ -1287,14 +1287,15 @@ pfor(void)
 {
 	SrcPos *p;
 	Node   *n, *i, *c, *s, *st;
-	char   *lcont, *lbreak;
+	char   *lstart, *lstep, *lend;
 
 	i = 0;
 	c = 0;
 	s = 0;
 	st = 0;
-	lcont = newlabel();
-	lbreak = newlabel();
+	lstart = newlabel(); 
+	lstep = newlabel();
+	lend = newlabel();
 	p = &tok->pos;
 	expect(TOKFOR);
 	expect('(');
@@ -1313,12 +1314,13 @@ pfor(void)
 	if(tok->k != ')')
 		s = expr();
 	expect(')');
-	pushcontbrk(lcont, lbreak);
+	pushcontbrk(lstep, lend);
 	st = stmt();
 	popcontbrk();
 	n = mknode(NFOR, p);
-	n->For.lstart = lcont;
-	n->For.lend = lbreak;
+	n->For.lstart = lstart;
+	n->For.lstep = lstep;
+	n->For.lend = lend;
 	n->For.init = i;
 	n->For.cond = c;
 	n->For.step = s;

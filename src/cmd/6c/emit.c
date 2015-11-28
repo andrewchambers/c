@@ -611,6 +611,7 @@ efor(Node *n)
 		outi("jz %s\n", n->For.lend);
 	}
 	stmt(n->For.stmt);
+	outi("%s:\n", n->For.lstep);
 	if(n->For.step)
 		expr(n->For.step);
 	outi("jmp %s\n", n->For.lstart);
