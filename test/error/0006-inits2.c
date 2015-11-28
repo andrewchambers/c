@@ -1,5 +1,5 @@
 /*
-PATTERN: too many
+PATTERN: end of struct
 PATTERN: c:6:
 */
 

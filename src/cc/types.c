@@ -3,6 +3,14 @@
 #include <gc/gc.h>
 #include "cc.h"
 
+static int
+align(int v, int a)
+{
+	if(v % a)
+		return v + a - (v % a);
+	return v;
+}
+
 int
 convrank(CTy *t)
 {
@@ -199,25 +207,126 @@ isarray(CTy *t)
 	return t->t == CARR;
 }
 
-StructMember *
-structfieldfromname(CTy *t, char *name)
+int
+structoffsetfromname(CTy *t, char *name)
 {
-	panic("...");
+	int offset;
+	StructMember *sm;
+	StructIter it;
+	
+	if(!getstructiter(&it, t, name))
+		return -1;
+	structwalk(&it, &sm, &offset);
+	return offset;
+}
+
+CTy *
+structtypefromname(CTy *t, char *name)
+{
+	int offset;
+	StructMember *sm;
+	StructIter it;
+	
+	if(!getstructiter(&it, t, name))
+		return 0;
+	structwalk(&it, &sm, &offset);
+	return sm->type;
+}
+
+void
+initstructiter(StructIter *it, CTy *t)
+{
+	if(!isstruct(t))
+		panic("internal error");
+	it->root = t;
+	it->depth = 1;
+	it->path[0] = 0;
+}
+
+int
+getstructiter(StructIter *it, CTy *t, char *name)
+{
+	StructExport *export;
+	ExportPath   *path;
+	int i;
+	
+	it->root = t;	
+	it->depth = 0;
+	for(i = 0; i < t->Struct.exports->len; i++) {
+		export = vecget(t->Struct.exports, i);
+		if(strcmp(export->name, name) != 0)
+			continue;
+		path = export->path;
+		while(path) {
+			it->path[it->depth++] = path->idx;
+			path = path->next;
+		}
+		return 1;
+	}
 	return 0;
 }
 
-StructMember *
-structfieldfromidx(CTy *t, int idx)
+static void
+_structwalk(StructIter *it, CTy *cur, int depth, StructMember **smout, int *offout)
 {
-	panic("...");
-	return 0;
+	*smout = vecget(cur->Struct.members, it->path[depth]);
+	*offout = *offout + (*smout)->offset;
+	if((depth + 1) == it->depth)
+		return;
+	_structwalk(it,  (*smout)->type, depth + 1, smout, offout);
 }
 
-int 
-structfieldidxfromname(CTy *t, char *name)
+void
+structwalk(StructIter *it, StructMember **smout, int *offout)
 {
-	panic("...");
-	return 0;
+	*smout = 0;
+	*offout = 0;
+	_structwalk(it, it->root, 0, smout, offout);
+}
+
+int
+structnext(StructIter *it)
+{
+	StructMember *sm;
+	CTy *curstruct;
+	int offset;
+
+	if(it->depth == 0)
+		return 0;
+	
+	if(it->depth == 1) {
+		curstruct = it->root;
+		offset = 0;
+	} else {
+		it->depth--;
+		structwalk(it, &sm, &offset);
+		curstruct = sm->type;
+		it->depth++;
+	}
+	if(curstruct->Struct.isunion) {
+		if(curstruct == it->root)
+			return 0;
+		it->depth--;
+		return structnext(it);
+	}
+	if(it->path[it->depth-1] + 1 < curstruct->Struct.members->len) {
+		it->path[it->depth-1]++;
+		while(1) {
+			structwalk(it, &sm, &offset);
+			if(!sm->name)
+			if(isstruct(sm->type)) {
+				if(!sm->type->Struct.members->len)
+					return structnext(it);
+				it->path[it->depth] = 0;
+				it->depth++;
+				continue;
+			}
+			break;
+		}
+		return 1;
+	}
+	it->depth -= 1;
+	return structnext(it);
 }
 
 static StructMember *
@@ -233,30 +342,19 @@ newstructmember(char *name, int offset, CTy *membt)
 }
 
 void
-addtostruct(SrcPos *pos, CTy *t, char *name, CTy *membt)
+addtostruct(CTy *t, char *name, CTy *membt)
 {
 	vecappend(t->Struct.members, newstructmember(name, -1, membt));
 }
 
-/* TODO: put somewhere else, use in backend too */
-static int
-align(int v, int a)
-{
-	if(v % a)
-		return v + a - (v % a);
-	return v;
-}
-
 void
-finalizestruct(CTy *t)
+finalizestruct(SrcPos *pos, CTy *t)
 {
 	StructMember *sm;
 	int i, j, curoffset;
 	StrSet *exportednames;
 	StructExport *export, *subexport;
-	ExportPath *path;
 	
-	printf("finalizing struct...\n");
 	/* calc alignment */
 	for(i = 0; i < t->Struct.members->len; i++) {
 		sm = vecget(t->Struct.members, i);
@@ -267,6 +365,8 @@ finalizestruct(CTy *t)
 		for(i = 0; i < t->Struct.members->len; i++) {
 			sm = vecget(t->Struct.members, i);
 			sm->offset = 0;
+			if(t->size < sm->type->size)
+				t->size = sm->type->size;
 		}
 	} else {
 		curoffset = 0;
@@ -275,16 +375,16 @@ finalizestruct(CTy *t)
 			curoffset = align(curoffset, sm->type->align);
 			sm->offset = curoffset;
 			curoffset += sm->type->size;
-		}	
+		}
+		t->size = curoffset;	
 	}
 	/* Calc export fields */
 	exportednames = 0;
 	for(i = 0; i < t->Struct.members->len; i++) {
 		sm = vecget(t->Struct.members, i);
 		if(sm->name) {
-			printf("exporting 1 %s\n", sm->name);
 			if(strsethas(exportednames, sm->name))
-				panic("... duplicate name 1 %s", sm->name);
+				errorposf(pos, "field %s duplicated in struct", sm->name);
 			export = gcmalloc(sizeof(StructExport));
 			export->name = sm->name;
 			export->path = gcmalloc(sizeof(ExportPath));
@@ -298,9 +398,8 @@ finalizestruct(CTy *t)
 			continue;
 		for(j = 0; j < sm->type->Struct.exports->len; j++) {
 			subexport = vecget(sm->type->Struct.exports, j);
-			printf("exporting 2 %s\n", subexport->name);
 			if(strsethas(exportednames, subexport->name))
-				panic("... duplicate name 2 %s", subexport->name);
+				errorposf(pos, "field %s duplicated in struct", subexport->name);
 			export = gcmalloc(sizeof(StructExport));
 			export->name = subexport->name;
 			export->path = gcmalloc(sizeof(ExportPath));
@@ -310,6 +409,9 @@ finalizestruct(CTy *t)
 			exportednames = strsetadd(exportednames, export->name);
 		}
 	}
+	t->size = align(t->size, t->align);
+	
+	/*	
 	for(i = 0; i < t->Struct.exports->len; i++) {
 		export = vecget(t->Struct.exports, i);
 		printf("export %s:\n", export->name);
@@ -318,10 +420,21 @@ finalizestruct(CTy *t)
 			printf(" %d\n", path->idx);
 			path = path->next;
 		}
+	}
+	
+	StructIter it;
+	for(i = 0; i < t->Struct.exports->len; i++) {
+		export = vecget(t->Struct.exports, i);
+		iterfromexport(&it, t, export->name);
+		printf("iter %s: depth=%d\n", export->name, it.depth);
+		do {
+			int off;
+			itwalk(&it, &sm, &off);
+			printf(" membername=%s offset=%d\n", sm->name, off);
+		} while (itnext(&it));
 		
 	}
-	printf("struct finalized...\n");
-	t->size = align(t->size, t->align);
+	*/
 }
 
 int

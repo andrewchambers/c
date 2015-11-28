@@ -1177,7 +1177,7 @@ ptag()
 static CTy *
 pstruct(int isunion)
 {
-	SrcPos *p;
+	SrcPos *startpos, *p;
 	CTy    *strct;
 	char   *name;
 	int     sclass;
@@ -1188,6 +1188,8 @@ pstruct(int isunion)
 	strct->Struct.isunion = isunion;
 	strct->Struct.exports = vec();
 	strct->Struct.members = vec();
+	
+	startpos = &tok->pos;
 	expect('{');
 	while(tok->k != '}') {
 		basety = declspecs(&sclass);
@@ -1200,7 +1202,7 @@ pstruct(int isunion)
 			}
 			if(t->incomplete)
 				errorposf(p, "incomplete type inside struct/union");
-			addtostruct(p, strct, name, t);
+			addtostruct(strct, name, t);
 			if(tok->k != ',')
 				break;
 			next();
@@ -1208,7 +1210,7 @@ pstruct(int isunion)
 		expect(';');
 	}
 	expect('}');
-	finalizestruct(strct);
+	finalizestruct(startpos, strct);
 	return strct;
 }
 
@@ -1629,32 +1631,40 @@ static Node *
 declstructinit(CTy *t)
 {
 	StructMember *structmember;
-	InitMember *initmemb;
-	Node   *n, *subinit;
-	CTy    *subty;
-	SrcPos *initpos, *selpos;
-	char   *selname;
-	int     i, idx;
+	InitMember   *initmemb;
+	StructIter   it;
+	Node         *n, *subinit;
+	CTy          *subty;
+	SrcPos       *initpos, *selpos;
+	char         *selname;
+	int          i, offset, neednext;
 	
 	initpos = &tok->pos;
 	n = mknode(NINIT, initpos);
 	n->type = t;
 	n->Init.inits = vec();
+	
+	initstructiter(&it, t);
 	expect('{');
+	neednext = 0;
 	for(;;) {
 		if(tok->k == '}')
 			break;
 		if(tok->k == '.') {
+			neednext = 0;
 			selpos = &tok->pos;
 			expect('.');
 			selname = tok->v;
 			expect(TOKIDENT);
 			expect('=');
-			idx = structfieldidxfromname(t, selname);
-			if(idx < 0)
+			if(!getstructiter(&it, t, selname))
 				errorposf(selpos, "struct has no member '%s'", selname);
 		}
-		structmember = structfieldfromidx(t, idx);
+		if(neednext) {
+			if(!structnext(&it))
+				errorposf(&tok->pos, "end of struct already reached");
+		}
+		structwalk(&it, &structmember, &offset);
 		if(!structmember)
 			errorposf(initpos, "too many elements in struct initializer");
 		subty = structmember->type;
@@ -1663,19 +1673,19 @@ declstructinit(CTy *t)
 		if(subinit->t == NINIT) {
 			for(i = 0; i < subinit->Init.inits->len; i++) {
 				initmemb = vecget(subinit->Init.inits, i);
-				initmemb->offset = 0;
+				initmemb->offset += offset;
 				vecappend(n->Init.inits, initmemb);
 			}
 		} else {
 			initmemb = gcmalloc(sizeof(InitMember));
-			initmemb->offset = 0;
+			initmemb->offset = offset;
 			initmemb->n = subinit;
 			vecappend(n->Init.inits, initmemb);
 		}
-		idx += 1;
 		if(tok->k != ',')
 			break;
 		next();
+		neednext = 1;
 	}
 	checkinitoverlap(n);
 	expect('}');
@@ -2191,7 +2201,6 @@ postexpr(void)
 	int   done;
 	Tok  *t;
 	Node *n1, *n2, *n3;
-	StructMember *sm;
 
 	n1 = primaryexpr();
 	done = 0;
@@ -2222,10 +2231,9 @@ postexpr(void)
 			next();
 			n2->Sel.name = tok->v;
 			n2->Sel.operand = n1;
-			sm = structfieldfromname(n1->type, tok->v);
-			if(!sm)
+			n2->type = structtypefromname(n1->type, tok->v);
+			if(!n2->type)
 				errorposf(&tok->pos, "struct has no member %s", tok->v);
-			n2->type = sm->type;
 			expect(TOKIDENT);
 			n1 = n2;
 			break;
@@ -2239,10 +2247,9 @@ postexpr(void)
 			n2->Sel.name = tok->v;
 			n2->Sel.operand = n1;
 			n2->Sel.arrow = 1;
-			sm = structfieldfromname(n1->type->Ptr.subty, tok->v);
-			if(!sm)
+			n2->type = structtypefromname(n1->type->Ptr.subty, tok->v);
+			if(!n2->type)
 				errorposf(&tok->pos, "struct pointer has no member %s", tok->v);
-			n2->type = sm->type;
 			expect(TOKIDENT);
 			n1 = n2;
 			break;

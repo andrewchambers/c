@@ -1,6 +1,5 @@
 /*
 PATTERN: x
-PATTERN: c:9
 */
 
 struct x {

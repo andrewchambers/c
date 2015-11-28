@@ -283,8 +283,8 @@ static void
 addr(Node *n)
 {
 	int sz;
+	int offset;
 	Sym *sym;
-	StructMember *sm;
 	
 	switch(n->t) {
 	case NUNOP:
@@ -292,10 +292,15 @@ addr(Node *n)
 		break;
 	case NSEL:
 		expr(n->Sel.operand);
-		sm = structfieldfromname(n->Sel.operand->type, n->Sel.name);
-		if(!sm)
+		if(isptr(n->Sel.operand->type))
+			offset = structoffsetfromname(n->Sel.operand->type->Ptr.subty, n->Sel.name);
+		else if(isstruct(n->Sel.operand->type))
+			offset = structoffsetfromname(n->Sel.operand->type, n->Sel.name);
+		else
 			panic("internal error");
-		outi("addq $%d, %%rax\n", sm->offset);
+		if(offset < 0)
+			panic("internal error");
+		outi("addq $%d, %%rax\n", offset);
 		break;
 	case NIDENT:
 		sym = n->Ident.sym;
@@ -710,10 +715,16 @@ sel(Node *n)
 
 	expr(n->Sel.operand);
 	t = n->Sel.operand->type;
-	offset = structfieldfromname(t, n->Sel.name)->offset;
-	if(offset != 0) {
+	if(isptr(t))
+		offset = structoffsetfromname(t->Ptr.subty, n->Sel.name);
+	else if(isstruct(t))
+		offset = structoffsetfromname(t, n->Sel.name);
+	else
+		panic("internal error");
+	if(offset < 0)
+		panic("internal error");
+	if(offset != 0)
 		outi("add $%d, %%rax\n", offset);
-	}
 	load(n->type);
 }
 

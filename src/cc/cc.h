@@ -4,6 +4,7 @@
 typedef struct SrcPos SrcPos;
 typedef struct StructMember StructMember;
 typedef struct StructExport StructExport;
+typedef struct StructIter StructIter;
 typedef struct ExportPath ExportPath;
 typedef struct NameTy NameTy;
 typedef struct CTy CTy;
@@ -148,6 +149,12 @@ struct StructMember {
 struct NameTy {
 	char *name;
 	CTy  *type;
+};
+
+struct StructIter {
+	CTy *root;
+	int depth;
+	int path[1024];
 };
 
 struct ExportPath {
@@ -462,11 +469,14 @@ int isarray(CTy *);
 int sametype(CTy *, CTy *);
 int convrank(CTy *);
 int canrepresent(CTy *, CTy *);
-StructMember *structfieldfromname(CTy *, char *);
-int structfieldidxfromname(CTy *, char *);
-StructMember *structfieldfromidx(CTy *, int );
-void addtostruct(SrcPos *, CTy *, char *, CTy *);
-void finalizestruct(CTy *);
+int getstructiter(StructIter *, CTy *, char *);
+int structnext(StructIter *);
+int structoffsetfromname(CTy *, char *);
+CTy * structtypefromname(CTy *, char *);
+void initstructiter(StructIter *, CTy *);
+void structwalk(StructIter *, StructMember **, int *);
+void addtostruct(CTy *, char *, CTy *);
+void finalizestruct(SrcPos *, CTy *);
 
 /* parse.c */
 void  parse(void);
