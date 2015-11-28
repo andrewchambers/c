@@ -19,6 +19,7 @@ tokktostr(Tokkind t)
 	case TOKFOR:        return "for";
 	case TOKVOID:       return "void";
 	case TOKCHAR:       return "char";
+	case TOKCHARLIT:    return "character literal";
 	case TOKSHORT:      return "short";
 	case TOKINT:        return "int";
 	case TOKLONG:       return "long";
@@ -117,6 +118,7 @@ mktok(Lexer *l, int kind) {
 	case TOKSTR:
 	case TOKNUM:
 	case TOKIDENT:
+	case TOKCHARLIT:
 		/* TODO: intern strings */
 		r->v = gcstrdup(l->tokval);
 		break;
@@ -263,22 +265,21 @@ lex(Lexer *l)
 		}
 	} else if (c == '\'') {
 		accept(l, c);
-		for(;;) {
+		c = nextc(l);
+		if(c == EOF)
+			errorf("unclosed char\n"); /* TODO error pos */
+		accept(l, c);
+		if(c == '\\') {
 			c = nextc(l);
-			if(c == EOF)
-				errorf("unclosed char\n"); /* TODO error pos */
+			if(c == EOF || c == '\n')
+				errorf("EOF or newline in char literal\n");
 			accept(l, c);
-			if(c == '\\') {
-				c = nextc(l);
-				if(c == EOF || c == '\n')
-					errorf("EOF or newline in char literal");
-				accept(l, c);
-				continue;
-			}
-			if (c == '\'') { /* TODO: escape chars */ 
-				return mktok(l, TOKNUM);
-			}
 		}
+		c = nextc(l);
+		accept(l, c);
+		if (c != '\'')
+			errorf("char literal expects '\n");
+		return mktok(l, TOKCHARLIT);
 	} else if(identfirstc(c)) {
 		accept(l, c);
 		for(;;) {

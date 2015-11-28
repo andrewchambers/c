@@ -2298,6 +2298,23 @@ primaryexpr(void)
 		n->type = cint;
 		next();
 		return n;
+	case TOKCHARLIT:
+		/* XXX it seems wrong to do this here, also table is better */
+		n = mknode(NNUM, &tok->pos);
+		if(strcmp(tok->v, "'\n'") == 0) {
+			n->Num.v = '\n';
+		} else if(strcmp(tok->v, "'\\'") == 0) {
+			n->Num.v = '\\';
+		} else if(strcmp(tok->v, "'\''") == 0) {
+			n->Num.v = '\'';
+		} else if(tok->v[1] == '\\') {
+			errorposf(&tok->pos, "unknown escape code");
+		} else {
+			n->Num.v = tok->v[1];
+		}
+		n->type = cint;
+		next();
+		return n;
 	case TOKSTR:
 		n = mknode(NSTR, &tok->pos);
 		n->Str.v = tok->v;
