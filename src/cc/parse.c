@@ -1227,8 +1227,8 @@ penum()
 	v = 0;
 	t = newtype(CENUM);
 	/* TODO: backend specific? */
-	t->size = 8;
-	t->align = 8;
+	t->size = 4;
+	t->align = 4;
 	t->Enum.members = vec();
 	expect('{');
 	for(;;) {
