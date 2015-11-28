@@ -2301,13 +2301,17 @@ primaryexpr(void)
 	case TOKCHARLIT:
 		/* XXX it seems wrong to do this here, also table is better */
 		n = mknode(NNUM, &tok->pos);
-		if(strcmp(tok->v, "'\n'") == 0) {
+		if(strcmp(tok->v, "'\\n'") == 0) {
 			n->Num.v = '\n';
 		} else if(strcmp(tok->v, "'\\\\'") == 0) {
 			n->Num.v = '\\';
-		} else if(strcmp(tok->v, "'\''") == 0) {
+		} else if(strcmp(tok->v, "'\\''") == 0) {
 			n->Num.v = '\'';
-		} else if(tok->v[1] == '\\') {
+		} else if(strcmp(tok->v, "'\\r'") == 0) {
+			n->Num.v = '\r';
+		} else if(strcmp(tok->v, "'\\t'") == 0) {
+			n->Num.v = '\t';
+		}  else if(tok->v[1] == '\\') {
 			errorposf(&tok->pos, "unknown escape code");
 		} else {
 			n->Num.v = tok->v[1];
