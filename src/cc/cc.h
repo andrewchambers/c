@@ -458,12 +458,15 @@ Tok  *lex(Lexer *);
 Tok  *pp(void);
 
 /* types.c */
+CTy *newtype(int);
+CTy *mkptr(CTy *);
 int isvoid(CTy *);
 int isftype(CTy *);
 int isitype(CTy *);
 int isarithtype(CTy *);
 int isptr(CTy *);
 int ischarptr(CTy *t);
+int ischararray(CTy *t);
 int isfunc(CTy *);
 int isfuncptr(CTy *);
 int isstruct(CTy *);

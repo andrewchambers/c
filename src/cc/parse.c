@@ -371,28 +371,6 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 	return sym;
 }
 
-static CTy *
-newtype(int type)
-{
-	CTy *t;
-
-	t = gcmalloc(sizeof(CTy));
-	t->t = type;
-	return t;
-}
-
-static CTy *
-mkptr(CTy *t)
-{
-	CTy *p;
-
-	p = newtype(CPTR);
-	p->Ptr.subty = t;
-	p->size = 8;
-	p->align = 8;
-	return p;
-}
-
 static NameTy *
 newnamety(char *n, CTy *t)
 {
@@ -1635,6 +1613,8 @@ declarrayinit(CTy *t)
 	}
 	checkinitoverlap(n);
 	expect('}');
+	if(t->Arr.dim == -1)
+		t->Arr.dim = largestidx;
 	if(largestidx != t->Arr.dim)
 		errorposf(initpos, "array initializer wrong size for type");
 	return n;

@@ -11,6 +11,29 @@ align(int v, int a)
 	return v;
 }
 
+CTy *
+newtype(int type)
+{
+	CTy *t;
+
+	t = gcmalloc(sizeof(CTy));
+	t->t = type;
+	return t;
+}
+
+CTy *
+mkptr(CTy *t)
+{
+	CTy *p;
+
+	p = newtype(CPTR);
+	p->Ptr.subty = t;
+	p->size = 8;
+	p->align = 8;
+	return p;
+}
+
+
 int
 convrank(CTy *t)
 {
@@ -182,6 +205,15 @@ ischarptr(CTy *t)
 	return t->Ptr.subty->Prim.type == PRIMCHAR;
 }
 
+int
+ischararray(CTy *t)
+{
+	if(!isarray(t))
+		return 0;
+	if(t->Ptr.subty->t != CPRIM)
+		return 0;
+	return t->Ptr.subty->Prim.type == PRIMCHAR;
+}
 
 int
 isfunc(CTy *t)

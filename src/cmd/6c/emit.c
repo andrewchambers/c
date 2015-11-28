@@ -928,6 +928,13 @@ data(Data *d)
 	if(d->isglobal)
 		out(".globl %s\n", d->label);
 	out("%s:\n", d->label);
+	
+	if(ischararray(d->type))
+	if(d->init->t == NSTR) {
+		out(".string %s\n", d->init->Str.v);
+		return;
+	}
+	
 	if(ischarptr(d->type))
 	if(d->init->t == NSTR) {
 		l = newlabel();

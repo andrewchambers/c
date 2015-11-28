@@ -138,6 +138,9 @@ foldident(Node *n)
 Const *
 foldexpr(Node *n)
 {
+	char *l;
+	CTy  *ty;
+
 	switch(n->t) {
 	case NBINOP:
 		return foldbinop(n);
@@ -151,6 +154,13 @@ foldexpr(Node *n)
 		return foldcast(n);
 	case NIDENT:
 		return foldident(n);
+	case NSTR:
+		l = newlabel();
+		ty = newtype(CARR);
+		ty->Arr.subty = cchar;
+		/* XXX DIM? */
+		penddata(l, ty, n, 0);
+		return mkconst(l, 0);
 	default:
 		return 0;
 	}
