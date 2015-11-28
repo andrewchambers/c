@@ -410,31 +410,6 @@ finalizestruct(SrcPos *pos, CTy *t)
 		}
 	}
 	t->size = align(t->size, t->align);
-	
-	/*	
-	for(i = 0; i < t->Struct.exports->len; i++) {
-		export = vecget(t->Struct.exports, i);
-		printf("export %s:\n", export->name);
-		path = export->path;
-		while(path) {
-			printf(" %d\n", path->idx);
-			path = path->next;
-		}
-	}
-	
-	StructIter it;
-	for(i = 0; i < t->Struct.exports->len; i++) {
-		export = vecget(t->Struct.exports, i);
-		iterfromexport(&it, t, export->name);
-		printf("iter %s: depth=%d\n", export->name, it.depth);
-		do {
-			int off;
-			itwalk(&it, &sm, &off);
-			printf(" membername=%s offset=%d\n", sm->name, off);
-		} while (itnext(&it));
-		
-	}
-	*/
 }
 
 int
