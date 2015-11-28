@@ -1640,6 +1640,9 @@ declstructinit(CTy *t)
 	int          i, offset, neednext;
 	
 	initpos = &tok->pos;
+	if(t->incomplete)
+		errorposf(initpos, "cannot initialize an incomplete struct/union");
+		
 	n = mknode(NINIT, initpos);
 	n->type = t;
 	n->Init.inits = vec();
