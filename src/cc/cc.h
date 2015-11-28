@@ -267,6 +267,7 @@ struct Node {
 		} Cond;
 		struct {
 			char *lstart;
+			char *lstep;
 			char *lend;
 			Node *init;
 			Node *cond;
