@@ -6,7 +6,6 @@ GCCSRC="src/cc/cpp.c
 	src/cc/error.c
 	src/panic.c
 	src/cmd/6c/emit.c
-	src/cmd/6c/frontend.c
 	src/cmd/6c/main.c
 	src/cc/parse.c"
 SELFHOSTSRC="src/ds/list.c
@@ -16,7 +15,8 @@ SELFHOSTSRC="src/ds/list.c
 	src/gc/gc.c
 	src/cc/types.c
 	src/cc/foldexpr.c
-	src/cc/lex.c"
+	src/cc/lex.c
+	src/cmd/6c/frontend.c"
 SELFHOSTOBJDIR=lib/selfhostobj
 
 mkdir -p $SELFHOSTOBJDIR

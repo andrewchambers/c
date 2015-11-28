@@ -925,6 +925,8 @@ data(Data *d)
 		out(".comm %s, %d, %d\n", d->label, d->type->size, d->type->align);
 		return;
 	}
+	if(d->isglobal)
+		out(".globl %s\n", d->label);
 	out("%s:\n", d->label);
 	if(ischarptr(d->type))
 	if(d->init->t == NSTR) {
@@ -963,6 +965,8 @@ emitsym(Sym *sym)
 	out("# emit sym %s\n", sym->name);
 	switch(sym->k){
 	case SYMGLOBAL:
+		if(sym->Global.sclass == SCEXTERN)
+			break;
 		if(isfunc(sym->type)) {
 			func(sym->init, sym->Global.label, sym->Global.sclass == SCGLOBAL);
 			break;

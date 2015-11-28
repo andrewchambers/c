@@ -307,6 +307,8 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 				errorposf(p, "incompatible redefinition of typedef %s", name);
 			break;
 		case SYMGLOBAL:
+			if(sym->Global.sclass == SCEXTERN && sclass == SCGLOBAL)
+				sym->Global.sclass = SCGLOBAL;
 			if(sym->Global.sclass != sclass)
 				errorposf(p, "redefinition of %s with differing storage class", name);
 			if(sym->init && n)
@@ -337,6 +339,11 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 	case SCTYPEDEF:
 		sym->k = SYMTYPE;
 		break;
+	case SCEXTERN:
+		sym->k = SYMGLOBAL;
+		sym->Global.label = name;
+		sym->Global.sclass = SCEXTERN;
+		break;
 	case SCGLOBAL:
 		sym->k = SYMGLOBAL;
 		sym->Global.label = name;
@@ -347,9 +354,13 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 		sym->Global.label = newlabel();
 		sym->Global.sclass = SCSTATIC;
 		break;
+	default:
+		panic("internal error");
 	}
 	if(sym->k == SYMGLOBAL) {
 		if(sym->init)
+			emitsym(sym);
+		else if(sym->Global.sclass == SCEXTERN)
 			emitsym(sym);
 		else
 			if(!isfunc(sym->type))
