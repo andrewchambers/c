@@ -202,64 +202,21 @@ isarray(CTy *t)
 StructMember *
 structfieldfromname(CTy *t, char *name)
 {
-	StructMember *sm;
-	int i;
-	
-	for(i = 0; i < t->Struct.exports->len; i++) {
-		sm = vecget(t->Struct.exports, i);
-		if(!sm->name)
-			continue;
-		if(strcmp(name, sm->name) == 0)
-			return sm;
-	}
+	panic("...");
 	return 0;
 }
 
 StructMember *
 structfieldfromidx(CTy *t, int idx)
 {
-	StructMember *sm, *nextsm;
-	int i, curidx, nexti;
-	
-	curidx = 0;
-	i = 0;
-	while(i < t->Struct.exports->len) {
-		sm = vecget(t->Struct.exports, i);
-		if(curidx == idx)
-			return sm;
-		nexti = i;
-		for(;;) {
-			if(nexti == t->Struct.exports->len)
-				break;
-			nextsm = vecget(t->Struct.exports, nexti);
-			if(nextsm->offset != sm->offset)
-				break;
-			nexti++;
-		}
-		curidx++;
-		i = nexti;
-	}
+	panic("...");
 	return 0;
 }
 
 int 
 structfieldidxfromname(CTy *t, char *name)
 {
-	StructMember *sm, *sm2;
-	int i;
-	
-	sm = structfieldfromname(t, name);
-	if(!sm)
-		return -1;
-	i = 0;
-	while(1) {
-		sm2 = structfieldfromidx(t, i);
-		if(!sm2)
-			return -1;
-		if(sm->offset == sm2->offset)
-			return i;
-		i++;
-	}
+	panic("...");
 	return 0;
 }
 
@@ -278,7 +235,7 @@ newstructmember(char *name, int offset, CTy *membt)
 void
 addtostruct(SrcPos *pos, CTy *t, char *name, CTy *membt)
 {
-	vecappend(t->Struct.members, newstructmember(name, -1, t));
+	vecappend(t->Struct.members, newstructmember(name, -1, membt));
 }
 
 /* TODO: put somewhere else, use in backend too */
@@ -293,36 +250,77 @@ align(int v, int a)
 void
 finalizestruct(CTy *t)
 {
-	StructMember *sm, *subsm;
+	StructMember *sm;
 	int i, j, curoffset;
+	StrSet *exportednames;
+	StructExport *export, *subexport;
+	ExportPath *path;
 	
-	if(t->Struct.isunion)
-		panic("...");
+	printf("finalizing struct...\n");
 	/* calc alignment */
-	for(i = 0 ; i < t->Struct.members->len; i++) {
-		sm = vecget(t->Struct.members, i);
-		t->align = align(t->align ,sm->type->align);
-	}
-	/* calc member offsets */
-	curoffset = 0;
-	for(i = 0 ; i < t->Struct.members->len; i++) {
-		sm = vecget(t->Struct.members, i);
-		curoffset = align(curoffset, sm->type->align);
-		sm->offset = curoffset;
-		curoffset += sm->type->size;
-	}
-	/* Calc export fields */
 	for(i = 0; i < t->Struct.members->len; i++) {
 		sm = vecget(t->Struct.members, i);
-		if(sm->name || !isstruct(sm->type)) {
-			vecappend(t->Struct.exports, newstructmember(sm->name, sm->offset, sm->type));
+		t->align = align(t->align, sm->type->align);
+	}
+	/* calc member offsets */
+	if(t->Struct.isunion) {
+		for(i = 0; i < t->Struct.members->len; i++) {
+			sm = vecget(t->Struct.members, i);
+			sm->offset = 0;
+		}
+	} else {
+		curoffset = 0;
+		for(i = 0; i < t->Struct.members->len; i++) {
+			sm = vecget(t->Struct.members, i);
+			curoffset = align(curoffset, sm->type->align);
+			sm->offset = curoffset;
+			curoffset += sm->type->size;
+		}	
+	}
+	/* Calc export fields */
+	exportednames = 0;
+	for(i = 0; i < t->Struct.members->len; i++) {
+		sm = vecget(t->Struct.members, i);
+		if(sm->name) {
+			printf("exporting 1 %s\n", sm->name);
+			if(strsethas(exportednames, sm->name))
+				panic("... duplicate name 1 %s", sm->name);
+			export = gcmalloc(sizeof(StructExport));
+			export->name = sm->name;
+			export->path = gcmalloc(sizeof(ExportPath));
+			export->path->idx = i;
+			export->path->next = 0;
+			vecappend(t->Struct.exports, export);
+			exportednames = strsetadd(exportednames, export->name);
 			continue;
 		}
-		for(j = 0; j < sm->type->Struct.exports->len ; j++) {
-			subsm = vecget(sm->type->Struct.exports, j);
-			vecappend(t->Struct.exports, newstructmember(subsm->name, subsm->offset + sm->offset, subsm->type));
+		if(!isstruct(sm->type))
+			continue;
+		for(j = 0; j < sm->type->Struct.exports->len; j++) {
+			subexport = vecget(sm->type->Struct.exports, j);
+			printf("exporting 2 %s\n", subexport->name);
+			if(strsethas(exportednames, subexport->name))
+				panic("... duplicate name 2 %s", subexport->name);
+			export = gcmalloc(sizeof(StructExport));
+			export->name = subexport->name;
+			export->path = gcmalloc(sizeof(ExportPath));
+			export->path->idx = i;
+			export->path->next = subexport->path;
+			vecappend(t->Struct.exports, export);
+			exportednames = strsetadd(exportednames, export->name);
 		}
 	}
+	for(i = 0; i < t->Struct.exports->len; i++) {
+		export = vecget(t->Struct.exports, i);
+		printf("export %s:\n", export->name);
+		path = export->path;
+		while(path) {
+			printf(" %d\n", path->idx);
+			path = path->next;
+		}
+		
+	}
+	printf("struct finalized...\n");
 	t->size = align(t->size, t->align);
 }
 

@@ -1543,117 +1543,152 @@ compareinits(const void *lvoid, const void *rvoid)
 	return 0;
 }
 
-static int 
-memberoffset(CTy *t, int idx)
+static void
+checkinitoverlap(Node *n)
 {
-	StructMember *sm;
+	InitMember *init, *nextinit;
+	int i;
 
-	if(!isstruct(t) && !isarray(t))
-		panic("internal error");
-	if(isarray(t))
-		return t->Arr.subty->size * idx;
-	sm = structfieldfromidx(t, idx);
-	if(!sm)
-		return -1;
-	return sm->offset;
+	qsort(n->Init.inits->d, n->Init.inits->len, sizeof(void*), compareinits);
+	for(i = 0; i < n->Init.inits->len - 1; i++) {
+		init = vecget(n->Init.inits, i);
+		nextinit = vecget(n->Init.inits, i + 1);
+		if(nextinit->offset < init->offset + init->n->type->size)
+			errorposf(&init->n->pos, "fields in init overlaps with another field");
+	}
+}
+
+static Node *
+declarrayinit(CTy *t)
+{
+	InitMember *initmemb;
+	Node   *n, *subinit;
+	CTy    *subty;
+	SrcPos *initpos, *selpos;
+	Const  *arrayidx;
+	int     i;
+	int     idx;
+	int     largestidx;
+	
+	initpos = &tok->pos;
+	n = mknode(NINIT, initpos);
+	n->type = t;
+	n->Init.inits = vec();
+	idx = 0;
+	largestidx = 0;
+	expect('{');
+	for(;;) {
+		if(tok->k == '}')
+			break;
+		if(isarray(t)) {
+			subty = t->Arr.subty;
+			if(tok->k == '[') {
+				selpos = &tok->pos;
+				expect('[');
+				arrayidx = constexpr();
+				expect(']');
+				expect('=');
+				if(arrayidx->p != 0)
+					errorposf(selpos, "pointer derived constants not allowed in initializer selector");
+				if(arrayidx->v < 0)
+					errorposf(selpos, "negative initializer index not allowed");
+				idx = arrayidx->v;
+				if(largestidx < idx)
+					largestidx = idx;
+			}
+		}
+		subinit = declinit(subty);
+		/* Flatten nested inits */
+		if(subinit->t == NINIT) {
+			for(i = 0; i < subinit->Init.inits->len; i++) {
+				initmemb = vecget(subinit->Init.inits, i);
+				initmemb->offset = subty->size * idx + initmemb->offset;
+				vecappend(n->Init.inits, initmemb);
+			}
+		} else {
+			initmemb = gcmalloc(sizeof(InitMember));
+			initmemb->offset = subty->size * idx;
+			initmemb->n = subinit;
+			vecappend(n->Init.inits, initmemb);
+		}
+		idx += 1;
+		if(largestidx < idx)
+			largestidx = idx;
+		if(tok->k != ',')
+			break;
+		next();
+	}
+	checkinitoverlap(n);
+	expect('}');
+	if(largestidx != t->Arr.dim)
+		errorposf(initpos, "array initializer wrong size for type");
+	return n;
+}
+
+static Node *
+declstructinit(CTy *t)
+{
+	StructMember *structmember;
+	InitMember *initmemb;
+	Node   *n, *subinit;
+	CTy    *subty;
+	SrcPos *initpos, *selpos;
+	char   *selname;
+	int     i, idx;
+	
+	initpos = &tok->pos;
+	n = mknode(NINIT, initpos);
+	n->type = t;
+	n->Init.inits = vec();
+	expect('{');
+	for(;;) {
+		if(tok->k == '}')
+			break;
+		if(tok->k == '.') {
+			selpos = &tok->pos;
+			expect('.');
+			selname = tok->v;
+			expect(TOKIDENT);
+			expect('=');
+			idx = structfieldidxfromname(t, selname);
+			if(idx < 0)
+				errorposf(selpos, "struct has no member '%s'", selname);
+		}
+		structmember = structfieldfromidx(t, idx);
+		if(!structmember)
+			errorposf(initpos, "too many elements in struct initializer");
+		subty = structmember->type;
+		subinit = declinit(subty);
+		/* Flatten nested inits */
+		if(subinit->t == NINIT) {
+			for(i = 0; i < subinit->Init.inits->len; i++) {
+				initmemb = vecget(subinit->Init.inits, i);
+				initmemb->offset = 0;
+				vecappend(n->Init.inits, initmemb);
+			}
+		} else {
+			initmemb = gcmalloc(sizeof(InitMember));
+			initmemb->offset = 0;
+			initmemb->n = subinit;
+			vecappend(n->Init.inits, initmemb);
+		}
+		idx += 1;
+		if(tok->k != ',')
+			break;
+		next();
+	}
+	checkinitoverlap(n);
+	expect('}');
+	return n;
 }
 
 static Node *
 declinit(CTy *t)
 {
-	InitMember   *initmemb, *nextinitmemb;
-	StructMember *structmember;
-	Node   *n, *subinit;
-	CTy    *subty;
-	SrcPos *initpos, *selpos;
-	Const  *arrayidx;
-	char   *selname;
-	int     i;
-	int     idx;
-	int     largestidx;
-	
-	/* XXX check and insert casts */
-	initpos = &tok->pos;
-	if((isarray(t) || isstruct(t))
-		&& tok->k == '{') {
-		/* XXX factor to function */
-		/* XXX duplicate code for struct/array, or combine logic? */
-		n = mknode(NINIT, initpos);
-		n->type = t;
-		n->Init.inits = vec();
-		idx = 0;
-		largestidx = 0;
-		expect('{');
-		for(;;) {
-			if(tok->k == '}')
-				break;
-			if(isarray(t)) {
-				subty = t->Arr.subty;
-				if(tok->k == '[') {
-					selpos = &tok->pos;
-					expect('[');
-					arrayidx = constexpr();
-					expect(']');
-					expect('=');
-					if(arrayidx->p != 0)
-						errorposf(selpos, "pointer derived constants not allowed in initializer selector");
-					if(arrayidx->v < 0)
-						errorposf(selpos, "negative initializer index not allowed");
-					idx = arrayidx->v;
-					if(largestidx < idx)
-						largestidx = idx;
-				}
-			} else {
-				if(tok->k == '.') {
-					selpos = &tok->pos;
-					expect('.');
-					selname = tok->v;
-					expect(TOKIDENT);
-					expect('=');
-					idx = structfieldidxfromname(t, selname);
-					if(idx < 0)
-						errorposf(selpos, "struct has no member '%s'", selname);
-				}
-				structmember = structfieldfromidx(t, idx);
-				if(!structmember)
-					errorposf(initpos, "too many elements in struct initializer");
-				subty = structmember->type;
-			}
-			subinit = declinit(subty);
-			/* Flatten nested inits */
-			if(subinit->t == NINIT) {
-				for(i = 0; i < subinit->Init.inits->len; i++) {
-					initmemb = vecget(subinit->Init.inits, i);
-					initmemb->offset = memberoffset(t, idx) + initmemb->offset;
-					vecappend(n->Init.inits, initmemb);
-				}
-			} else {
-				initmemb = gcmalloc(sizeof(InitMember));
-				initmemb->offset = memberoffset(t, idx);
-				initmemb->n = subinit;
-				vecappend(n->Init.inits, initmemb);
-			}
-			idx += 1;
-			if(largestidx < idx)
-				largestidx = idx;
-			if(tok->k != ',')
-				break;
-			next();
-		}
-		qsort(n->Init.inits->d, n->Init.inits->len, sizeof(void*), compareinits);
-		for(i = 0; i < n->Init.inits->len - 1; i++) {
-			initmemb = vecget(n->Init.inits, i);
-			nextinitmemb = vecget(n->Init.inits, i + 1);
-			if(nextinitmemb->offset < initmemb->offset + initmemb->n->type->size)
-				errorposf(&initmemb->n->pos, "fields in init overlaps with another field");
-		}
-		expect('}');
-		if(isarray(t)) {
-			if(largestidx != t->Arr.dim)
-				errorposf(initpos, "array initializer wrong size for type");
-		}
-		return n;
-	}
+	if(isarray(t) && tok->k == '{') 
+		return declarrayinit(t);
+	if(isstruct(t)  && tok->k == '{') 
+		return declstructinit(t);
 	return assignexpr();
 }
 

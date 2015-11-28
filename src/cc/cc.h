@@ -3,6 +3,8 @@
 
 typedef struct SrcPos SrcPos;
 typedef struct StructMember StructMember;
+typedef struct StructExport StructExport;
+typedef struct ExportPath ExportPath;
 typedef struct NameTy NameTy;
 typedef struct CTy CTy;
 typedef struct Sym Sym;
@@ -146,6 +148,16 @@ struct StructMember {
 struct NameTy {
 	char *name;
 	CTy  *type;
+};
+
+struct ExportPath {
+	int idx;
+	ExportPath *next;
+};
+
+struct StructExport {
+	char *name;
+	ExportPath *path;
 };
 
 struct CTy {
