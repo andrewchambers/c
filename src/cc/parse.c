@@ -1564,6 +1564,7 @@ declarrayinit(CTy *t)
 	int     idx;
 	int     largestidx;
 	
+	subty = t->Arr.subty;
 	initpos = &tok->pos;
 	n = mknode(NINIT, initpos);
 	n->type = t;
@@ -1574,22 +1575,19 @@ declarrayinit(CTy *t)
 	for(;;) {
 		if(tok->k == '}')
 			break;
-		if(isarray(t)) {
-			subty = t->Arr.subty;
-			if(tok->k == '[') {
-				selpos = &tok->pos;
-				expect('[');
-				arrayidx = constexpr();
-				expect(']');
-				expect('=');
-				if(arrayidx->p != 0)
-					errorposf(selpos, "pointer derived constants not allowed in initializer selector");
-				if(arrayidx->v < 0)
-					errorposf(selpos, "negative initializer index not allowed");
-				idx = arrayidx->v;
-				if(largestidx < idx)
-					largestidx = idx;
-			}
+		if(tok->k == '[') {
+			selpos = &tok->pos;
+			expect('[');
+			arrayidx = constexpr();
+			expect(']');
+			expect('=');
+			if(arrayidx->p != 0)
+				errorposf(selpos, "pointer derived constants not allowed in initializer selector");
+			if(arrayidx->v < 0)
+				errorposf(selpos, "negative initializer index not allowed");
+			idx = arrayidx->v;
+			if(largestidx < idx)
+				largestidx = idx;
 		}
 		subinit = declinit(subty);
 		/* Flatten nested inits */
