@@ -728,6 +728,7 @@ fbody(void)
 		nt = vecget(curfunc->type->Func.params, i);
 		if(nt->name) {
 			sym = definesym(&curfunc->pos, SCAUTO, nt->name, nt->type, 0);
+			sym->Local.isparam = 1;
 			vecappend(curfunc->Func.params, sym);
 		}
 	}

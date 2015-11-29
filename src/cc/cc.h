@@ -388,10 +388,11 @@ struct Sym {
 	Node   *init;
 	union {
 		struct {
-			int   sclass;
+			int sclass;
 			char *label;
 		} Global;
 		struct {
+			int isparam;
 			StkSlot *slot;
 		} Local;
 		struct {

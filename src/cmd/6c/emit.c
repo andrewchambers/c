@@ -79,11 +79,8 @@ calcslotoffsets(Node *f)
 	for(i = 0; i < f->Func.stkslots->len; i++) {
 		s = vecget(f->Func.stkslots, i);
 		tsz = s->size;
-		/* This allows us to just copy params which have had the size rounded up. */
-		if(tsz < 8)
+		if(tsz <= 8)
 			tsz = 8;
-		else if(tsz < 16)
-			tsz = 16;
 		curoffset += tsz;
 		if(curoffset % s->align)
 			curoffset = (curoffset - (curoffset % s->align) + s->align);
@@ -579,6 +576,10 @@ ident(Node *n)
 		return;
 	}
 	addr(n);
+	if(sym->k == SYMLOCAL)
+	if(sym->Local.isparam)
+	if(isarray(sym->type))
+		outi("movq (%%rax), %%rax\n");
 	load(n->type);
 }
 
