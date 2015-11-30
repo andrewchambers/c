@@ -1,5 +1,5 @@
 
-CFLAGS  = -std=c89 -g -Wfatal-errors -Werror -Wno-unused-parameter -Wall -Wextra -D_DEFAULT_SOURCE
+CFLAGS  = -std=c89 -g -Wfatal-errors -Wno-unused-parameter -Wall -Wextra -D_DEFAULT_SOURCE
 
 # NOTE if one of these headers does not exist, the wildcard rule fails.
 HFILES = src/u.h src/cc/cc.h src/ds/ds.h src/gc/gc.h

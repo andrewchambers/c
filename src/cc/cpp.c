@@ -10,6 +10,7 @@ typedef enum {
 	FUNCMACRO,
 	BUILTINMACRO,
 } MacroKind;
+
 typedef struct Macro Macro;
 struct Macro {
 	MacroKind k;
@@ -64,16 +65,48 @@ poplex()
 	fclose(lexers[nlexers]->f);
 }
 
+static int
+fileexists(char *fname)
+{
+	FILE *f;
+
+	f = fopen(fname, "r");
+	if(!f)
+		return 0;
+	fclose(f);
+	return 1;
+}
+
+static char *
+findinclude(char *path, int issysinclude)
+{
+	int i;
+	char buf[4096];
+	
+	/* XXX check current dir */
+	/* XXX proper path join */
+	for(i = 0; i < includedirs->len; i++) {
+		snprintf(buf, sizeof(buf), "%s/%s", (char*)vecget(includedirs, i), path);
+		if(fileexists(buf))
+			return gcstrdup(buf);
+	}
+	return 0;
+}
+
 static void
 include()
 {
-	int   n;
+	int  n;
 	Tok  *t;
-	char *path;
+	char *path, *fullpath;
+	SrcPos *pos;
+	int  sysinclude;
 
 	t = ppnoexpand();
-	if(t->k != TOKSTR)
-		errorposf(&t->pos, "#include expects a string");
+	pos = &t->pos;
+	if(t->k != TOKSTR && t->k != TOKHEADER)
+		errorposf(pos, "#include expects a string or '<>' style header");
+	sysinclude = t->k == TOKHEADER;
 	path = gcstrdup(t->v);
 	n = strlen(path);
 	path[n - 1] = 0;
@@ -81,7 +114,10 @@ include()
 	t = ppnoexpand();
 	if(t->k != TOKDIREND)
 		errorposf(&t->pos, "garbage at end of #include (%s)", tokktostr(t->k));
-	pushlex(path);
+	fullpath = findinclude(path, sysinclude);
+	if(!fullpath)
+		errorposf(pos, "could find header %s", path);
+	pushlex(fullpath);
 }
 
 static int

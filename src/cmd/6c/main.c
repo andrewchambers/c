@@ -18,7 +18,6 @@ main(int argc, char *argv[])
 	
 	cfile = 0;
 	includedirs = vec();
-	vecappend(includedirs, "./");
 	for(i = 1; i < argc; i++) {
 		if(strcmp(argv[i], "-I") == 0) {
 			i++;

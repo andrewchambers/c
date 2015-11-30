@@ -44,6 +44,7 @@ typedef enum {
 	TOKHASH   = '#',
 	TOKNUM = 256,
 	TOKIDENT,
+	TOKHEADER,
 	TOKIF,
 	TOKDO,
 	TOKFOR,
@@ -418,6 +419,7 @@ struct Lexer {
 	int    indirective;
 	int    ws;
 	int    nl;
+	int    includestate;
 	char   tokval[MAXTOKSZ+1];
 };
 

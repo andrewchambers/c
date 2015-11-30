@@ -70,6 +70,7 @@ tokktostr(Tokkind t)
 	case TOKHASHHASH:   return "##";
 	case TOKDIRSTART:   return "Directive start";
 	case TOKDIREND:     return "Directive end";
+	case TOKHEADER:     return "include header";
 	case '?':           return "?";
 	case '[':           return "[";
 	case '+':           return "+";
@@ -99,6 +100,12 @@ tokktostr(Tokkind t)
 	panic("internal error converting token to string: %d", t);
 }
 
+enum {
+	INCLUDEBEGIN,
+	INCLUDEIDENT,
+	INCLUDEHEADER,
+};
+
 /* makes a token, copies v */
 static Tok *
 mktok(Lexer *l, int kind) {
@@ -119,11 +126,30 @@ mktok(Lexer *l, int kind) {
 	case TOKNUM:
 	case TOKIDENT:
 	case TOKCHARLIT:
+	case TOKHEADER:
 		/* TODO: intern strings */
 		r->v = gcstrdup(l->tokval);
 		break;
 	default:
 		r->v = tokktostr(kind);
+		break;
+	}
+	/* The lexer needs to be aware of '<>' style includes. */
+	switch(l->includestate) {
+	case INCLUDEBEGIN:
+		if(kind == TOKDIRSTART)
+			l->includestate = INCLUDEIDENT;
+		else
+			l->includestate = INCLUDEBEGIN;
+		break;
+	case INCLUDEIDENT:
+		if(kind == TOKIDENT && strcmp(r->v, "include") == 0)
+			l->includestate = INCLUDEHEADER;
+		else
+			l->includestate = INCLUDEBEGIN;
+		break;
+	default:
+		l->includestate = INCLUDEBEGIN;
 		break;
 	}
 	return r;
@@ -321,6 +347,15 @@ lex(Lexer *l)
 			}
 			accept(l, c);
 		}
+	} else if(c == '<' && l->includestate == INCLUDEHEADER) {
+		for(;;){
+			accept(l, c);
+			if(c == EOF)
+				errorf("eof in include\n");
+			if(c == '>')
+				return mktok(l, TOKHEADER);
+			c = nextc(l);
+		}
 	} else {
 		c2 = nextc(l);
 		if(c == '/' && c2 == '*') {
@@ -383,7 +418,6 @@ lex(Lexer *l)
 		else if(c == '#' && c2 == '#') return mktok(l, TOKHASHHASH);
 		else if(c == '\\' && c2 == '\n') return lex(l);
 		else {
-
 			/* TODO, detect invalid operators */
 			ungetch(l, c2);
 			if(c == '#' && l->nl) {
