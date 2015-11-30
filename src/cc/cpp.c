@@ -116,7 +116,7 @@ include()
 		errorposf(&t->pos, "garbage at end of #include (%s)", tokktostr(t->k));
 	fullpath = findinclude(path, sysinclude);
 	if(!fullpath)
-		errorposf(pos, "could find header %s", path);
+		errorposf(pos, "could not find header %s", path);
 	pushlex(fullpath);
 }
 
