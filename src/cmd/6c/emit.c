@@ -788,12 +788,12 @@ vastart(Node *n)
 	expr(n->Builtin.Vastart.valist);
 	/* XXX currently only support int args */
 	argend = (n->Builtin.Vastart.param->Ident.sym->Local.paramidx + 1) * 8;
-    pushq("rcx");
-    outi("movl $%d, (%%rax)\n", argend);
-    outi("movl $%d, 4(%%rax)\n", 48 + 0 * 16);
-    outi("leaq %d(%%rbp), %%rcx\n", -176);
-    outi("movq %%rcx, 16(%%rax)\n");
-    popq("rcx");
+	pushq("rcx");
+	outi("movl $%d, (%%rax)\n", argend);
+	outi("movl $%d, 4(%%rax)\n", 48 + 0 * 16);
+	outi("leaq %d(%%rbp), %%rcx\n", -176);
+	outi("movq %%rcx, 16(%%rax)\n");
+	popq("rcx");
 }
 
 static void
