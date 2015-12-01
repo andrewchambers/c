@@ -15,7 +15,10 @@ supported target in less than 30 seconds.
 
 ## Building
 
-Requires an external C compiler and gnu binutils (for now).
+Requires an external C compiler and gnu binutils (for now), and I have only tested
+it on linux 64 bit so far.
+
+The code does use anonymous union extensions, so your compiler will need to support them too.
 
 ```
 $ make
@@ -24,7 +27,7 @@ $ make
 ## Testing
 ```
 $ make test
-$ make selfhost # partial self hosting
+$ make selfhost # self hosting
 ```
 
 ## Plan
@@ -55,13 +58,14 @@ Build musl libc.
 
 ## Status
 
-Pre stage 1.
+Pre stage 2. Self hosting with lots of missing edge cases. Though technically these
+bugs can be fixed with the compiler itself :). It uses it's own stubbed out headers
+and cannot correctly process system headers yet (Help wanted). 
 
-See tests for what works.
 
 ## Contributing
 
-Contributors welcome, preferrably discuss on irc before starting something.
+Contributors welcome, preferrably discuss on gitter before starting something.
 Even contributing self contained test cases is useful.
 
 ### Code layout
@@ -90,39 +94,23 @@ reduce the test case by hand until it is as small as possible.
 Try and follow the general template changed where needed:
 ```
 What are you trying to do:
-
-I am trying to compile foo.c and your compiler has ruined my life by deleting all 
-my files.
-
+...
 What you expected to happen:
-
-The program works in many other C compilers, so should compile with no issue.
-
+...
 What actually hapened:
-
-/ was deleted while the compiler printed "hahaha" many thousands of times.
-
-Here is a small self contained file which reproduces the issue.
+...
 ```
+Try and add a small self contained file which reproduces the issue.
 
 In general each bug fix or change should add a test file which triggers the bug.
 
-### Commit messages
-
-General style: 
-
-```
-Fix issue #3 post increment.
-
-Post increment had a bug where it decremented instead of incremented.
-```
-
-Commits can be squashed to increase clarity.
-
 ### Memory management
 
-The compiler assumes a conservative garbage collector.
-For now, the header is stubbed out. This simplifies the code.
+The compiler does not explicitly free memory. Peak memory usage while self hosting
+is approximately 2Mb, so it should not be an issue, even for planned targets/hosts like
+the raspberry pi.
+
+ This actually simplifies the code and probably makes it faster because allocations can be pointer bumps.
 
 ## Useful Links
 
