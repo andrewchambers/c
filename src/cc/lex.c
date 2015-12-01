@@ -98,6 +98,7 @@ tokktostr(Tokkind t)
 	case '\\':          return "\\";
 	}
 	panic("internal error converting token to string: %d", t);
+	return 0;
 }
 
 enum {
@@ -256,6 +257,10 @@ lex(Lexer *l)
 	}
 	c = nextc(l);
 	if(c == EOF) {
+		if(l->indirective) {
+			l->indirective = 0;
+			return mktok(l, TOKDIREND);
+		}
 		return mktok(l, TOKEOF);
 	} else if(wsc(c)) {
 		l->ws = 1;
@@ -264,6 +269,10 @@ lex(Lexer *l)
 		do {
 			c = nextc(l);
 			if(c == EOF) {
+				if(l->indirective) {
+					l->indirective = 0;
+					return mktok(l, TOKDIREND);
+				}
 				return mktok(l, TOKEOF);
 			}
 			if(c == '\n')
@@ -285,9 +294,8 @@ lex(Lexer *l)
 				accept(l, c);
 				continue;
 			}
-			if (c == '"') { /* TODO: escape chars */ 
+			if(c == '"') /* TODO: escape chars */ 
 				return mktok(l, TOKSTR);
-			}
 		}
 	} else if (c == '\'') {
 		accept(l, c);
@@ -303,7 +311,7 @@ lex(Lexer *l)
 		}
 		c = nextc(l);
 		accept(l, c);
-		if (c != '\'')
+		if(c != '\'')
 			errorf("char literal expects '\n");
 		return mktok(l, TOKCHARLIT);
 	} else if(identfirstc(c)) {
@@ -370,12 +378,10 @@ lex(Lexer *l)
 						l->nl = 1;
 				} while(c != '*');
 				c = nextc(l);
-				if(c == EOF) {
+				if(c == EOF)
 					return mktok(l, TOKEOF);
-				}
-				if(c == '/') {
+				if(c == '/') 
 					return lex(l);
-				}
 				if(c == '\n')
 					l->nl = 1;
 			}
@@ -383,9 +389,8 @@ lex(Lexer *l)
 			l->ws = 1;
 			do {
 				c = nextc(l);
-				if (c == EOF) {
+				if (c == EOF)
 					return mktok(l, TOKEOF);
-				}
 			} while(c != '\n');
 			l->nl = 1;
 			ungetch(l, c);

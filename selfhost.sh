@@ -20,18 +20,16 @@ SELFHOSTSRC="src/ds/list.c
 SELFHOSTOBJDIR=lib/selfhostobj
 
 mkdir -p $SELFHOSTOBJDIR
-for F in $GCCSRC
+for C in $GCCSRC
 do
-	O=$SELFHOSTOBJDIR/`basename $F .c`.o
-	gcc -c -I./src/ $F -o $O
+	O=$SELFHOSTOBJDIR/`basename $C .c`.o
+	gcc -c -I./src/ $C -o $O
 done
-for F in $SELFHOSTSRC
+for C in $SELFHOSTSRC
 do
-	O=$SELFHOSTOBJDIR/`basename $F .c`.o
-	C=$SELFHOSTOBJDIR/`basename $F`
-	S=$SELFHOSTOBJDIR/`basename $F .c`.s
-	gcc -nostdinc -I./src/ -I./src/selfhost/ -E $F | grep -v "^#" > $C
-	bin/6c $C > $S
+	O=$SELFHOSTOBJDIR/`basename $C .c`.o
+	S=$SELFHOSTOBJDIR/`basename $C .c`.s
+	bin/6c -I src -I src/selfhost -I `dirname $C`  $C > $S
 	gcc -c $S -o $O
 done
 

@@ -426,8 +426,10 @@ pp()
 		}
 		return pp();
 	default:
-		panic("unimplemented");
+		;
 	}
+	panic("unimplemented");
+	return 0;
 }
 
 void
