@@ -8,12 +8,7 @@ typedef struct {
 
 typedef __va_elem va_list[1];
 
-#define va_start(X, Y) do { \
-                            (X)[0].gp_offset = 0; \
-                            (X)[0].fp_offset = 0; \
-                            (X)[0].overflow_arg_area = 0; \
-                            (X)[0].reg_save_area = 0;\
-                       } while(0);
+#define va_start(X, Y) __builtin_va_start((X), (Y))
 #define va_end(X) (X)
 
 int vfprintf(FILE *stream, const char *format, va_list ap);

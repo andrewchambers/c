@@ -232,13 +232,18 @@ typedef enum {
 	NSIZEOF,
 	NIF,
 	NDECL,
-	NEXPRSTMT
+	NEXPRSTMT,
+	NBUILTIN
 } Nodekind;
 
 typedef struct {
 	int offset;
 	Node *n;
 } InitMember;
+
+typedef enum {
+	BUILTIN_VASTART
+} Builtinkind;
 
 struct Node {
 	/* type tag, one of the N* types */
@@ -371,6 +376,15 @@ struct Node {
 		struct {
 			CTy *type;
 		} Sizeof;
+		struct {
+			Builtinkind t;
+			union {
+				struct {
+					Node *valist;
+					Node *param;
+				} Vastart;
+			};
+		} Builtin;
 	};
 };
 
@@ -393,8 +407,11 @@ struct Sym {
 			char *label;
 		} Global;
 		struct {
-			int isparam;
 			StkSlot *slot;
+			/* XXX make a Param sym type */ 
+			CTy *functy;
+			int paramidx;
+			int isparam;
 		} Local;
 		struct {
 			int64 v;

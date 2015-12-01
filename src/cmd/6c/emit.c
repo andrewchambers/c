@@ -74,7 +74,7 @@ calcslotoffsets(Node *f)
 {
 	int i, tsz, curoffset;
 	StkSlot *s;
-
+	
 	curoffset = 0;
 	for(i = 0; i < f->Func.stkslots->len; i++) {
 		s = vecget(f->Func.stkslots, i);
@@ -85,6 +85,8 @@ calcslotoffsets(Node *f)
 		if(curoffset % s->align)
 			curoffset = (curoffset - (curoffset % s->align) + s->align);
 		s->offset = -curoffset;
+		if(f->type->Func.isvararg)
+			s->offset -= 176;
 	}
 	if(curoffset % 16)
 		curoffset = (curoffset - (curoffset % 16) + 16);
@@ -121,6 +123,16 @@ func(Node *f, char *label, int isglobal)
 	out("%s:\n", label);
 	pushq("rbp");
 	outi("movq %%rsp, %%rbp\n");
+    if (f->type->Func.isvararg) {
+    	stackoffset += 176;
+	 	outi("sub $176, %%rsp\n");
+		outi("movq %%rdi, (%%rsp)\n");
+		outi("movq %%rsi, 8(%%rsp)\n");
+		outi("movq %%rdx, 16(%%rsp)\n");
+		outi("movq %%rcx, 24(%%rsp)\n");
+		outi("movq %%r8, 32(%%rsp)\n");
+		outi("movq %%r9, 40(%%rsp)\n");
+    }
 	if (f->Func.localsz) {
 		outi("sub $%d, %%rsp\n", f->Func.localsz);
 		stackoffset += f->Func.localsz;
@@ -769,6 +781,22 @@ str(Node *n)
 }
 
 static void
+vastart(Node *n)
+{
+	int argend;
+	
+	expr(n->Builtin.Vastart.valist);
+	/* XXX currently only support int args */
+	argend = (n->Builtin.Vastart.param->Ident.sym->Local.paramidx + 1) * 8;
+    pushq("rcx");
+    outi("movl $%d, (%%rax)\n", argend);
+    outi("movl $%d, 4(%%rax)\n", 48 + 0 * 16);
+    outi("leaq %d(%%rbp), %%rcx\n", -176);
+    outi("movq %%rcx, 16(%%rax)\n");
+    popq("rcx");
+}
+
+static void
 expr(Node *n)
 {
 	switch(n->t){
@@ -813,6 +841,15 @@ expr(Node *n)
 		break;
 	case NINCDEC:
 		incdec(n);
+		break;
+	case NBUILTIN:
+		switch(n->Builtin.t) {
+		case BUILTIN_VASTART:
+			vastart(n);
+			break;
+		default:
+			errorposf(&n->pos, "unimplemented builtin");
+		}
 		break;
 	default:
 		errorf("unimplemented emit expr %d\n", n->t);

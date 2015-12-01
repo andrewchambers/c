@@ -38,6 +38,7 @@ static Node  *primaryexpr(void);
 static Node  *declorstmt(void);
 static Node  *decl(void);
 static Node  *declinit(CTy *);
+static Node  *vastart();
 static void   fbody(void);
 static CTy   *declspecs(int *);
 
@@ -729,6 +730,8 @@ fbody(void)
 		if(nt->name) {
 			sym = definesym(&curfunc->pos, SCAUTO, nt->name, nt->type, 0);
 			sym->Local.isparam = 1;
+			sym->Local.paramidx = i;
+			sym->Local.functy = curfunc->type;
 			vecappend(curfunc->Func.params, sym);
 		}
 	}
@@ -2274,6 +2277,8 @@ primaryexpr(void)
 	
 	switch (tok->k) {
 	case TOKIDENT:
+		if(strcmp(tok->v, "__builtin_va_start") == 0)
+			return vastart();
 		sym = lookup(syms, tok->v);
 		if(!sym)
 			errorposf(&tok->pos, "undefined symbol %s", tok->v);
@@ -2325,5 +2330,29 @@ primaryexpr(void)
 	}
 	errorf("unreachable.");
 	return 0;
+}
+
+static Node *
+vastart()
+{
+	Node *n, *valist, *param;
+	
+	n = mknode(NBUILTIN, &tok->pos);
+	expect(TOKIDENT);
+	expect('(');
+	valist = assignexpr();
+	expect(',');
+	param = assignexpr();
+	expect(')');
+	n->type = cvoid;
+	n->Builtin.t = BUILTIN_VASTART;
+	n->Builtin.Vastart.param = param;
+	n->Builtin.Vastart.valist = valist;
+	if(param->t != NIDENT)
+		errorposf(&n->pos, "expected an identifer in va_start");
+	if(param->Ident.sym->k != SYMLOCAL 
+	   || !param->Ident.sym->Local.isparam)
+		errorposf(&n->pos, "expected a parameter symbol in va_start");
+	return n;
 }
 
