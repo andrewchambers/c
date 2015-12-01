@@ -1,5 +1,5 @@
 #include <u.h>
-#include <gc/gc.h>
+#include <mem/mem.h>
 #include "ds.h"
 
 typedef struct MapEnt MapEnt;
@@ -12,7 +12,7 @@ Map *map()
 {
 	Map *m;
 
-	m = gcmalloc(sizeof(Map));
+	m = xmalloc(sizeof(Map));
 	m->l = list();
 	return m;
 }
@@ -22,7 +22,7 @@ mapset(Map *m, char *k, void *v)
 {
 	MapEnt *me;
 
-	me = gcmalloc(sizeof(MapEnt));
+	me = xmalloc(sizeof(MapEnt));
 	me->k = k;
 	me->v = v;
 	listprepend(m->l, me);

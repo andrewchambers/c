@@ -1,5 +1,5 @@
 #include <u.h>
-#include <gc/gc.h>
+#include <mem/mem.h>
 #include "ds.h"
 
 List *
@@ -7,7 +7,7 @@ list()
 {
 	List *l;
 
-	l = gcmalloc(sizeof(List));
+	l = xmalloc(sizeof(List));
 	return l;
 }
 
@@ -17,7 +17,7 @@ listappend(List *l, void *v)
 	ListEnt *e, *ne;
 
 	l->len++;
-	ne = gcmalloc(sizeof(ListEnt));
+	ne = xmalloc(sizeof(ListEnt));
 	ne->v = v;
 	if(l->head == 0) {
 		l->head = ne;
@@ -35,7 +35,7 @@ listprepend(List *l, void *v)
 	ListEnt *e;
 
 	l->len++;
-	e = gcmalloc(sizeof(ListEnt));
+	e = xmalloc(sizeof(ListEnt));
 	e->v = v;
 	e->next = l->head;
 	l->head = e;
@@ -61,7 +61,7 @@ listinsert(List *l, int idx, void *v)
 		e = e->next;
 		i++;
 	}
-	newe = gcmalloc(sizeof(ListEnt));
+	newe = xmalloc(sizeof(ListEnt));
 	newe->v = v;
 	newe->next = e->next;
 	e->next = newe;

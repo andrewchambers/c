@@ -1,5 +1,5 @@
 #include <u.h>
-#include <gc/gc.h>
+#include <mem/mem.h>
 #include <ds/ds.h>
 #include "cc.h"
 
@@ -90,7 +90,7 @@ newlabel(void)
 	if(n < 0)
 		panic("internal error");
 	n += 1;
-	s = gcmalloc(n);
+	s = xmalloc(n);
 	if(snprintf(s, n, ".L%d", labelcount) < 0)
 		panic("internal error");
 	labelcount++;
@@ -279,7 +279,7 @@ defineenum(SrcPos *p, char *name, CTy *type, int64 v)
 {
 	Sym *sym;
 
-	sym = gcmalloc(sizeof(Sym));
+	sym = xmalloc(sizeof(Sym));
 	sym->pos = p;
 	sym->name = name;
 	sym->type = type;
@@ -325,14 +325,14 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 		}
 		return sym;
 	}
-	sym = gcmalloc(sizeof(Sym));
+	sym = xmalloc(sizeof(Sym));
 	sym->name = name;
 	sym->type = type;
 	sym->init = n;
 	switch(sclass) {
 	case SCAUTO:
 		sym->k = SYMLOCAL;
-		sym->Local.slot = gcmalloc(sizeof(StkSlot));
+		sym->Local.slot = xmalloc(sizeof(StkSlot));
 		sym->Local.slot->size = sym->type->size;
 		sym->Local.slot->align = sym->type->align;
 		vecappend(curfunc->Func.stkslots, sym->Local.slot);
@@ -377,7 +377,7 @@ newnamety(char *n, CTy *t)
 {
 	NameTy *nt;
 	
-	nt = gcmalloc(sizeof(NameTy));
+	nt = xmalloc(sizeof(NameTy));
 	nt->name = n;
 	nt->type = t;
 	return nt;
@@ -388,7 +388,7 @@ mknode(int type, SrcPos *p)
 {
 	Node *n;
 
-	n = gcmalloc(sizeof(Node));
+	n = xmalloc(sizeof(Node));
 	n->pos = *p;
 	n->t = type;
 	return n;
@@ -574,7 +574,7 @@ usualarithconv(Node **a, Node **b)
 		*small = mkcast(&(*small)->pos, *small, (*large)->type);
 		return (*large)->type;
 	}
-	t = gcmalloc(sizeof(CTy));
+	t = xmalloc(sizeof(CTy));
 	*t = *((*large)->type);
 	t->Prim.issigned = 0;
 	*large = mkcast(&(*large)->pos, *large, t);
@@ -1004,7 +1004,7 @@ directdeclarator(CTy *basety, char **name)
 	switch(tok->k) {
 	case '(':
 		expect('(');
-		stub = gcmalloc(sizeof(CTy));
+		stub = xmalloc(sizeof(CTy));
 		*stub = *basety;
 		ty = declarator(stub, name, 0);
 		expect(')');
@@ -1601,7 +1601,7 @@ declarrayinit(CTy *t)
 				vecappend(n->Init.inits, initmemb);
 			}
 		} else {
-			initmemb = gcmalloc(sizeof(InitMember));
+			initmemb = xmalloc(sizeof(InitMember));
 			initmemb->offset = subty->size * idx;
 			initmemb->n = subinit;
 			vecappend(n->Init.inits, initmemb);
@@ -1675,7 +1675,7 @@ declstructinit(CTy *t)
 				vecappend(n->Init.inits, initmemb);
 			}
 		} else {
-			initmemb = gcmalloc(sizeof(InitMember));
+			initmemb = xmalloc(sizeof(InitMember));
 			initmemb->offset = offset;
 			initmemb->n = subinit;
 			vecappend(n->Init.inits, initmemb);

@@ -2,14 +2,14 @@
 CFLAGS  = -std=c89 -g -Wfatal-errors -Wno-unused-parameter -Wall -Wextra -D_DEFAULT_SOURCE
 
 # NOTE if one of these headers does not exist, the wildcard rule fails.
-HFILES = src/u.h src/cc/cc.h src/ds/ds.h src/gc/gc.h
+HFILES = src/u.h src/cc/cc.h src/ds/ds.h src/mem/mem.h
 CCO    = src/cc/cpp.o \
          src/cc/lex.o \
          src/cc/parse.o \
          src/cc/types.o \
          src/cc/foldexpr.o \
          src/cc/error.o
-GCO    = src/gc/gc.o
+GCO    = src/mem/mem.o
 DSO    = src/ds/list.o \
          src/ds/map.o \
          src/ds/vec.o \

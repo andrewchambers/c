@@ -1,7 +1,7 @@
 #include <u.h>
 #include <ds/ds.h>
 #include <cc/cc.h>
-#include <gc/gc.h>
+#include <mem/mem.h>
 
 static void expr(Node *);
 static void stmt(Node *);
@@ -26,7 +26,7 @@ penddata(char *label, CTy *ty, Node *init, int isglobal)
 {
 	Data *d;
 
-	d = gcmalloc(sizeof(Data));
+	d = xmalloc(sizeof(Data));
 	d->label = label;
 	d->type = ty;
 	d->init = init;

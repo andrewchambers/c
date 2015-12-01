@@ -1,5 +1,5 @@
 #include <u.h>
-#include <gc/gc.h>
+#include <mem/mem.h>
 #include <ds/ds.h>
 #include "cc.h"
 
@@ -44,7 +44,7 @@ pushlex(char *path)
 
 	if(nlexers == MAXINCLUDE)
 		panic("include depth limit reached!");
-	l = gcmalloc(sizeof(Lexer));
+	l = xmalloc(sizeof(Lexer));
 	l->pos.file = path;
 	l->prevpos.file = path;
 	l->markpos.file = path;
@@ -88,7 +88,7 @@ findinclude(char *path, int issysinclude)
 	for(i = 0; i < includedirs->len; i++) {
 		snprintf(buf, sizeof(buf), "%s/%s", (char*)vecget(includedirs, i), path);
 		if(fileexists(buf))
-			return gcstrdup(buf);
+			return xstrdup(buf);
 	}
 	return 0;
 }
@@ -107,7 +107,7 @@ include()
 	if(t->k != TOKSTR && t->k != TOKHEADER)
 		errorposf(pos, "#include expects a string or '<>' style header");
 	sysinclude = t->k == TOKHEADER;
-	path = gcstrdup(t->v);
+	path = xstrdup(t->v);
 	n = strlen(path);
 	path[n - 1] = 0;
 	path++;
@@ -150,7 +150,7 @@ define()
 		errorposf(&n->pos, "invalid macro name %s", n->v);
 	if(lookupmacro(n))
 		errorposf(&n->pos, "redefinition of macro %s", n->v);
-	m = gcmalloc(sizeof(Macro));
+	m = xmalloc(sizeof(Macro));
 	t = ppnoexpand();
 	if(t->k == '(' && !t->ws) {
 		m->k = FUNCMACRO;
@@ -343,7 +343,7 @@ expandfunclike(SrcPos *pos, Macro *m, Vec *params, StrSet *hs)
 			if(strcmp(t1->v, vecget(m->Func.argnames, j)) == 0) {
 				v = vecget(params, j);
 				for(k = 0; k < v->len; k++) {
-					t2 = gcmalloc(sizeof(Tok));
+					t2 = xmalloc(sizeof(Tok));
 					*t2 = *(Tok*)(vecget(v, k));
 					t2->pos = *pos;
 					t2->hs = hs;
@@ -354,7 +354,7 @@ expandfunclike(SrcPos *pos, Macro *m, Vec *params, StrSet *hs)
 			}
 		}
 		if(!argfound) {
-			t2 = gcmalloc(sizeof(Tok));
+			t2 = xmalloc(sizeof(Tok));
 			*t2 = *t1;
 			t2->pos = *pos;
 			t2->hs = hs;
@@ -419,7 +419,7 @@ pp()
 		if(strsethas(t1->hs, t1->v))
 			return t1;
 		for(i = 0; i < m->Obj.toks->len; i++) {
-			expanded = gcmalloc(sizeof(Tok));
+			expanded = xmalloc(sizeof(Tok));
 			*expanded = *(Tok*)vecget(m->Obj.toks, m->Obj.toks->len - i - 1);
 			expanded->hs = strsetadd(expanded->hs, t1->v);
 			listprepend(toks, expanded);

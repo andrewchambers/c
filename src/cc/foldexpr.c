@@ -1,5 +1,5 @@
 #include <u.h>
-#include <gc/gc.h>
+#include <mem/mem.h>
 #include <ds/ds.h>
 #include "cc.h"
 
@@ -8,7 +8,7 @@ mkconst(char *p, int64 v)
 {
 	Const *c;
 
-	c = gcmalloc(sizeof(Const));
+	c = xmalloc(sizeof(Const));
 	c->p = p;
 	c->v = v;
 	return c;

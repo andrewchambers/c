@@ -1,5 +1,5 @@
 #include <u.h>
-#include <gc/gc.h>
+#include <mem/mem.h>
 #include <ds/ds.h>
 #include "cc.h"
 
@@ -113,7 +113,7 @@ mktok(Lexer *l, int kind) {
 	Tok *r;
 
 	l->tokval[l->nchars] = 0;
-	r = gcmalloc(sizeof(Tok));
+	r = xmalloc(sizeof(Tok));
 	r->pos.line = l->markpos.line;
 	r->pos.col = l->markpos.col;
 	r->pos.file = l->markpos.file;
@@ -129,7 +129,7 @@ mktok(Lexer *l, int kind) {
 	case TOKCHARLIT:
 	case TOKHEADER:
 		/* TODO: intern strings */
-		r->v = gcstrdup(l->tokval);
+		r->v = xstrdup(l->tokval);
 		break;
 	default:
 		r->v = tokktostr(kind);

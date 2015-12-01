@@ -1,5 +1,5 @@
 #include <u.h>
-#include <gc/gc.h>
+#include <mem/mem.h>
 #include "ds.h"
 
 Vec *
@@ -7,10 +7,10 @@ vec()
 {
 	Vec *v;
 
-	v = gcmalloc(sizeof(Vec));
+	v = xmalloc(sizeof(Vec));
 	v->len = 0;
 	v->cap = 16;
-	v->d = gcmalloc(sizeof(void*) * v->cap);
+	v->d = xmalloc(sizeof(void*) * v->cap);
 	return v;
 }
 
@@ -38,7 +38,7 @@ vecresize(Vec *v, int cap)
 
 	if(v->cap >= cap)
 		return;
-	nd = gcmalloc(cap*sizeof(void*));
+	nd = xmalloc(cap*sizeof(void*));
 	for(i = 0; i < v->len; i++)
 		nd[i] = v->d[i];
 	v->d = nd;

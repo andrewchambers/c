@@ -1,6 +1,6 @@
 #include "u.h"
 #include "ds/ds.h"
-#include "gc/gc.h"
+#include "mem/mem.h"
 #include <time.h>
 
 #define MAXPARAMS  10
@@ -99,14 +99,14 @@ randstruct(int depth)
 	int i, n; 
 	char buff[1024];
 
-	r = gcmalloc(sizeof(Val));
+	r = xmalloc(sizeof(Val));
 	r->t = STRUCT;
 	r->Cstruct.members = vec();
 	n = rand() % MAXSTRUCTM;
 	for(i = 0; i < n; i++)
 		vecappend(r->Cstruct.members, randval(depth + 1));
 	snprintf(buff, sizeof buff, "s%d", structcount++);
-	r->Cstruct.name = gcstrdup(buff);
+	r->Cstruct.name = xstrdup(buff);
 	printf("struct %s {\n", r->Cstruct.name);
 	for(i = 0; i < r->Cstruct.members->len; i++) {
 		p = vecget(r->Cstruct.members, i);
@@ -126,37 +126,37 @@ randval(int depth)
 	again:
 	switch(rand() % TEND) {
 	case CHAR:
-		r = gcmalloc(sizeof(Val));
+		r = xmalloc(sizeof(Val));
 		r->t = CHAR;
 		r->Cchar.v = rand();
 		break;
 	case SHORT:
-		r = gcmalloc(sizeof(Val));
+		r = xmalloc(sizeof(Val));
 		r->t = SHORT;
 		r->Cshort.v = rand();
 		break;
 	case INT:
-		r = gcmalloc(sizeof(Val));
+		r = xmalloc(sizeof(Val));
 		r->t = INT;
 		r->Cint.v = rand();
 		break;
 	case LONG:
-		r = gcmalloc(sizeof(Val));
+		r = xmalloc(sizeof(Val));
 		r->t = LONG;
 		r->Clong.v = rand();
 		break;
 	case LLONG:
-		r = gcmalloc(sizeof(Val));
+		r = xmalloc(sizeof(Val));
 		r->t = LLONG;
 		r->Cllong.v = rand();
 		break;
 	case FLOAT:
-		r = gcmalloc(sizeof(Val));
+		r = xmalloc(sizeof(Val));
 		r->t = FLOAT;
 		r->Cfloat.v = (float)rand();
 		break;
 	case DOUBLE:
-		r = gcmalloc(sizeof(Val));
+		r = xmalloc(sizeof(Val));
 		r->t = DOUBLE;
 		r->Cdouble.v = (double)rand();
 		break;
@@ -177,7 +177,7 @@ randtestcase()
 	Testcase *t;
 	int n, i;
 	
-	t = gcmalloc(sizeof(Testcase));
+	t = xmalloc(sizeof(Testcase));
 	t->vals = vec();
 	t->ret = randval(0);
 	n = rand() % MAXPARAMS;

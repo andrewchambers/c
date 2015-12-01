@@ -1,6 +1,6 @@
 #include <u.h>
 #include <ds/ds.h>
-#include <gc/gc.h>
+#include <mem/mem.h>
 #include "cc.h"
 
 static int
@@ -16,7 +16,7 @@ newtype(int type)
 {
 	CTy *t;
 
-	t = gcmalloc(sizeof(CTy));
+	t = xmalloc(sizeof(CTy));
 	t->t = type;
 	return t;
 }
@@ -366,7 +366,7 @@ newstructmember(char *name, int offset, CTy *membt)
 {
 	StructMember *sm;
 
-	sm = gcmalloc(sizeof(StructMember));
+	sm = xmalloc(sizeof(StructMember));
 	sm->name = name;
 	sm->type = membt;
 	sm->offset = offset;
@@ -417,9 +417,9 @@ finalizestruct(SrcPos *pos, CTy *t)
 		if(sm->name) {
 			if(strsethas(exportednames, sm->name))
 				errorposf(pos, "field %s duplicated in struct", sm->name);
-			export = gcmalloc(sizeof(StructExport));
+			export = xmalloc(sizeof(StructExport));
 			export->name = sm->name;
-			export->path = gcmalloc(sizeof(ExportPath));
+			export->path = xmalloc(sizeof(ExportPath));
 			export->path->idx = i;
 			export->path->next = 0;
 			vecappend(t->Struct.exports, export);
@@ -432,9 +432,9 @@ finalizestruct(SrcPos *pos, CTy *t)
 			subexport = vecget(sm->type->Struct.exports, j);
 			if(strsethas(exportednames, subexport->name))
 				errorposf(pos, "field %s duplicated in struct", subexport->name);
-			export = gcmalloc(sizeof(StructExport));
+			export = xmalloc(sizeof(StructExport));
 			export->name = subexport->name;
-			export->path = gcmalloc(sizeof(ExportPath));
+			export->path = xmalloc(sizeof(ExportPath));
 			export->path->idx = i;
 			export->path->next = subexport->path;
 			vecappend(t->Struct.exports, export);

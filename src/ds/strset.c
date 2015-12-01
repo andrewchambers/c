@@ -1,5 +1,5 @@
 #include <u.h>
-#include <gc/gc.h>
+#include <mem/mem.h>
 #include "ds.h"
 
 StrSet *
@@ -9,7 +9,7 @@ strsetadd(StrSet *ss, char *v)
 
 	if(strsethas(ss,v))
 		return ss;
-	r = gcmalloc(sizeof(StrSet));
+	r = xmalloc(sizeof(StrSet));
 	r->v = v;
 	r->next = ss;
 	return r;

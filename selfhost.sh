@@ -6,7 +6,7 @@ SELFHOSTSRC="src/ds/list.c
 	src/ds/map.c
 	src/ds/vec.c
 	src/ds/strset.c
-	src/gc/gc.c
+	src/mem/mem.c
 	src/cc/types.c
 	src/cc/foldexpr.c
 	src/cc/lex.c
