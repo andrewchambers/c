@@ -10,10 +10,7 @@
 #include <string.h>
 #include <stdarg.h>
 
-/* XXX uncomment to silence clang static analysis
 #define NORETURN __attribute__((__noreturn__)); 
-*/
-#define NORETURN 
 
 typedef int64_t  int64;
 typedef int32_t  int32;
