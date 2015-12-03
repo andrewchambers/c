@@ -123,17 +123,17 @@ func(Node *f, char *label, int isglobal)
 	out("%s:\n", label);
 	pushq("rbp");
 	outi("movq %%rsp, %%rbp\n");
-    if (f->type->Func.isvararg) {
-    	stackoffset += 176;
-	 	outi("sub $176, %%rsp\n");
+	if(f->type->Func.isvararg) {
+		stackoffset += 176;
+		outi("sub $176, %%rsp\n");
 		outi("movq %%rdi, (%%rsp)\n");
 		outi("movq %%rsi, 8(%%rsp)\n");
 		outi("movq %%rdx, 16(%%rsp)\n");
 		outi("movq %%rcx, 24(%%rsp)\n");
 		outi("movq %%r8, 32(%%rsp)\n");
 		outi("movq %%r9, 40(%%rsp)\n");
-    }
-	if (f->Func.localsz) {
+	}
+	if(f->Func.localsz) {
 		outi("sub $%d, %%rsp\n", f->Func.localsz);
 		stackoffset += f->Func.localsz;
 	}
@@ -788,12 +788,12 @@ vastart(Node *n)
 	expr(n->Builtin.Vastart.valist);
 	/* XXX currently only support int args */
 	argend = (n->Builtin.Vastart.param->Ident.sym->Local.paramidx + 1) * 8;
-    pushq("rcx");
-    outi("movl $%d, (%%rax)\n", argend);
-    outi("movl $%d, 4(%%rax)\n", 48 + 0 * 16);
-    outi("leaq %d(%%rbp), %%rcx\n", -176);
-    outi("movq %%rcx, 16(%%rax)\n");
-    popq("rcx");
+	pushq("rcx");
+	outi("movl $%d, (%%rax)\n", argend);
+	outi("movl $%d, 4(%%rax)\n", 48 + 0 * 16);
+	outi("leaq %d(%%rbp), %%rcx\n", -176);
+	outi("movq %%rcx, 16(%%rax)\n");
+	popq("rcx");
 }
 
 static void
