@@ -2,21 +2,21 @@
 
 set -e
 
-SELFHOSTSRC="src/ds/list.c
-	src/ds/map.c
-	src/ds/vec.c
-	src/ds/strset.c
-	src/mem/mem.c
-	src/cc/types.c
+SELFHOSTSRC="src/cc/cpp.c
+	src/cc/error.c
 	src/cc/foldexpr.c
 	src/cc/lex.c
-	src/cmd/6c/frontend.c
-	src/cc/cpp.c
-	src/cmd/6c/main.c
 	src/cc/parse.c
-	src/cc/error.c
-	src/panic.c
-	src/cmd/6c/emit.c"
+	src/cc/types.c
+	src/cmd/6c/emit.c
+	src/cmd/6c/frontend.c
+	src/cmd/6c/main.c
+	src/ds/list.c
+	src/ds/map.c
+	src/ds/strset.c
+	src/ds/vec.c
+	src/mem/mem.c
+	src/panic.c"
 SELFHOSTOBJDIR=lib/selfhostobj
 mkdir -p lib/selfhostobj
 
