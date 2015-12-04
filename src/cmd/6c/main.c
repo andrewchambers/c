@@ -24,6 +24,8 @@ main(int argc, char *argv[])
 			if(i >= argc)
 				errorf("-I requires an include path\n");
 			vecappend(includedirs, argv[i]);
+		} else if(strncmp(argv[i], "-I", 2) == 0) {
+			vecappend(includedirs, argv[i]+2);
 		} else {
 			if(argv[i][0] == '-')
 				errorf("unknown flag %s\n", argv[i]);
