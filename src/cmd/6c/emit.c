@@ -749,14 +749,28 @@ idx(Node *n)
 
 	expr(n->Idx.idx);
 	sz = n->type->size;
-	if(sz != 1) {
+	if(sz != 1)
 		outi("imul $%d, %%rax\n", sz);
-	}
 	outi("push %%rax\n");
 	expr(n->Idx.operand);
 	outi("pop %%rcx\n");
 	outi("addq %%rcx, %%rax\n");
 	load(n->type);
+}
+
+static void
+ptradd(Node *n)
+{
+	int sz;
+
+	sz = n->type->Ptr.subty->size;
+	expr(n->Ptradd.offset);
+	if(sz != 1)
+		outi("imul $%d, %%rax\n", sz);
+	outi("push %%rax\n");
+	expr(n->Ptradd.ptr);
+	outi("pop %%rcx\n");
+	outi("addq %%rcx, %%rax\n");
 }
 
 static void
@@ -838,6 +852,9 @@ expr(Node *n)
 		break;
 	case NCALL:
 		call(n);
+		break;
+	case NPTRADD:
+		ptradd(n);
 		break;
 	case NINCDEC:
 		incdec(n);

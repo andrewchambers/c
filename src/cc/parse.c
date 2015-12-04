@@ -420,12 +420,34 @@ mkincdec(SrcPos *p, int op, int post, Node *operand)
 }
 
 static Node *
+mkptradd(SrcPos *p, Node *ptr, Node *offset)
+{
+	Node *n;
+	if(!isptr(ptr->type))
+		panic("internal error");
+	if(!isitype(offset->type))
+		errorposf(&offset->pos, "addition with a pointer requires an integer type");
+	n = mknode(NPTRADD, p);
+	n->Ptradd.ptr = ptr;
+	n->Ptradd.offset = offset;
+	n->type = ptr->type;
+	return n;
+}
+
+static Node *
 mkbinop(SrcPos *p, int op, Node *l, Node *r)
 {
 	Node *n;
 	CTy  *t;
 	
 	t = 0;
+	if(op == '+') {
+		if(isptr(l->type))
+			return mkptradd(p, l, r);
+		if(isptr(r->type))
+			return mkptradd(p, r, l);
+	}
+	
 	if(!isptr(l->type))
 		l = ipromote(l);
 	if(!isptr(r->type))

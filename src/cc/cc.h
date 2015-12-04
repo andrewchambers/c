@@ -227,6 +227,7 @@ typedef enum {
 	NSTR,
 	NIDX,
 	NINCDEC,
+	NPTRADD,
 	NSEL,
 	NCALL,
 	NSIZEOF,
@@ -338,6 +339,10 @@ struct Node {
 			int   post;
 			Node *operand;
 		} Incdec;
+		struct {
+			Node *ptr;
+			Node *offset;
+		} Ptradd;
 		struct {
 			Node *operand;
 		} Cast;
