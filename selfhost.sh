@@ -24,7 +24,7 @@ for C in $SELFHOSTSRC
 do
 	O=$SELFHOSTOBJDIR/`basename $C .c`.o
 	S=$SELFHOSTOBJDIR/`basename $C .c`.s
-	bin/6c -I src -I src/selfhost -I `dirname $C`  $C > $S
+	bin/6c -I src -I src/selfhost $C > $S
 	gcc -c $S -o $O
 done
 

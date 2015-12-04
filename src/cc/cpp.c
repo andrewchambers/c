@@ -28,7 +28,8 @@ struct Macro {
 int	nlexers;
 Lexer *lexers[MAXINCLUDE];
 
-static Vec *includedirs;
+static char *searchdir;
+static Vec  *includedirs;
 
 /* List of tokens inserted into the stream */
 static List *toks;
@@ -83,7 +84,11 @@ findinclude(char *path, int issysinclude)
 	int i;
 	char buf[4096];
 	
-	/* XXX check current dir */
+	if(!issysinclude) {
+		snprintf(buf, sizeof(buf), "%s%s", searchdir, path);
+		if(fileexists(buf))
+			return xstrdup(buf);
+	}
 	/* XXX proper path join */
 	for(i = 0; i < includedirs->len; i++) {
 		snprintf(buf, sizeof(buf), "%s/%s", (char*)vecget(includedirs, i), path);
@@ -432,13 +437,33 @@ pp()
 	return 0;
 }
 
+static char *
+filetodir(char *filepath)
+{
+	char *dir, *end;
+
+	dir = xstrdup(filepath);
+	end = dir + strlen(dir);
+	while(end != dir) {
+		if(*end == '/')
+			break;
+		end--;
+	}
+	if(*end == '/')
+		end[1] = 0;
+	else
+		end[0] = 0;	
+	return dir;
+}
+
 void
-cppinit(char *path, Vec *includes)
+cppinit(char *filepath, Vec *includes)
 {
 	includedirs = includes;
 	nlexers = 0;
 	toks = list();
 	macros = map();
-	pushlex(path);
+	searchdir = filetodir(filepath);
+	pushlex(filepath);
 }
 
