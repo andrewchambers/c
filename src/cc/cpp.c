@@ -452,7 +452,7 @@ filetodir(char *filepath)
 	if(*end == '/')
 		end[1] = 0;
 	else
-		end[0] = 0;	
+		end[0] = 0;
 	return dir;
 }
 
