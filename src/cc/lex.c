@@ -169,7 +169,7 @@ hexnumberc(int c)
 		return 1;
 	if(c >= 'a' && c <= 'f')
 		return 1;
-	if(c >= 'F' && c <= 'F')
+	if(c >= 'A' && c <= 'F')
 		return 1;
 	return 0;
 }
