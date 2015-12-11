@@ -10,7 +10,7 @@
 #include <string.h>
 #include <stdarg.h>
 
-#define NORETURN __attribute__((__noreturn__)); 
+#define NORETURN __attribute__((__noreturn__))
 
 typedef int64_t  int64;
 typedef int32_t  int32;
