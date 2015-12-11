@@ -418,7 +418,6 @@ lex(Lexer *l)
 		else if(c == '<' && c2 == '<') return mktok(l, TOKSHL);
 		else if(c == '>' && c2 == '>') return mktok(l, TOKSHR);
 		else if(c == '|' && c2 == '|') return mktok(l, TOKLOR);
-		else if(c == '|' && c2 == '|') return mktok(l, TOKLOR);
 		else if(c == '&' && c2 == '&') return mktok(l, TOKLAND);
 		else if(c == '#' && c2 == '#') return mktok(l, TOKHASHHASH);
 		else if(c == '\\' && c2 == '\n') return lex(l);
