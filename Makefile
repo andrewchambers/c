@@ -46,6 +46,18 @@ selfhost:
 	mv ./bin/selfhosted ./bin/6c
 	./test.sh
 
+qchost:
+	make clean
+	./qchost.sh
+	mv ./bin/qchosted ./bin/6c
+	./test.sh
+	./selfhost.sh
+	mv ./bin/selfhosted ./bin/6c
+	./test.sh
+	./selfhost.sh
+	mv ./bin/selfhosted ./bin/6c
+	./test.sh
+
 .c.o: $(HFILES)
 	$(CC) $(CFLAGS) -Isrc/ -o $@ -c $<
 
