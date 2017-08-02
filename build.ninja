@@ -8,9 +8,10 @@ rule link
 
 build util.o: cc util.c
 build cpp.o: cc cpp.c
+build ctypes.o: cc ctypes.c
 build cc.o: cc cc.c
 build ir.o: cc ir.c
 build main.o: cc main.c
-build cc: link util.o cpp.o cc.o ir.o main.o
+build cc: link util.o cpp.o ctypes.o cc.o ir.o main.o
 
 default cc
