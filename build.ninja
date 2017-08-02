@@ -1,5 +1,5 @@
-cc = cc
-cflags = -Wall -std=c89 -pedantic
+cc = clang
+cflags = -Wall -pedantic
 
 rule cc
   command = $cc $cflags -c -o $out $in

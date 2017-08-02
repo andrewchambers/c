@@ -121,7 +121,7 @@ tokktostr(Tokkind t)
 enum {
 	INCLUDEBEGIN,
 	INCLUDEIDENT,
-	INCLUDEHEADER,
+	INCLUDEHEADER
 };
 
 /* makes a token, copies v */
@@ -457,7 +457,7 @@ lex(Lexer *l)
 typedef enum {
 	OBJMACRO,
 	FUNCMACRO,
-	BUILTINMACRO,
+	BUILTINMACRO
 } MacroKind;
 
 typedef struct Macro Macro;

@@ -97,3 +97,8 @@ typedef struct Tok {
 	StrSet *hs; /* Hideset, the list of tokens expanded to get this token */
 	SrcPos  pos;
 } Tok;
+
+void  cppinit(char *, Vec *);
+char *tokktostr(Tokkind);
+Tok  *pp(void);
+
