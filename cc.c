@@ -18,7 +18,7 @@ static CTy   *declaratortail(CTy *);
 static void   funcbody(void);
 static void   block(void);
 static void   stmt(void);
-static void   pif(void);
+static void   pif (void);
 static void   pfor(void);
 static void   dowhile(void);
 static void   pwhile(void);
@@ -987,7 +987,7 @@ funcbody()
 
 
 static void
-pif(void)
+pif (void)
 {
 	SrcPos *p;
 	Node   *e;
@@ -998,7 +998,7 @@ pif(void)
 	e = expr();
 	expect(')');
 	stmt();
-	if(tok->k == TOKELSE) {
+	if (tok->k == TOKELSE) {
 		expect(TOKELSE);
 		stmt();
 	}
@@ -1020,19 +1020,19 @@ pfor(void)
 	p = &tok->pos;
 	expect(TOKFOR);
 	expect('(');
-	if(tok->k == ';') {
+	if (tok->k == ';') {
 		next();
 	} else {
 		i = expr();
 		expect(';');
 	}
-	if(tok->k == ';') {
+	if (tok->k == ';') {
 		next();
 	} else {
 		c = expr();
 		expect(';');
 	}
-	if(tok->k != ')')
+	if (tok->k != ')')
 		s = expr();
 	expect(')');
 	pushcontbrk(lstep, lend);
@@ -1120,7 +1120,7 @@ istypename(char *n)
 	Sym *sym;
 
 	sym = lookup(syms, n);
-	if(sym && sym->k == SYMTYPE)
+	if (sym && sym->k == SYMTYPE)
 		return 1;
 	return 0;
 }
@@ -1150,9 +1150,9 @@ istypestart(Tok *t)
 static int
 isdeclstart(Tok *t)
 {
-	if(istypestart(t))
+	if (istypestart(t))
 		return 1;
-	switch(tok->k) {
+	switch (tok->k) {
 	case TOKEXTERN:
 	case TOKREGISTER:
 	case TOKSTATIC:
@@ -1170,7 +1170,7 @@ isdeclstart(Tok *t)
 static void
 declorstmt()
 {
-	if(isdeclstart(tok))
+	if (isdeclstart(tok))
 		decl();
 	else
 		stmt();
@@ -1182,19 +1182,19 @@ stmt(void)
 	Tok  *t;
 	char *label;
 
-	if(tok->k == TOKIDENT && nexttok->k == ':') {
+	if (tok->k == TOKIDENT && nexttok->k == ':') {
 		t = tok;
 		label = newlabel();
 		next();
 		next();
-		if(mapget(labels, t->v))
+		if (mapget(labels, t->v))
 			errorposf(&t->pos, "redefinition of label %s", t->v);
 		mapset(labels, t->v, label);
 		return;
 	}
-	switch(tok->k) {
+	switch (tok->k) {
 	case TOKIF:
-		pif();
+		pif ();
 		return;
 	case TOKFOR:
 		pfor();
@@ -1242,9 +1242,9 @@ compareinits(const void *lvoid, const void *rvoid)
 	
 	l = *(void**)lvoid;
 	r = *(void**)rvoid;
-	if(l->offset < r->offset)
+	if (l->offset < r->offset)
 		return -1;
-	if(l->offset > r->offset)
+	if (l->offset > r->offset)
 		return 1;
 	return 0;
 }
@@ -1259,7 +1259,7 @@ checkinitoverlap(Node *n)
 	for(i = 0; i < n->Init.inits->len - 1; i++) {
 		init = vecget(n->Init.inits, i);
 		nextinit = vecget(n->Init.inits, i + 1);
-		if(nextinit->offset < init->offset + init->n->type->size)
+		if (nextinit->offset < init->offset + init->n->type->size)
 			errorposf(&init->n->pos, "fields in init overlaps with another field");
 	}
 }
@@ -1285,25 +1285,25 @@ declarrayinit(CTy *t)
 	largestidx = 0;
 	expect('{');
 	for(;;) {
-		if(tok->k == '}')
+		if (tok->k == '}')
 			break;
-		if(tok->k == '[') {
+		if (tok->k == '[') {
 			selpos = &tok->pos;
 			expect('[');
 			arrayidx = constexpr();
 			expect(']');
 			expect('=');
-			if(arrayidx->p != 0)
+			if (arrayidx->p != 0)
 				errorposf(selpos, "pointer derived constants not allowed in initializer selector");
-			if(arrayidx->v < 0)
+			if (arrayidx->v < 0)
 				errorposf(selpos, "negative initializer index not allowed");
 			idx = arrayidx->v;
-			if(largestidx < idx)
+			if (largestidx < idx)
 				largestidx = idx;
 		}
 		subinit = declinit(subty);
 		/* Flatten nested inits */
-		if(subinit->t == NINIT) {
+		if (subinit->t == NINIT) {
 			for(i = 0; i < subinit->Init.inits->len; i++) {
 				initmemb = vecget(subinit->Init.inits, i);
 				initmemb->offset = subty->size * idx + initmemb->offset;
@@ -1316,17 +1316,17 @@ declarrayinit(CTy *t)
 			vecappend(n->Init.inits, initmemb);
 		}
 		idx += 1;
-		if(largestidx < idx)
+		if (largestidx < idx)
 			largestidx = idx;
-		if(tok->k != ',')
+		if (tok->k != ',')
 			break;
 		next();
 	}
 	checkinitoverlap(n);
 	expect('}');
-	if(t->Arr.dim == -1)
+	if (t->Arr.dim == -1)
 		t->Arr.dim = largestidx;
-	if(largestidx != t->Arr.dim)
+	if (largestidx != t->Arr.dim)
 		errorposf(initpos, "array initializer wrong size for type");
 	return n;
 }
@@ -1344,7 +1344,7 @@ declstructinit(CTy *t)
 	int          i, offset, neednext;
 	
 	initpos = &tok->pos;
-	if(t->incomplete)
+	if (t->incomplete)
 		errorposf(initpos, "cannot initialize an incomplete struct/union");
 		
 	n = mknode(NINIT, initpos);
@@ -1355,29 +1355,29 @@ declstructinit(CTy *t)
 	expect('{');
 	neednext = 0;
 	for(;;) {
-		if(tok->k == '}')
+		if (tok->k == '}')
 			break;
-		if(tok->k == '.') {
+		if (tok->k == '.') {
 			neednext = 0;
 			selpos = &tok->pos;
 			expect('.');
 			selname = tok->v;
 			expect(TOKIDENT);
 			expect('=');
-			if(!getstructiter(&it, t, selname))
+			if (!getstructiter(&it, t, selname))
 				errorposf(selpos, "struct has no member '%s'", selname);
 		}
-		if(neednext) {
-			if(!structnext(&it))
+		if (neednext) {
+			if (!structnext(&it))
 				errorposf(&tok->pos, "end of struct already reached");
 		}
 		structwalk(&it, &structmember, &offset);
-		if(!structmember)
+		if (!structmember)
 			errorposf(initpos, "too many elements in struct initializer");
 		subty = structmember->type;
 		subinit = declinit(subty);
 		/* Flatten nested inits */
-		if(subinit->t == NINIT) {
+		if (subinit->t == NINIT) {
 			for(i = 0; i < subinit->Init.inits->len; i++) {
 				initmemb = vecget(subinit->Init.inits, i);
 				initmemb->offset += offset;
@@ -1389,7 +1389,7 @@ declstructinit(CTy *t)
 			initmemb->n = subinit;
 			vecappend(n->Init.inits, initmemb);
 		}
-		if(tok->k != ',')
+		if (tok->k != ',')
 			break;
 		next();
 		neednext = 1;
@@ -1402,9 +1402,9 @@ declstructinit(CTy *t)
 static Node *
 declinit(CTy *t)
 {
-	if(isarray(t) && tok->k == '{') 
+	if (isarray(t) && tok->k == '{') 
 		return declarrayinit(t);
-	if(isstruct(t)  && tok->k == '{') 
+	if (isstruct(t)  && tok->k == '{') 
 		return declstructinit(t);
 	return assignexpr();
 }
@@ -1414,7 +1414,7 @@ exprstmt(void)
 {
 	Node *e;
 
-	if(tok->k == ';') {
+	if (tok->k == ';') {
 		next();
 		return;
 	}
@@ -1428,7 +1428,7 @@ preturn(void)
 	Node *e;
 
 	expect(TOKRETURN);
-	if(tok->k != ';')
+	if (tok->k != ';')
 		e = expr();
 	expect(';');
 }
@@ -1441,7 +1441,7 @@ pcontinue(void)
 	
 	pos = &tok->pos;
 	l = curcont();
-	if(!l)
+	if (!l)
 		errorposf(pos, "continue without parent statement");
 	expect(TOKCONTINUE);
 	expect(';');
@@ -1455,7 +1455,7 @@ pbreak(void)
 	
 	pos = &tok->pos;
 	l = curbrk();
-	if(!l)
+	if (!l)
 		errorposf(pos, "break without parent statement");
 	expect(TOKBREAK);
 	expect(';');
@@ -1473,7 +1473,7 @@ pdefault(void)
 	panic("unimplemented pdefault");
 	/*
 	s = curswitch();
-	if(s->Switch.ldefault)
+	if (s->Switch.ldefault)
 		errorposf(pos, "switch already has default");
 	s->Switch.ldefault = l;
 	*/
@@ -1494,7 +1494,7 @@ pcase(void)
 	s = curswitch();
 	expect(TOKCASE);
 	c = constexpr();
-	if(c->p)
+	if (c->p)
 		errorposf(pos, "case cannot have pointer derived constant");
 	n->Case.cond = c->v;
 	expect(':');
@@ -1504,14 +1504,16 @@ pcase(void)
 }
 
 static void
-block()
+block(void)
 {
-	expect('{');
 	pushscope();
-
-	popscope();
+	expect('{');
+	while(tok->k != '}' && tok->k != TOKEOF)
+		declorstmt();
 	expect('}');
+	popscope();
 }
+
 
 static Node *
 mknode(int type, SrcPos *p)
@@ -1527,9 +1529,9 @@ mknode(int type, SrcPos *p)
 static int
 islval(Node *n)
 {
-	switch(n->t) {
+	switch (n->t) {
 	case NUNOP:
-		if(n->Unop.op == '*')
+		if (n->Unop.op == '*')
 			return 1;
 		return 0;
 	case NIDENT:
@@ -1752,7 +1754,7 @@ expr(void)
 	p = &tok->pos;
 	n = assignexpr();
 	last = n;
-	if(tok->k == ',') {
+	if (tok->k == ',') {
 		v = vec();
 		vecappend(v, n);
 		while(tok->k == ',') {
@@ -1770,7 +1772,7 @@ expr(void)
 static int
 isassignop(Tokkind k)
 {
-	switch(k) {
+	switch (k) {
 	case '=':
 	case TOKADDASS:
 	case TOKSUBASS:
@@ -1792,7 +1794,7 @@ assignexpr(void)
 	Node *l, *r;
 
 	l = condexpr();
-	if(isassignop(tok->k)) {
+	if (isassignop(tok->k)) {
 		t = tok;
 		next();
 		r = assignexpr();
@@ -1829,7 +1831,7 @@ condexpr(void)
 	Node *n, *c, *t, *f;
 
 	c = logorexpr();
-	if(tok->k != '?')
+	if (tok->k != '?')
 		return c;
 	next();
 	t = expr();
@@ -1840,7 +1842,7 @@ condexpr(void)
 	n->Cond.iftrue = t;
 	n->Cond.iffalse = f;
 	/* TODO: what are the limitations? */
-	if(!sametype(t->type, f->type))
+	if (!sametype(t->type, f->type))
 		errorposf(&n->pos, "both cases of ? must be same type.");
 	n->type = t->type;
 	return n;
@@ -2014,12 +2016,12 @@ castexpr(void)
 	Node *o;
 	CTy  *ty;
 	
-	if(tok->k == '(' && istypestart(nexttok)) {
+	if (tok->k == '(' && istypestart(nexttok)) {
 		t = tok;
 		expect('(');
 		ty = typename();
 		expect(')');
-		if(tok->k == '{') {
+		if (tok->k == '{') {
 			o = declinit(ty);
 			return o;
 		}
@@ -2066,7 +2068,7 @@ unaryexpr(void)
 	case TOKSIZEOF:
 		n = mknode(NSIZEOF, &tok->pos);
 		next();
-		if(tok->k == '(' && istypestart(nexttok)) {
+		if (tok->k == '(' && istypestart(nexttok)) {
 			expect('(');
 			ty = typename();
 			expect(')');
@@ -2094,26 +2096,26 @@ call(Node *funclike)
 	n = mknode(NCALL, &tok->pos);
 	n->Call.funclike = funclike;
 	n->Call.args = vec();
-	if(isfunc(funclike->type))
+	if (isfunc(funclike->type))
 		fty = funclike->type;
 	else if (isfuncptr(funclike->type))
 		fty = funclike->type->Ptr.subty;
 	else
 		errorposf(pos, "cannot call non function");
 	n->type = fty->Func.rtype;
-	if(tok->k != ')') {
+	if (tok->k != ')') {
 		for(;;) {
 			vecappend(n->Call.args, assignexpr());
-			if(tok->k != ',') {
+			if (tok->k != ',') {
 				break;
 			}
 			next();
 		}
 	}
 	expect(')');
-	if(n->Call.args->len < fty->Func.params->len)
+	if (n->Call.args->len < fty->Func.params->len)
 		errorposf(pos, "function called with too few args");
-	if(n->Call.args->len > fty->Func.params->len && !fty->Func.isvararg)
+	if (n->Call.args->len > fty->Func.params->len && !fty->Func.isvararg)
 		errorposf(pos, "function called with too many args");
 	return n;
 }
@@ -2128,14 +2130,14 @@ postexpr(void)
 	n1 = primaryexpr();
 	done = 0;
 	while(!done) {
-		switch(tok->k) {
+		switch (tok->k) {
 		case '[':
 			t = tok;
 			next();
 			n2 = expr();
 			expect(']');
 			n3 = mknode(NIDX, &t->pos);
-			if(isptr(n1->type))
+			if (isptr(n1->type))
 				n3->type = n1->type->Ptr.subty;
 			else if (isarray(n1->type))
 				n3->type = n1->type->Arr.subty;
@@ -2146,24 +2148,24 @@ postexpr(void)
 			n1 = n3;
 			break;
 		case '.':
-			if(!isstruct(n1->type))
+			if (!isstruct(n1->type))
 				errorposf(&tok->pos, "expected a struct");
-			if(n1->type->incomplete)
+			if (n1->type->incomplete)
 				errorposf(&tok->pos, "selector on incomplete type");
 			n2 = mknode(NSEL, &tok->pos);
 			next();
 			n2->Sel.name = tok->v;
 			n2->Sel.operand = n1;
 			n2->type = structtypefromname(n1->type, tok->v);
-			if(!n2->type)
+			if (!n2->type)
 				errorposf(&tok->pos, "struct has no member %s", tok->v);
 			expect(TOKIDENT);
 			n1 = n2;
 			break;
 		case TOKARROW:
-			if(!(isptr(n1->type) && isstruct(n1->type->Ptr.subty)))
+			if (!(isptr(n1->type) && isstruct(n1->type->Ptr.subty)))
 				errorposf(&tok->pos, "expected a struct pointer");
-			if(n1->type->Ptr.subty->incomplete)
+			if (n1->type->Ptr.subty->incomplete)
 				errorposf(&tok->pos, "selector on incomplete type");
 			n2 = mknode(NSEL, &tok->pos);
 			next();
@@ -2171,7 +2173,7 @@ postexpr(void)
 			n2->Sel.operand = n1;
 			n2->Sel.arrow = 1;
 			n2->type = structtypefromname(n1->type->Ptr.subty, tok->v);
-			if(!n2->type)
+			if (!n2->type)
 				errorposf(&tok->pos, "struct pointer has no member %s", tok->v);
 			expect(TOKIDENT);
 			n1 = n2;
@@ -2202,10 +2204,10 @@ primaryexpr(void)
 	
 	switch (tok->k) {
 	case TOKIDENT:
-		if(strcmp(tok->v, "__builtin_va_start") == 0)
+		if (strcmp(tok->v, "__builtin_va_start") == 0)
 			return vastart();
 		sym = lookup(syms, tok->v);
-		if(!sym)
+		if (!sym)
 			errorposf(&tok->pos, "undefined symbol %s", tok->v);
 		n = mknode(NIDENT, &tok->pos);
 		n->Ident.sym = sym;
@@ -2221,17 +2223,17 @@ primaryexpr(void)
 	case TOKCHARLIT:
 		/* XXX it seems wrong to do this here, also table is better */
 		n = mknode(NNUM, &tok->pos);
-		if(strcmp(tok->v, "'\\n'") == 0) {
+		if (strcmp(tok->v, "'\\n'") == 0) {
 			n->Num.v = '\n';
-		} else if(strcmp(tok->v, "'\\\\'") == 0) {
+		} else if (strcmp(tok->v, "'\\\\'") == 0) {
 			n->Num.v = '\\';
-		} else if(strcmp(tok->v, "'\\''") == 0) {
+		} else if (strcmp(tok->v, "'\\''") == 0) {
 			n->Num.v = '\'';
-		} else if(strcmp(tok->v, "'\\r'") == 0) {
+		} else if (strcmp(tok->v, "'\\r'") == 0) {
 			n->Num.v = '\r';
-		} else if(strcmp(tok->v, "'\\t'") == 0) {
+		} else if (strcmp(tok->v, "'\\t'") == 0) {
 			n->Num.v = '\t';
-		}  else if(tok->v[1] == '\\') {
+		}  else if (tok->v[1] == '\\') {
 			errorposf(&tok->pos, "unknown escape code");
 		} else {
 			n->Num.v = tok->v[1];
@@ -2273,9 +2275,9 @@ vastart()
 	n->Builtin.t = BUILTIN_VASTART;
 	n->Builtin.Vastart.param = param;
 	n->Builtin.Vastart.valist = valist;
-	if(param->t != NIDENT)
+	if (param->t != NIDENT)
 		errorposf(&n->pos, "expected an identifer in va_start");
-	if(param->Ident.sym->k != SYMLOCAL 
+	if (param->Ident.sym->k != SYMLOCAL 
 	   || !param->Ident.sym->Local.isparam)
 		errorposf(&n->pos, "expected a parameter symbol in va_start");
 	return n;
