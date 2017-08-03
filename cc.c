@@ -33,7 +33,7 @@ next(void)
 static void
 expect(Tokkind kind)
 {
-	if(tok->k != kind)
+	if (tok->k != kind)
 		errorposf(&tok->pos,"expected %s, got %s", 
 			tokktostr(kind), tokktostr(tok->k));
 	next();
@@ -160,7 +160,7 @@ define(Map *scope[], char *k, void *v)
 	Map *m;
 	
 	m = scope[nscopes - 1];
-	if(mapget(m, k))
+	if (mapget(m, k))
 		return 0;
 	mapset(m, k, v);
 	return 1; 
@@ -255,7 +255,8 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 				errorposf(p, "%s already initialized", name);
 			if (!sym->init && n) {
 				sym->init = n;
-				emitsym(sym);
+				if (!isfunc(sym->type))
+					emitsym(sym);
 				removetentativesym(sym);
 			}
 			break;
@@ -302,14 +303,13 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 	default:
 		panic("internal error");
 	}
-	if (sym->k == SYMGLOBAL) {
-		if (sym->init)
-			emitsym(sym);
-		else if (sym->Global.sclass == SCEXTERN)
-			emitsym(sym);
-		else
-			if (!isfunc(sym->type))
+	if (!isfunc(sym->type)) {
+		if (sym->k == SYMGLOBAL) {
+			if (sym->init || sym->Global.sclass == SCEXTERN)
+				emitsym(sym);
+			else
 				addtentativesym(sym);
+		}
 	}
 	if (!define(syms, name, sym))
 		panic("internal error");
@@ -327,23 +327,23 @@ params(CTy *fty)
 	SrcPos *pos;
 
 	fty->Func.isvararg = 0;
-	if(tok->k == ')')
+	if (tok->k == ')')
 		return;
-	if(tok->k == TOKVOID && nexttok->k == ')') {
+	if (tok->k == TOKVOID && nexttok->k == ')') {
 		next();
 		return;
 	}
-	for(;;) {
+	for (;;) {
 		pos = &tok->pos;
 		t = declspecs(&sclass);
 		t = declarator(t, &name, 0);
-		if(sclass != SCNONE)
+		if (sclass != SCNONE)
 			errorposf(pos, "storage class not allowed in parameter decl");
 		vecappend(fty->Func.params, newnamety(name, t));
-		if(tok->k != ',')
+		if (tok->k != ',')
 			break;
 		next();
-		if(tok->k == TOKELLIPSIS) {
+		if (tok->k == TOKELLIPSIS) {
 			fty->Func.isvararg = 1;
 			next();
 			break;
@@ -365,37 +365,39 @@ decl()
 	pos = &tok->pos;
 	syms  = vec();
 	basety = declspecs(&sclass);
-	while(tok->k != ';' && tok->k != TOKEOF) {
+	while (tok->k != ';' && tok->k != TOKEOF) {
 		type = declarator(basety, &name, &init);
 		switch(sclass){
 		case SCNONE:
-			if(isglobal()) {
+			if (isglobal()) {
 				sclass = SCGLOBAL;
 			} else {
 				sclass = SCAUTO;
 			}
 			break;
 		case SCTYPEDEF:
-			if(init)
+			if (init)
 				errorposf(pos, "typedef cannot have an initializer");
 			break;
 		}
-		if(!name)
+		if (!name)
 			errorposf(pos, "decl needs to specify a name");
 		sym = definesym(pos, sclass, name, type, init);
 		vecappend(syms, sym);
-		if(isglobal() && tok->k == '{') {
-			if(init)
+		if (isglobal() && tok->k == '{') {
+			if (init)
 				errorposf(pos, "function declaration has an initializer");
-			if(type->t != CFUNC)
+			if (type->t != CFUNC)
 				errorposf(pos, "expected a function");
 			curfunc = sym;
+			emitfuncstart(sym);
 			fbody();
+			emitfuncend();
 			definesym(pos, sclass, name, type, (Node*)1);
 			curfunc = 0;
 			return;
 		}
-		if(tok->k == ',')
+		if (tok->k == ',')
 			next();
 		else
 			break;
@@ -448,8 +450,8 @@ declspecs(int *sclass)
 	*sclass = SCNONE;
 
 	for(;;) {
-		if(issclasstok(tok)) {
-			if(*sclass != SCNONE)
+		if (issclasstok(tok)) {
+			if (*sclass != SCNONE)
 				errorposf(pos, "multiple storage classes in declaration specifiers.");
 			switch(tok->k) {
 			case TOKEXTERN:
@@ -480,45 +482,45 @@ declspecs(int *sclass)
 			break;
 		case TOKSTRUCT:
 		case TOKUNION:
-			if(bits)
+			if (bits)
 				goto err;
 			bits |= BITSTRUCT;
 			t = ptag();
 			goto done;
 		case TOKENUM:
-			if(bits)
+			if (bits)
 				goto err;
 			bits |= BITENUM;
 			t = ptag();
 			goto done;
 		case TOKVOID:
-			if(bits&BITVOID)
+			if (bits&BITVOID)
 				goto err;
 			bits |= BITVOID;
 			next();
 			goto done;
 		case TOKCHAR:
-			if(bits&BITCHAR)
+			if (bits&BITCHAR)
 				goto err;
 			bits |= BITCHAR;
 			next();
 			break;
 		case TOKSHORT:
-			if(bits&BITSHORT)
+			if (bits&BITSHORT)
 				goto err;
 			bits |= BITSHORT;
 			next();
 			break;
 		case TOKINT:
-			if(bits&BITINT)
+			if (bits&BITINT)
 				goto err;
 			bits |= BITINT;
 			next();
 			break;
 		case TOKLONG:
-			if(bits&BITLONGLONG)
+			if (bits&BITLONGLONG)
 				goto err;
-			if(bits&BITLONG) {
+			if (bits&BITLONG) {
 				bits &= ~BITLONG;
 				bits |= BITLONGLONG;
 			} else {
@@ -527,34 +529,34 @@ declspecs(int *sclass)
 			next();
 			break;
 		case TOKFLOAT:
-			if(bits&BITFLOAT)
+			if (bits&BITFLOAT)
 				goto err;
 			bits |= BITFLOAT;
 			next();
 			break;
 		case TOKDOUBLE:
-			if(bits&BITDOUBLE)
+			if (bits&BITDOUBLE)
 				goto err;
 			bits |= BITDOUBLE;
 			next();
 			break;
 		case TOKSIGNED:
-			if(bits&BITSIGNED)
+			if (bits&BITSIGNED)
 				goto err;
 			bits |= BITSIGNED;
 			next();
 			break;
 		case TOKUNSIGNED:
-			if(bits&BITUNSIGNED)
+			if (bits&BITUNSIGNED)
 				goto err;
 			bits |= BITUNSIGNED;
 			next();
 			break;
 		case TOKIDENT:
 			sym = lookup(syms, tok->v);
-			if(sym && sym->k == SYMTYPE)
+			if (sym && sym->k == SYMTYPE)
 				t = sym->type;
-			if(t && !bits) {
+			if (t && !bits) {
 				bits |= BITIDENT;
 				next();
 				goto done;
@@ -639,13 +641,13 @@ declarator(CTy *basety, char **name, Node **init)
 		return t;
 	default:
 		t = directdeclarator(basety, name);
-		if(tok->k == '=') {
-			if(!init)
+		if (tok->k == '=') {
+			if (!init)
 				errorposf(&tok->pos, "unexpected initializer");
 			next();
 			*init = NULL; //XXX declinit(t);
 		} else {
-			if(init)
+			if (init)
 				*init = 0;
 		}
 		return t; 
@@ -669,12 +671,12 @@ directdeclarator(CTy *basety, char **name)
 		*stub = *declaratortail(basety);
 		return ty;
 	case TOKIDENT:
-		if(name)
+		if (name)
 			*name = tok->v;
 		next();
 		return declaratortail(basety);
 	default:
-		if(!name)
+		if (!name)
 			errorposf(&tok->pos, "expected ident or ( but got %s", tokktostr(tok->k));
 		return declaratortail(basety);
 	}
@@ -698,11 +700,11 @@ declaratortail(CTy *basety)
 			newt->Arr.subty = t;
 			newt->Arr.dim = -1;
 			next();
-			if(tok->k != ']') {
+			if (tok->k != ']') {
 				p = &tok->pos;
 				/* XXX check for int type? */
 				c = constexpr();
-				if(c->p)
+				if (c->p)
 					errorposf(p, "pointer derived constant in array size");
 				newt->Arr.dim = c->v;
 				newt->size = newt->Arr.dim * newt->Arr.subty->size;
@@ -717,7 +719,7 @@ declaratortail(CTy *basety)
 			newt->Func.params = vec();
 			next();
 			params(newt);
-			if(tok->k != ')')
+			if (tok->k != ')')
 				errorposf(&tok->pos, "expected valid parameter or )");
 			next();
 			t = newt;
@@ -750,21 +752,21 @@ ptag()
 	default:
 		errorposf(pos, "expected a tag");
 	}
-	if(tok->k == TOKIDENT) {
+	if (tok->k == TOKIDENT) {
 		name = tok->v;
 		next();
 		namety = lookup(tags, name);
-		if(namety) {
+		if (namety) {
 			switch(tkind) {
 			case TOKUNION:
 			case TOKSTRUCT:
-				if(namety->t != CSTRUCT)
+				if (namety->t != CSTRUCT)
 					errorposf(pos, "struct/union accessed by enum tag");
-				if(namety->Struct.isunion != (tkind == TOKUNION))
+				if (namety->Struct.isunion != (tkind == TOKUNION))
 					errorposf(pos, "struct/union accessed by wrong tag type");
 				break;
 			case TOKENUM:
-				if(namety->t != CENUM)
+				if (namety->t != CENUM)
 					errorposf(pos, "enum tag accessed by struct or union");
 				break;
 			default:
@@ -791,7 +793,7 @@ ptag()
 			mapset(tags[nscopes - 1], name, namety);
 		}
 	}
-	if(tok->k == '{' || !name) {
+	if (tok->k == '{' || !name) {
 		switch(tkind) {
 		case TOKUNION:
 			bodyty = pstruct(1);
@@ -806,18 +808,18 @@ ptag()
 			panic("unreachable");
 		}
 	}
-	if(!name) {
-		if(!bodyty)
+	if (!name) {
+		if (!bodyty)
 			panic("internal error");
 		return bodyty;
 	}
-	if(bodyty) {
+	if (bodyty) {
 		namety = mapget(tags[nscopes - 1], name);
-		if(!namety) {
+		if (!namety) {
 			mapset(tags[nscopes - 1], name, bodyty);
 			return bodyty;
 		}
-		if(!namety->incomplete)
+		if (!namety->incomplete)
 			errorposf(pos, "redefinition of tag %s", name);
 		*namety = *bodyty;
 		return namety;
@@ -842,19 +844,19 @@ pstruct(int isunion)
 	
 	startpos = &tok->pos;
 	expect('{');
-	while(tok->k != '}') {
+	while (tok->k != '}') {
 		basety = declspecs(&sclass);
 		for(;;) {
 			p = &tok->pos;
 			t = declarator(basety, &name, 0);
-			if(tok->k == ':') {
+			if (tok->k == ':') {
 				next();
 				constexpr();
 			}
-			if(t->incomplete)
+			if (t->incomplete)
 				errorposf(p, "incomplete type inside struct/union");
 			addtostruct(strct, name, t);
-			if(tok->k != ',')
+			if (tok->k != ',')
 				break;
 			next();
 		}
@@ -883,21 +885,21 @@ penum()
 	t->Enum.members = vec();
 	expect('{');
 	for(;;) {
-		if(tok->k == '}')
+		if (tok->k == '}')
 			break;
 		p = &tok->pos;
 		name = tok->v;
 		expect(TOKIDENT);
-		if(tok->k == '=') {
+		if (tok->k == '=') {
 			next();
 			c = constexpr();
-			if(c->p)
+			if (c->p)
 				errorposf(p, "pointer derived constant in enum");
 			v = c->v;
 		}
 		s = defineenum(p, name, t, v);
 		vecappend(t->Enum.members, s);
-		if(tok->k != ',')
+		if (tok->k != ',')
 			break;
 		next();
 		v += 1;
@@ -940,7 +942,7 @@ fbody()
 	for (i = 0 ; i < gotos->len ; i++) {
 		gotofixup = vecget(gotos, i);
 		l = mapget(labels, gotofixup->Goto.name);
-		if(!l)
+		if (!l)
 			errorposf(&gotofixup->pos, "goto target does not exist");
 		gotofixup->Goto.l = l;
 	}
@@ -972,7 +974,7 @@ constexpr(void)
 	/*
 	n = condexpr();
 	c = foldexpr(n);
-	if(!c)
+	if (!c)
 		errorposf(&n->pos, "not a constant expression");
 	*/
 	return c;
@@ -995,7 +997,7 @@ compile()
 
 	beginmodule();
 	
-	while(tok->k != TOKEOF)
+	while (tok->k != TOKEOF)
 		decl();
 	for(i = 0; i < tentativesyms->len; i++) {
 		sym = vecget(tentativesyms, i);

@@ -53,6 +53,9 @@ beginmodule()
 void
 emitsym(Sym *sym)
 {
+	if (isfunc(sym->type))
+		panic("emitsym precondition failed");
+
 	out("; %s:%d:%d %s\n", sym->pos->file, sym->pos->line, sym->pos->col, sym->name);
 	switch(sym->k){
 	case SYMGLOBAL:
@@ -68,27 +71,18 @@ emitsym(Sym *sym)
 }
 
 void
-beginfunc()
+emitfuncstart(Sym *sym)
 {
+	if (sym->k != SYMGLOBAL || !isfunc(sym->type))
+		panic("emitfuncstart precondition failed");
 
+	out("%s() {\n", sym->name);
 }
 
 void
-emitins()
+emitfuncend()
 {
-
-}
-
-void
-emitterm()
-{
-
-}
-
-void
-endfunc()
-{
-
+	out("}\n");
 }
 
 void
