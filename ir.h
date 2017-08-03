@@ -1,4 +1,6 @@
 
+char 	*nextlabel();
+
 void	setiroutput(FILE *f);
 void	beginmodule();
 void	adddata();
