@@ -94,13 +94,11 @@ void *
 xmalloc(int n)
 {
 	char *v;
-	int  i;
 
 	v = malloc(n);
 	if(!v)
 		panic("out of memory!");
-	for(i = 0; i < n; i++)
-		v[i] = 0;
+	
 	return v;
 }
 

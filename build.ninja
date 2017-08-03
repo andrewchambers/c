@@ -1,4 +1,4 @@
-cc = clang
+cc = cc
 cflags = -Wall -pedantic
 
 rule cc

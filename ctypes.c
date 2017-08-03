@@ -21,6 +21,17 @@ newtype(int type)
 	return t;
 }
 
+NameTy *
+newnamety(char *n, CTy *t)
+{
+	NameTy *nt;
+	
+	nt = xmalloc(sizeof(NameTy));
+	nt->name = n;
+	nt->type = t;
+	return nt;
+}
+
 CTy *
 mkptr(CTy *t)
 {

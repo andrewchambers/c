@@ -112,6 +112,7 @@ void initstructiter(StructIter *, CTy *);
 void structwalk(StructIter *, StructMember **, int *);
 void addtostruct(CTy *, char *, CTy *);
 void finalizestruct(SrcPos *, CTy *);
+NameTy *newnamety(char *n, CTy *t);
 
 uint64 getmaxval(CTy *);
 int64  getminval(CTy *);

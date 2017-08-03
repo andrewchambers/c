@@ -4,6 +4,7 @@
 #include <string.h>
 #include "util.h"
 #include "cpp.h"
+#include "ctypes.h"
 #include "cc.h"
 #include "ir.h"
 
