@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include "util.h"
 #include "cpp.h"
@@ -14,11 +15,46 @@ static CTy   *typename(void);
 static CTy   *declarator(CTy *, char **, Node **);
 static CTy   *directdeclarator(CTy *, char **);
 static CTy   *declaratortail(CTy *);
-
-static void   funcbody();
-static void   block();
+static void   funcbody(void);
+static void   block(void);
+static void   stmt(void);
+static void   pif(void);
+static void   pfor(void);
+static void   dowhile(void);
+static void   pwhile(void);
+static void   block(void);
+static void   preturn(void);
+static void   pswitch(void);
+static void   pdefault(void);
+static void   pcase(void);
+static void   pcontinue(void);
+static void   pbreak(void);
+static void   stmt(void);
+static void   exprstmt(void);
 static Const *constexpr(void);
-
+static Node  *expr(void);
+static Node  *assignexpr(void);
+static Node  *condexpr(void);
+static Node  *logorexpr(void);
+static Node  *logandexpr(void);
+static Node  *orexpr(void);
+static Node  *xorexpr(void);
+static Node  *andexpr(void);
+static Node  *eqlexpr(void);
+static Node  *relexpr(void);
+static Node  *shiftexpr(void);
+static Node  *addexpr(void);
+static Node  *mulexpr(void);
+static Node  *castexpr(void);
+static Node  *unaryexpr(void);
+static Node  *postexpr(void);
+static Node  *primaryexpr(void);
+static Node  *vastart(void);
+static Node  *ipromote(Node *);
+static Node  *declinit(CTy *);
+static CTy   *usualarithconv(Node **, Node **);
+static Node  *mkcast(SrcPos *, Node *, CTy *);
+static Node  *mknode(int type, SrcPos *p);
 
 Tok *tok;
 Tok *nexttok;
@@ -71,14 +107,14 @@ Vec  *gotos;
 Vec  *tentativesyms;
 
 static void
-pushswitch(Switch *s)
+pushswitch (Switch *s)
 {
         switches[switchdepth] = s;
         switchdepth += 1;
 }
 
 static void
-popswitch(void)
+popswitch (void)
 {
         switchdepth -= 1;
         if (switchdepth < 0)
@@ -86,7 +122,7 @@ popswitch(void)
 }
 
 static Switch *
-curswitch(void)
+curswitch (void)
 {
         if (switchdepth == 0)
                 return 0;
@@ -374,7 +410,7 @@ decl()
 	basety = declspecs(&sclass);
 	while (tok->k != ';' && tok->k != TOKEOF) {
 		type = declarator(basety, &name, &init);
-		switch(sclass){
+		switch (sclass){
 		case SCNONE:
 			if (isglobal()) {
 				sclass = SCGLOBAL;
@@ -415,7 +451,7 @@ decl()
 
 static int
 issclasstok(Tok *t) {
-	switch(t->k) {
+	switch (t->k) {
 	case TOKEXTERN:
 	case TOKSTATIC:
 	case TOKREGISTER:
@@ -460,7 +496,7 @@ declspecs(int *sclass)
 		if (issclasstok(tok)) {
 			if (*sclass != SCNONE)
 				errorposf(pos, "multiple storage classes in declaration specifiers.");
-			switch(tok->k) {
+			switch (tok->k) {
 			case TOKEXTERN:
 				*sclass = SCEXTERN;
 				break;
@@ -482,7 +518,7 @@ declspecs(int *sclass)
 			next();
 			continue;
 		}
-		switch(tok->k) {
+		switch (tok->k) {
 		case TOKCONST:
 		case TOKVOLATILE:
 			next();
@@ -574,7 +610,7 @@ declspecs(int *sclass)
 		}
 	}
 	done:
-	switch(bits){
+	switch (bits){
 	case BITFLOAT:
 		return cfloat;
 	case BITDOUBLE:
@@ -640,7 +676,7 @@ declarator(CTy *basety, char **name, Node **init)
 
 	while (tok->k == TOKCONST || tok->k == TOKVOLATILE)
 		next();
-	switch(tok->k) {
+	switch (tok->k) {
 	case '*':
 		next();
 		basety = mkptr(basety);
@@ -652,7 +688,7 @@ declarator(CTy *basety, char **name, Node **init)
 			if (!init)
 				errorposf(&tok->pos, "unexpected initializer");
 			next();
-			*init = NULL; //XXX declinit(t);
+			*init = declinit(t);
 		} else {
 			if (init)
 				*init = 0;
@@ -668,7 +704,7 @@ directdeclarator(CTy *basety, char **name)
 	CTy *ty, *stub;
 
 	*name = 0;
-	switch(tok->k) {
+	switch (tok->k) {
 	case '(':
 		expect('(');
 		stub = xmalloc(sizeof(CTy));
@@ -749,7 +785,7 @@ ptag()
 	namety = 0;
 	bodyty = 0;
 	name = 0;
-	switch(tok->k) {
+	switch (tok->k) {
 	case TOKUNION:
 	case TOKSTRUCT:
 	case TOKENUM:
@@ -764,7 +800,7 @@ ptag()
 		next();
 		namety = lookup(tags, name);
 		if (namety) {
-			switch(tkind) {
+			switch (tkind) {
 			case TOKUNION:
 			case TOKSTRUCT:
 				if (namety->t != CSTRUCT)
@@ -780,7 +816,7 @@ ptag()
 				panic("internal error");
 			}
 		} else {
-			switch(tkind) {
+			switch (tkind) {
 			case TOKUNION:
 				namety = newtype(CSTRUCT);
 				namety->Struct.isunion = 1;
@@ -801,7 +837,7 @@ ptag()
 		}
 	}
 	if (tok->k == '{' || !name) {
-		switch(tkind) {
+		switch (tkind) {
 		case TOKUNION:
 			bodyty = pstruct(1);
 			break;
@@ -949,6 +985,524 @@ funcbody()
 	}
 }
 
+
+static void
+pif(void)
+{
+	SrcPos *p;
+	Node   *e;
+	
+	p = &tok->pos;
+	expect(TOKIF);
+	expect('(');
+	e = expr();
+	expect(')');
+	stmt();
+	if(tok->k == TOKELSE) {
+		expect(TOKELSE);
+		stmt();
+	}
+}
+
+static void
+pfor(void)
+{
+	SrcPos *p;
+	Node   *n, *i, *c, *s;
+	char   *lstart, *lstep, *lend;
+
+	i = 0;
+	c = 0;
+	s = 0;
+	lstart = newlabel(); 
+	lstep = newlabel();
+	lend = newlabel();
+	p = &tok->pos;
+	expect(TOKFOR);
+	expect('(');
+	if(tok->k == ';') {
+		next();
+	} else {
+		i = expr();
+		expect(';');
+	}
+	if(tok->k == ';') {
+		next();
+	} else {
+		c = expr();
+		expect(';');
+	}
+	if(tok->k != ')')
+		s = expr();
+	expect(')');
+	pushcontbrk(lstep, lend);
+	stmt();
+	popcontbrk();
+}
+
+static void
+pwhile(void)
+{
+	SrcPos *p;
+	Node   *e;
+	char   *lcont, *lbreak;
+	
+	lcont = newlabel();
+	lbreak = newlabel();
+	p = &tok->pos;	
+	expect(TOKWHILE);
+	expect('(');
+	e = expr();
+	expect(')');
+	pushcontbrk(lcont, lbreak);
+	stmt();
+	popcontbrk();
+}
+
+static void
+dowhile(void)
+{
+	SrcPos *p;
+	Node   *e;
+	char   *lstart, *lcont, *lbreak;
+	
+	lstart = newlabel();
+	lcont = newlabel();
+	lbreak = newlabel();
+	p = &tok->pos;
+	expect(TOKDO);
+	pushcontbrk(lcont, lbreak);
+	stmt();
+	popcontbrk();
+	expect(TOKWHILE);
+	expect('(');
+	e = expr();
+	expect(')');
+	expect(';');
+}
+
+static void
+pswitch(void)
+{
+	SrcPos *p;
+	Node   *e;
+	char   *lbreak;
+	
+	lbreak = newlabel();
+	p = &tok->pos;
+	expect(TOKSWITCH);
+	expect('(');
+	e = expr();
+	expect(')');
+	pushbrk(lbreak);
+	panic("unimplemented switch");
+	pushswitch(NULL); // XXX TODO
+	stmt();
+	popswitch();
+	popbrk();
+}
+
+static void
+pgoto()
+{
+	Goto *go = xmalloc(sizeof(Goto));
+	go->pos = tok->pos;
+	expect(TOKGOTO);
+	go->label = tok->v;
+	expect(TOKIDENT);
+	expect(';');
+	vecappend(gotos, go);
+}
+
+static int
+istypename(char *n)
+{
+	Sym *sym;
+
+	sym = lookup(syms, n);
+	if(sym && sym->k == SYMTYPE)
+		return 1;
+	return 0;
+}
+
+static int
+istypestart(Tok *t)
+{
+	switch(t->k) {
+	case TOKENUM:
+	case TOKSTRUCT:
+	case TOKUNION:
+	case TOKVOID:
+	case TOKCHAR:
+	case TOKSHORT:
+	case TOKINT:
+	case TOKLONG:
+	case TOKSIGNED:
+	case TOKUNSIGNED:
+		return 1;
+	case TOKIDENT:	
+		return istypename(t->v);
+	default:
+		return 0;
+	}
+}
+
+static int
+isdeclstart(Tok *t)
+{
+	if(istypestart(t))
+		return 1;
+	switch(tok->k) {
+	case TOKEXTERN:
+	case TOKREGISTER:
+	case TOKSTATIC:
+	case TOKAUTO:
+	case TOKCONST:
+	case TOKVOLATILE:
+		return 1;
+	case TOKIDENT:
+		return istypename(t->v);
+	default:
+		return 0;
+	}
+}
+
+static void
+declorstmt()
+{
+	if(isdeclstart(tok))
+		decl();
+	else
+		stmt();
+}
+
+static void
+stmt(void)
+{
+	Tok  *t;
+	char *label;
+
+	if(tok->k == TOKIDENT && nexttok->k == ':') {
+		t = tok;
+		label = newlabel();
+		next();
+		next();
+		if(mapget(labels, t->v))
+			errorposf(&t->pos, "redefinition of label %s", t->v);
+		mapset(labels, t->v, label);
+		return;
+	}
+	switch(tok->k) {
+	case TOKIF:
+		pif();
+		return;
+	case TOKFOR:
+		pfor();
+		return;
+	case TOKWHILE:
+		pwhile();
+		return;
+	case TOKDO:
+		dowhile();
+		return;
+	case TOKRETURN:
+		preturn();
+		return;
+	case TOKSWITCH:
+		pswitch();
+		return;
+	case TOKCASE:
+		pcase();
+		return;
+	case TOKDEFAULT:
+		pdefault();
+		return;
+	case TOKBREAK:
+		pbreak();
+		return;
+	case TOKCONTINUE:
+		pcontinue();
+		return;
+	case TOKGOTO:
+		pgoto();
+		return;
+	case '{':
+		block();
+		return;
+	default:
+		exprstmt();
+		return;
+	}
+}
+
+static int
+compareinits(const void *lvoid, const void *rvoid)
+{
+	const InitMember *l, *r;
+	
+	l = *(void**)lvoid;
+	r = *(void**)rvoid;
+	if(l->offset < r->offset)
+		return -1;
+	if(l->offset > r->offset)
+		return 1;
+	return 0;
+}
+
+static void
+checkinitoverlap(Node *n)
+{
+	InitMember *init, *nextinit;
+	int i;
+
+	qsort(n->Init.inits->d, n->Init.inits->len, sizeof(void*), compareinits);
+	for(i = 0; i < n->Init.inits->len - 1; i++) {
+		init = vecget(n->Init.inits, i);
+		nextinit = vecget(n->Init.inits, i + 1);
+		if(nextinit->offset < init->offset + init->n->type->size)
+			errorposf(&init->n->pos, "fields in init overlaps with another field");
+	}
+}
+
+static Node *
+declarrayinit(CTy *t)
+{
+	InitMember *initmemb;
+	Node   *n, *subinit;
+	CTy    *subty;
+	SrcPos *initpos, *selpos;
+	Const  *arrayidx;
+	int     i;
+	int     idx;
+	int     largestidx;
+	
+	subty = t->Arr.subty;
+	initpos = &tok->pos;
+	n = mknode(NINIT, initpos);
+	n->type = t;
+	n->Init.inits = vec();
+	idx = 0;
+	largestidx = 0;
+	expect('{');
+	for(;;) {
+		if(tok->k == '}')
+			break;
+		if(tok->k == '[') {
+			selpos = &tok->pos;
+			expect('[');
+			arrayidx = constexpr();
+			expect(']');
+			expect('=');
+			if(arrayidx->p != 0)
+				errorposf(selpos, "pointer derived constants not allowed in initializer selector");
+			if(arrayidx->v < 0)
+				errorposf(selpos, "negative initializer index not allowed");
+			idx = arrayidx->v;
+			if(largestidx < idx)
+				largestidx = idx;
+		}
+		subinit = declinit(subty);
+		/* Flatten nested inits */
+		if(subinit->t == NINIT) {
+			for(i = 0; i < subinit->Init.inits->len; i++) {
+				initmemb = vecget(subinit->Init.inits, i);
+				initmemb->offset = subty->size * idx + initmemb->offset;
+				vecappend(n->Init.inits, initmemb);
+			}
+		} else {
+			initmemb = xmalloc(sizeof(InitMember));
+			initmemb->offset = subty->size * idx;
+			initmemb->n = subinit;
+			vecappend(n->Init.inits, initmemb);
+		}
+		idx += 1;
+		if(largestidx < idx)
+			largestidx = idx;
+		if(tok->k != ',')
+			break;
+		next();
+	}
+	checkinitoverlap(n);
+	expect('}');
+	if(t->Arr.dim == -1)
+		t->Arr.dim = largestidx;
+	if(largestidx != t->Arr.dim)
+		errorposf(initpos, "array initializer wrong size for type");
+	return n;
+}
+
+static Node *
+declstructinit(CTy *t)
+{
+	StructMember *structmember;
+	InitMember   *initmemb;
+	StructIter   it;
+	Node         *n, *subinit;
+	CTy          *subty;
+	SrcPos       *initpos, *selpos;
+	char         *selname;
+	int          i, offset, neednext;
+	
+	initpos = &tok->pos;
+	if(t->incomplete)
+		errorposf(initpos, "cannot initialize an incomplete struct/union");
+		
+	n = mknode(NINIT, initpos);
+	n->type = t;
+	n->Init.inits = vec();
+	
+	initstructiter(&it, t);
+	expect('{');
+	neednext = 0;
+	for(;;) {
+		if(tok->k == '}')
+			break;
+		if(tok->k == '.') {
+			neednext = 0;
+			selpos = &tok->pos;
+			expect('.');
+			selname = tok->v;
+			expect(TOKIDENT);
+			expect('=');
+			if(!getstructiter(&it, t, selname))
+				errorposf(selpos, "struct has no member '%s'", selname);
+		}
+		if(neednext) {
+			if(!structnext(&it))
+				errorposf(&tok->pos, "end of struct already reached");
+		}
+		structwalk(&it, &structmember, &offset);
+		if(!structmember)
+			errorposf(initpos, "too many elements in struct initializer");
+		subty = structmember->type;
+		subinit = declinit(subty);
+		/* Flatten nested inits */
+		if(subinit->t == NINIT) {
+			for(i = 0; i < subinit->Init.inits->len; i++) {
+				initmemb = vecget(subinit->Init.inits, i);
+				initmemb->offset += offset;
+				vecappend(n->Init.inits, initmemb);
+			}
+		} else {
+			initmemb = xmalloc(sizeof(InitMember));
+			initmemb->offset = offset;
+			initmemb->n = subinit;
+			vecappend(n->Init.inits, initmemb);
+		}
+		if(tok->k != ',')
+			break;
+		next();
+		neednext = 1;
+	}
+	checkinitoverlap(n);
+	expect('}');
+	return n;
+}
+
+static Node *
+declinit(CTy *t)
+{
+	if(isarray(t) && tok->k == '{') 
+		return declarrayinit(t);
+	if(isstruct(t)  && tok->k == '{') 
+		return declstructinit(t);
+	return assignexpr();
+}
+
+static void
+exprstmt(void)
+{
+	Node *e;
+
+	if(tok->k == ';') {
+		next();
+		return;
+	}
+	e = expr();
+	expect(';');
+}
+
+static void
+preturn(void)
+{   
+	Node *e;
+
+	expect(TOKRETURN);
+	if(tok->k != ';')
+		e = expr();
+	expect(';');
+}
+
+static void
+pcontinue(void)
+{
+	SrcPos *pos;
+	char   *l;
+	
+	pos = &tok->pos;
+	l = curcont();
+	if(!l)
+		errorposf(pos, "continue without parent statement");
+	expect(TOKCONTINUE);
+	expect(';');
+}
+
+static void
+pbreak(void)
+{
+	SrcPos *pos;
+	char   *l;
+	
+	pos = &tok->pos;
+	l = curbrk();
+	if(!l)
+		errorposf(pos, "break without parent statement");
+	expect(TOKBREAK);
+	expect(';');
+}
+
+static void
+pdefault(void)
+{
+	SrcPos *pos;
+	Node   *s;
+	char   *l;
+
+	pos = &tok->pos;
+	l = newlabel();
+	panic("unimplemented pdefault");
+	/*
+	s = curswitch();
+	if(s->Switch.ldefault)
+		errorposf(pos, "switch already has default");
+	s->Switch.ldefault = l;
+	*/
+	expect(TOKDEFAULT);
+	expect(':');
+	stmt();
+}
+
+static void
+pcase(void)
+{
+	SrcPos *pos;
+	Const  *c;
+
+	panic("unimplemented pcase");
+	/*
+	pos = &tok->pos;
+	s = curswitch();
+	expect(TOKCASE);
+	c = constexpr();
+	if(c->p)
+		errorposf(pos, "case cannot have pointer derived constant");
+	n->Case.cond = c->v;
+	expect(':');
+	stmt();
+	vecappend(s->Switch.cases, n);
+	*/
+}
+
 static void
 block()
 {
@@ -957,6 +1511,294 @@ block()
 
 	popscope();
 	expect('}');
+}
+
+static Node *
+mknode(int type, SrcPos *p)
+{
+	Node *n;
+
+	n = xmalloc(sizeof(Node));
+	n->pos = *p;
+	n->t = type;
+	return n;
+}
+
+static int
+islval(Node *n)
+{
+	switch(n->t) {
+	case NUNOP:
+		if(n->Unop.op == '*')
+			return 1;
+		return 0;
+	case NIDENT:
+	case NIDX:
+	case NSEL:
+	case NINIT:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+static Node *
+mkincdec(SrcPos *p, int op, int post, Node *operand)
+{
+	Node *n;
+
+	if (!islval(operand))
+		errorposf(&operand->pos, "++ and -- expects an lvalue");
+	n = mknode(NINCDEC, p);
+	n->Incdec.op = op;
+	n->Incdec.post = post;
+	n->Incdec.operand = operand;
+	n->type = operand->type;
+	return n;
+}
+
+static Node *
+mkptradd(SrcPos *p, Node *ptr, Node *offset)
+{
+	Node *n;
+	if (!isptr(ptr->type))
+		panic("internal error");
+	if (!isitype(offset->type))
+		errorposf(&offset->pos, "addition with a pointer requires an integer type");
+	n = mknode(NPTRADD, p);
+	n->Ptradd.ptr = ptr;
+	n->Ptradd.offset = offset;
+	n->type = ptr->type;
+	return n;
+}
+
+static Node *
+mkbinop(SrcPos *p, int op, Node *l, Node *r)
+{
+	Node *n;
+	CTy  *t;
+	
+	t = 0;
+	if (op == '+') {
+		if (isptr(l->type))
+			return mkptradd(p, l, r);
+		if (isptr(r->type))
+			return mkptradd(p, r, l);
+	}
+	
+	if (!isptr(l->type))
+		l = ipromote(l);
+	if (!isptr(r->type))
+		r = ipromote(r);
+	if (!isptr(l->type) && !isptr(r->type))
+		t = usualarithconv(&l, &r);
+	/* Other relationals? */
+	if (op == TOKEQL || op == TOKNEQ)
+		t = cint;
+	n = mknode(NBINOP, p);
+	n->Binop.op = op;
+	n->Binop.l = l;
+	n->Binop.r = r;
+	n->type = t;
+	return n;
+}
+
+static Node *
+mkassign(SrcPos *p, int op, Node *l, Node *r)
+{
+	Node *n;
+	CTy  *t;
+
+	if (!islval(l))
+		errorposf(&l->pos, "assign expects an lvalue");
+	r = mkcast(p, r, l->type);
+	t = l->type;
+	n = mknode(NASSIGN, p);
+	switch (op) {
+	case '=':
+		n->Assign.op = '=';
+		break;
+	case TOKADDASS:
+		n->Assign.op = '+';
+		break;
+	case TOKSUBASS:
+		n->Assign.op = '-';
+		break;
+	case TOKORASS:
+		n->Assign.op = '|';
+		break;
+	case TOKANDASS:
+		n->Assign.op = '&';
+		break;
+	case TOKMULASS:
+		n->Assign.op = '*';
+		break;
+	default:
+		panic("mkassign");
+	}
+	n->Assign.l = l;
+	n->Assign.r = r;
+	n->type = t;
+	return n;
+}
+
+static Node *
+mkunop(SrcPos *p, int op, Node *o)
+{
+	Node *n;
+	
+	n = mknode(NUNOP, p);
+	n->Unop.op = op;
+	switch (op) {
+	case '&':
+		if (!islval(o))
+			errorposf(&o->pos, "& expects an lvalue");
+		n->type = mkptr(o->type);
+		break;
+	case '*':
+		if (!isptr(o->type))
+			errorposf(&o->pos, "cannot deref non pointer");
+		n->type = o->type->Ptr.subty;
+		break;
+	default:
+		if (isitype(o->type))
+			o = ipromote(o);
+		n->type = o->type;
+		break;
+	}
+	n->Unop.operand = o;
+	return n;
+}
+
+static Node *
+mkcast(SrcPos *p, Node *o, CTy *to)
+{
+	Node *n;
+	
+	if (sametype(o->type, to))
+		return o;
+	n = mknode(NCAST, p);
+	n->type = to;
+	n->Cast.operand = o;
+	return n;
+}
+
+static Node *
+ipromote(Node *n)
+{
+	if (!isitype(n->type))
+		errorposf(&n->pos, "internal error - ipromote expects itype got %d", n->type->t);
+	switch (n->type->Prim.type) {
+	case PRIMCHAR:
+	case PRIMSHORT:
+		if (n->type->Prim.issigned)
+			return mkcast(&n->pos, n, cint);
+		else
+			return mkcast(&n->pos, n, cuint);
+	}
+	return n;
+}
+
+static CTy *
+usualarithconv(Node **a, Node **b)
+{   
+	Node **large, **small;
+	CTy   *t;
+
+	if (!isarithtype((*a)->type) || !isarithtype((*b)->type))
+		panic("internal error\n");
+	if (convrank((*a)->type) < convrank((*b)->type)) {
+		large = a;
+		small = b;
+	} else {
+		large = b;
+		small = a;
+	}
+	if (isftype((*large)->type)) {
+		*small = mkcast(&(*small)->pos, *small, (*large)->type);
+		return (*large)->type;
+	}
+	*large = ipromote(*large);
+	*small = ipromote(*small);
+	if (sametype((*large)->type, (*small)->type))
+		return (*large)->type;
+	if ((*large)->type->Prim.issigned == (*small)->type->Prim.issigned ) {
+		*small = mkcast(&(*small)->pos, *small, (*large)->type);
+		return (*large)->type;
+	}
+	if (!(*large)->type->Prim.issigned) {
+		*small = mkcast(&(*small)->pos, *small, (*large)->type);
+		return (*large)->type;
+	}
+	if ((*large)->type->Prim.issigned && canrepresent((*large)->type, (*small)->type)) {
+		*small = mkcast(&(*small)->pos, *small, (*large)->type);
+		return (*large)->type;
+	}
+	t = xmalloc(sizeof(CTy));
+	*t = *((*large)->type);
+	t->Prim.issigned = 0;
+	*large = mkcast(&(*large)->pos, *large, t);
+	*small = mkcast(&(*small)->pos, *small, t);
+	return t;
+}
+
+static Node *
+expr(void)
+{
+	SrcPos *p;
+	Vec    *v;
+	Node   *n, *last;
+
+	p = &tok->pos;
+	n = assignexpr();
+	last = n;
+	if(tok->k == ',') {
+		v = vec();
+		vecappend(v, n);
+		while(tok->k == ',') {
+			next();
+			last = assignexpr();
+			vecappend(v, last);
+		}
+		n = mknode(NCOMMA, p);
+		n->Comma.exprs = v;
+		n->type = last->type;
+	}
+	return n;
+}
+
+static int
+isassignop(Tokkind k)
+{
+	switch(k) {
+	case '=':
+	case TOKADDASS:
+	case TOKSUBASS:
+	case TOKMULASS:
+	case TOKDIVASS:
+	case TOKMODASS:
+	case TOKORASS:
+	case TOKANDASS:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+static Node *
+assignexpr(void)
+{
+	Tok  *t;
+	Node *l, *r;
+
+	l = condexpr();
+	if(isassignop(tok->k)) {
+		t = tok;
+		next();
+		r = assignexpr();
+		l = mkassign(&t->pos, t->k, l, r);
+	}
+	return l;
 }
 
 static Const *
@@ -978,6 +1820,465 @@ constexpr(void)
 		errorposf(&n->pos, "not a constant expression");
 	*/
 	return c;
+}
+
+/* Aka Ternary operator. */
+static Node *
+condexpr(void)
+{
+	Node *n, *c, *t, *f;
+
+	c = logorexpr();
+	if(tok->k != '?')
+		return c;
+	next();
+	t = expr();
+	expect(':');
+	f = condexpr();
+	n = mknode(NCOND, &tok->pos);
+	n->Cond.cond = c;
+	n->Cond.iftrue = t;
+	n->Cond.iffalse = f;
+	/* TODO: what are the limitations? */
+	if(!sametype(t->type, f->type))
+		errorposf(&n->pos, "both cases of ? must be same type.");
+	n->type = t->type;
+	return n;
+}
+
+static Node *
+logorexpr(void)
+{
+	Tok  *t;
+	Node *l, *r;
+
+	l = logandexpr();
+	while(tok->k == TOKLOR) {
+		t = tok;
+		next();
+		r = logandexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
+	}
+	return l;
+}
+
+static Node *
+logandexpr(void)
+{
+	Tok  *t;
+	Node *l, *r;
+
+	l = orexpr();
+	while(tok->k == TOKLAND) {
+		t = tok;
+		next();
+		r = orexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
+	}
+	return l;
+}
+
+static Node *
+orexpr(void)
+{
+	Tok  *t;
+	Node *l, *r;
+
+	l = xorexpr();
+	while(tok->k == '|') {
+		t = tok;
+		next();
+		r = xorexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
+	}
+	return l;
+}
+
+static Node *
+xorexpr(void)
+{
+	Tok  *t;
+	Node *l, *r;
+
+	l = andexpr();
+	while(tok->k == '^') {
+		t = tok;
+		next();
+		r = andexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
+	}
+	return l;
+}
+
+static Node *
+andexpr(void) 
+{
+	Tok  *t;
+	Node *l, *r;
+
+	l = eqlexpr();
+	while(tok->k == '&') {
+		t = tok;
+		next();
+		r = eqlexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
+	}
+	return l;
+}
+
+static Node *
+eqlexpr(void)
+{
+	Tok  *t;
+	Node *l, *r;
+
+	l = relexpr();
+	while(tok->k == TOKEQL || tok->k == TOKNEQ) {
+		t = tok;
+		next();
+		r = relexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
+	}
+	return l;
+}
+
+static Node *
+relexpr(void)
+{
+	Tok  *t;
+	Node *l, *r;
+
+	l = shiftexpr();
+	while(tok->k == '>' || tok->k == '<' 
+		  || tok->k == TOKLEQ || tok->k == TOKGEQ) {
+		t = tok;
+		next();
+		r = shiftexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
+	}
+	return l;
+}
+
+static Node *
+shiftexpr(void)
+{
+	Tok  *t;
+	Node *l, *r;
+
+	l = addexpr();
+	while(tok->k == TOKSHL || tok->k == TOKSHR) {
+		t = tok;
+		next();
+		r = addexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
+	}
+	return l;
+}
+
+static Node *
+addexpr(void)
+{
+	Tok  *t;
+	Node *l, *r;
+
+	l = mulexpr();
+	while(tok->k == '+' || tok->k == '-'	) {
+		t = tok;
+		next();
+		r = mulexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
+	}
+	return l;
+}
+
+static Node *
+mulexpr(void)
+{
+	Tok  *t;
+	Node *l, *r;
+	
+	l = castexpr();
+	while(tok->k == '*' || tok->k == '/' || tok->k == '%') {
+		t = tok;
+		next();
+		r = castexpr();
+		l = mkbinop(&t->pos, t->k, l, r);
+	}
+	return l;
+}
+
+static Node *
+castexpr(void)
+{
+	Tok  *t;
+	Node *o;
+	CTy  *ty;
+	
+	if(tok->k == '(' && istypestart(nexttok)) {
+		t = tok;
+		expect('(');
+		ty = typename();
+		expect(')');
+		if(tok->k == '{') {
+			o = declinit(ty);
+			return o;
+		}
+		o = unaryexpr();
+		return mkcast(&t->pos, o, ty);
+	}
+	return unaryexpr();
+}
+
+static CTy *
+typename(void)
+{
+	int   sclass;
+	CTy  *t;
+	char *name;
+	
+	t = declspecs(&sclass);
+	t = declarator(t, &name, 0);
+	return t;
+}
+
+static Node *
+unaryexpr(void)
+{
+	Tok  *t;
+	CTy  *ty;
+	Node *n;
+
+	switch (tok->k) {
+	case TOKINC:
+	case TOKDEC:
+		t = tok;
+		next();
+		n = unaryexpr();
+		return mkincdec(&t->pos, t->k, 0, n);
+	case '*':
+	case '&':
+	case '-':
+	case '!':
+	case '~':
+		t = tok;
+		next();
+		return mkunop(&t->pos, t->k, castexpr());
+	case TOKSIZEOF:
+		n = mknode(NSIZEOF, &tok->pos);
+		next();
+		if(tok->k == '(' && istypestart(nexttok)) {
+			expect('(');
+			ty = typename();
+			expect(')');
+		} else {
+			ty = unaryexpr()->type;
+		}
+		n->Sizeof.type = ty;
+		n->type = cint;
+		return n;
+	default:
+		;
+	}
+	return postexpr();
+}
+
+static Node *
+call(Node *funclike)
+{
+	Node   *n;
+	CTy    *fty;
+	SrcPos *pos ;
+
+	pos = &tok->pos;
+	expect('(');
+	n = mknode(NCALL, &tok->pos);
+	n->Call.funclike = funclike;
+	n->Call.args = vec();
+	if(isfunc(funclike->type))
+		fty = funclike->type;
+	else if (isfuncptr(funclike->type))
+		fty = funclike->type->Ptr.subty;
+	else
+		errorposf(pos, "cannot call non function");
+	n->type = fty->Func.rtype;
+	if(tok->k != ')') {
+		for(;;) {
+			vecappend(n->Call.args, assignexpr());
+			if(tok->k != ',') {
+				break;
+			}
+			next();
+		}
+	}
+	expect(')');
+	if(n->Call.args->len < fty->Func.params->len)
+		errorposf(pos, "function called with too few args");
+	if(n->Call.args->len > fty->Func.params->len && !fty->Func.isvararg)
+		errorposf(pos, "function called with too many args");
+	return n;
+}
+
+static Node *
+postexpr(void)
+{
+	int   done;
+	Tok  *t;
+	Node *n1, *n2, *n3;
+
+	n1 = primaryexpr();
+	done = 0;
+	while(!done) {
+		switch(tok->k) {
+		case '[':
+			t = tok;
+			next();
+			n2 = expr();
+			expect(']');
+			n3 = mknode(NIDX, &t->pos);
+			if(isptr(n1->type))
+				n3->type = n1->type->Ptr.subty;
+			else if (isarray(n1->type))
+				n3->type = n1->type->Arr.subty;
+			else
+				errorposf(&t->pos, "can only index an array or pointer");
+			n3->Idx.idx = n2;
+			n3->Idx.operand = n1;
+			n1 = n3;
+			break;
+		case '.':
+			if(!isstruct(n1->type))
+				errorposf(&tok->pos, "expected a struct");
+			if(n1->type->incomplete)
+				errorposf(&tok->pos, "selector on incomplete type");
+			n2 = mknode(NSEL, &tok->pos);
+			next();
+			n2->Sel.name = tok->v;
+			n2->Sel.operand = n1;
+			n2->type = structtypefromname(n1->type, tok->v);
+			if(!n2->type)
+				errorposf(&tok->pos, "struct has no member %s", tok->v);
+			expect(TOKIDENT);
+			n1 = n2;
+			break;
+		case TOKARROW:
+			if(!(isptr(n1->type) && isstruct(n1->type->Ptr.subty)))
+				errorposf(&tok->pos, "expected a struct pointer");
+			if(n1->type->Ptr.subty->incomplete)
+				errorposf(&tok->pos, "selector on incomplete type");
+			n2 = mknode(NSEL, &tok->pos);
+			next();
+			n2->Sel.name = tok->v;
+			n2->Sel.operand = n1;
+			n2->Sel.arrow = 1;
+			n2->type = structtypefromname(n1->type->Ptr.subty, tok->v);
+			if(!n2->type)
+				errorposf(&tok->pos, "struct pointer has no member %s", tok->v);
+			expect(TOKIDENT);
+			n1 = n2;
+			break;
+		case '(':
+			n1 = call(n1);
+			break;
+		case TOKINC:
+			n1 = mkincdec(&tok->pos, TOKINC, 1, n1);
+			next();
+			break;
+		case TOKDEC:
+			n1 = mkincdec(&tok->pos, TOKDEC, 1, n1);
+			next();
+			break;
+		default:
+			done = 1;
+		}
+	}
+	return n1;
+}
+
+static Node *
+primaryexpr(void) 
+{
+	Sym  *sym;
+	Node *n;
+	
+	switch (tok->k) {
+	case TOKIDENT:
+		if(strcmp(tok->v, "__builtin_va_start") == 0)
+			return vastart();
+		sym = lookup(syms, tok->v);
+		if(!sym)
+			errorposf(&tok->pos, "undefined symbol %s", tok->v);
+		n = mknode(NIDENT, &tok->pos);
+		n->Ident.sym = sym;
+		n->type = sym->type;
+		next();
+		return n;
+	case TOKNUM:
+		n = mknode(NNUM, &tok->pos);
+		n->Num.v = atoll(tok->v);
+		n->type = cint;
+		next();
+		return n;
+	case TOKCHARLIT:
+		/* XXX it seems wrong to do this here, also table is better */
+		n = mknode(NNUM, &tok->pos);
+		if(strcmp(tok->v, "'\\n'") == 0) {
+			n->Num.v = '\n';
+		} else if(strcmp(tok->v, "'\\\\'") == 0) {
+			n->Num.v = '\\';
+		} else if(strcmp(tok->v, "'\\''") == 0) {
+			n->Num.v = '\'';
+		} else if(strcmp(tok->v, "'\\r'") == 0) {
+			n->Num.v = '\r';
+		} else if(strcmp(tok->v, "'\\t'") == 0) {
+			n->Num.v = '\t';
+		}  else if(tok->v[1] == '\\') {
+			errorposf(&tok->pos, "unknown escape code");
+		} else {
+			n->Num.v = tok->v[1];
+		}
+		n->type = cint;
+		next();
+		return n;
+	case TOKSTR:
+		n = mknode(NSTR, &tok->pos);
+		n->Str.v = tok->v;
+		n->type = mkptr(cchar);
+		next();
+		return n;
+	case '(':
+		next();
+		n = expr();
+		expect(')');
+		return n;
+	default:
+		errorposf(&tok->pos, "expected an ident, constant, string or (");
+	}
+	errorf("unreachable.");
+	return 0;
+}
+
+static Node *
+vastart()
+{
+	Node *n, *valist, *param;
+	
+	n = mknode(NBUILTIN, &tok->pos);
+	expect(TOKIDENT);
+	expect('(');
+	valist = assignexpr();
+	expect(',');
+	param = assignexpr();
+	expect(')');
+	n->type = cvoid;
+	n->Builtin.t = BUILTIN_VASTART;
+	n->Builtin.Vastart.param = param;
+	n->Builtin.Vastart.valist = valist;
+	if(param->t != NIDENT)
+		errorposf(&n->pos, "expected an identifer in va_start");
+	if(param->Ident.sym->k != SYMLOCAL 
+	   || !param->Ident.sym->Local.isparam)
+		errorposf(&n->pos, "expected a parameter symbol in va_start");
+	return n;
 }
 
 void
