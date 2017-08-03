@@ -15,7 +15,7 @@ typedef enum {
 	SYMENUM,
 	SYMTYPE,
 	SYMGLOBAL,
-	SYMLOCAL,
+	SYMLOCAL
 } Symkind;
 
 typedef struct Const {
@@ -35,7 +35,6 @@ typedef struct Sym {
 			char *label;
 		} Global;
 		struct {
-			CTy *functy;
 			int paramidx;
 			int isparam;
 		} Local;

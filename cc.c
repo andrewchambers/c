@@ -15,7 +15,7 @@ static CTy   *declarator(CTy *, char **, Node **);
 static CTy   *directdeclarator(CTy *, char **);
 static CTy   *declaratortail(CTy *);
 
-static void   fbody();
+static void   funcbody();
 static void   block();
 static Const *constexpr(void);
 
@@ -59,7 +59,14 @@ static Switch *switches[MAXLABELDEPTH];
 
 Sym  *curfunc;
 
+/* source label -> backend label */
 Map  *labels;
+
+typedef struct Goto {
+	SrcPos pos;
+	char *label;
+} Goto;
+
 Vec  *gotos;
 Vec  *tentativesyms;
 
@@ -391,7 +398,7 @@ decl()
 				errorposf(pos, "expected a function");
 			curfunc = sym;
 			emitfuncstart(sym);
-			fbody();
+			funcbody();
 			emitfuncend();
 			definesym(pos, sclass, name, type, (Node*)1);
 			curfunc = 0;
@@ -911,42 +918,35 @@ penum()
 
 
 static void
-fbody()
+funcbody()
 {
-	/*
-	Node   *gotofixup;
-	int     i;
-	char   *l;
 	NameTy *nt;
 	Sym    *sym;
-	*/
+	Goto   *go;
+	int     i;
+
 	pushscope();
-	/*
+	
 	labels = map();
 	gotos = vec();
 
 	for (i = 0; i < curfunc->type->Func.params->len; i++) {
 		nt = vecget(curfunc->type->Func.params, i);
 		if (nt->name) {
-			sym = definesym(&curfunc->pos, SCAUTO, nt->name, nt->type, 0);
+			sym = definesym(curfunc->pos, SCAUTO, nt->name, nt->type, 0);
 			sym->Local.isparam = 1;
 			sym->Local.paramidx = i;
-			sym->Local.functy = curfunc->type;
-			vecappend(curfunc->Func.params, sym);
 		}
 	}
-	*/
+
 	block();
 	popscope();
-	/*
+
 	for (i = 0 ; i < gotos->len ; i++) {
-		gotofixup = vecget(gotos, i);
-		l = mapget(labels, gotofixup->Goto.name);
-		if (!l)
-			errorposf(&gotofixup->pos, "goto target does not exist");
-		gotofixup->Goto.l = l;
+		go = vecget(gotos, i);
+		if (!mapget(labels, go->label))
+			errorposf(&go->pos, "goto target not defined");
 	}
-	*/
 }
 
 static void
@@ -999,6 +999,7 @@ compile()
 	
 	while (tok->k != TOKEOF)
 		decl();
+	
 	for(i = 0; i < tentativesyms->len; i++) {
 		sym = vecget(tentativesyms, i);
 		emitsym(sym);
