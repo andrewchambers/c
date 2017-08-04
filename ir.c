@@ -42,16 +42,28 @@ typedef struct BasicBlock {
 	Terminator terminator;
 	int cap;
 	int ninstructions;
+	int terminated;
 } BasicBlock;
 
 static BasicBlock *
 mkbasicblock()
 {
-	panic("unimplemented mkbasicblock");
+	BasicBlock *bb;
+
+	bb = xmalloc(sizeof(BasicBlock));
+	bb->labels = vec();
+	vecappend(bb->labels, newlabel());
+	bb->cap = 32;
+	bb->instructions = xmalloc(sizeof(Instruction) * bb->cap);
+	bb->terminated = 0;
+	bb->ninstructions = 0;
+	return bb;
 }
 
-BasicBlock *prelude;
-BasicBlock *current;
+Sym        *curfunc;
+BasicBlock *preludebb;
+BasicBlock *currentbb;
+Vec        *basicblocks;
 
 int labelcount;
 
@@ -124,16 +136,48 @@ emitfuncstart(Sym *sym)
 		panic("emitfuncstart precondition failed");
 
 	out("%s() {\n", sym->name);
+
+	curfunc = sym;
+	basicblocks = vec();
+	preludebb = mkbasicblock();
+	currentbb = preludebb;
+	vecappend(basicblocks, preludebb);
+}
+
+static void
+emitbb(BasicBlock *bb)
+{
+	int i;
+
+	
+	for (i = 0; i < bb->labels->len; i++) {
+		out("%s:\n", vecget(bb->labels, i));
+	}
+
+	for (i = 0; i < bb->ninstructions; i++) {
+		/* bb->instructions[i] */
+	}
+
+	if (bb->terminated) {
+		
+	} else {
+		out("ret\n");
+	}
 }
 
 void
 emitfuncend()
 {
+	int i;
+
+	for (i = 0; i < basicblocks->len; i++) {
+		emitbb(vecget(basicblocks, i));
+	}
 	out("}\n");
 }
 
 void
 endmodule()
 {
-	out("; Until we meet again.\n");
+
 }
