@@ -14,6 +14,8 @@ typedef enum {
 
 typedef struct IRVal {
 	IRValKind kind;
+	int64 v;
+	char  *label;
 } IRVal;
 
 typedef enum {
@@ -29,7 +31,7 @@ typedef struct Instruction {
 
 typedef struct Terminator {
 	Opcode op;
-	IRVal reg;
+	IRVal v;
 	char *label1;
 	char *label2;
 } Terminator;
