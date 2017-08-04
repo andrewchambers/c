@@ -135,7 +135,7 @@ out(char *fmt, ...)
 void
 beginmodule()
 {
-	out("; Compiled with care...\n");
+	out("# Compiled with care...\n");
 }
 
 void
@@ -144,7 +144,7 @@ emitsym(Sym *sym)
 	if (isfunc(sym->type))
 		panic("emitsym precondition failed");
 
-	out("; %s:%d:%d %s\n", sym->pos->file, sym->pos->line, sym->pos->col, sym->name);
+	out("# %s:%d:%d %s\n", sym->pos->file, sym->pos->line, sym->pos->col, sym->name);
 	switch(sym->k){
 	case SYMGLOBAL:
 		break;
@@ -218,5 +218,5 @@ emitfuncend()
 void
 endmodule()
 {
-	out("; compiled with %lld bytes allocated\n", malloctotal);
+	out("# Compiled with %lld bytes allocated.\n", malloctotal);
 }
