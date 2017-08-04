@@ -60,6 +60,9 @@ mkbasicblock()
 	return bb;
 }
 
+
+static FILE *outf;
+
 Sym        *curfunc;
 BasicBlock *preludebb;
 BasicBlock *currentbb;
@@ -84,7 +87,33 @@ newlabel(void)
 	return s;
 }
 
-static FILE *outf;
+static char *
+ctype2irtype(CTy *ty)
+{
+	switch (ty->t) {
+	case CVOID:
+		return "";
+	case CPRIM:
+		switch (ty->Prim.type) {
+		case PRIMCHAR:
+			return "w";
+		case PRIMSHORT:
+			return "w";
+		case PRIMINT:
+			return "w";
+		case PRIMLONG:
+			return "l";
+		case PRIMLLONG:
+			return "l";
+		default:
+			panic("unhandled cprim");
+		}
+	case CPTR:
+		return "l";
+	default:
+		panic("unhandled ctype");
+	}
+}
 
 void
 setiroutput(FILE *f)
@@ -132,12 +161,22 @@ emitsym(Sym *sym)
 void
 emitfuncstart(Sym *sym)
 {
+	int i;
+	NameTy *namety;
+
 	if (sym->k != SYMGLOBAL || !isfunc(sym->type))
 		panic("emitfuncstart precondition failed");
 
-	out("%s() {\n", sym->name);
-
 	curfunc = sym;
+
+	out("function %s $%s(", ctype2irtype(curfunc->type->Func.rtype), curfunc->name);
+
+	for (i = 0; i < curfunc->type->Func.params->len; i++) {
+		namety = vecget(curfunc->type->Func.params, i);
+		out("%s %s%s", ctype2irtype(namety->type), namety->type, i == curfunc->type->Func.params->len - 1 ? "" : ",");
+	}
+	out(")\n");
+
 	basicblocks = vec();
 	preludebb = mkbasicblock();
 	currentbb = preludebb;
