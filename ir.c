@@ -179,5 +179,5 @@ emitfuncend()
 void
 endmodule()
 {
-
+	out("; compiled with %lld bytes allocated\n", malloctotal);
 }

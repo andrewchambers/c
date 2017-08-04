@@ -17,6 +17,8 @@ void panic(char *fmt, ...) NORETURN;
 void errorf(char *, ...) NORETURN;
 void errorposf(SrcPos *, char *, ...) NORETURN;
 
+extern int64 malloctotal;
+
 void *xmalloc(int);
 char *xstrdup(char *);
 

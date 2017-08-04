@@ -90,10 +90,14 @@ xstrdup(char *s)
 	return r;
 }
 
+int64 malloctotal;
+
 void *
 xmalloc(int n)
 {
 	char *v;
+
+	malloctotal += n;
 
 	v = malloc(n);
 	if(!v)
