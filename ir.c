@@ -6,6 +6,51 @@
 #include "cc.h"
 #include "ir.h"
 
+typedef enum {
+	IRConst,
+	IRLabel,
+	IRVReg
+} IRValKind;
+
+typedef struct IRVal {
+	IRValKind kind;
+} IRVal;
+
+typedef enum {
+	Opalloca,
+	Opret,
+	Opjmp
+} Opcode; 
+
+typedef struct Instruction {
+	Opcode op;
+	IRVal a, b, c;
+} Instruction;
+
+typedef struct Terminator {
+	Opcode op;
+	IRVal reg;
+	char *label1;
+	char *label2;
+} Terminator;
+
+typedef struct BasicBlock {
+	Vec *labels;
+	Instruction *instructions;
+	Terminator terminator;
+	int cap;
+	int ninstructions;
+} BasicBlock;
+
+static BasicBlock *
+mkbasicblock()
+{
+	panic("unimplemented mkbasicblock");
+}
+
+BasicBlock *prelude;
+BasicBlock *current;
+
 int labelcount;
 
 char *
