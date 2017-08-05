@@ -153,4 +153,6 @@ typedef struct Node {
 	};
 } Node;
 
+extern Sym *curfunc;
+
 void compile();

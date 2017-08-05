@@ -6,78 +6,8 @@
 #include "cc.h"
 #include "ir.h"
 
-typedef enum {
-	IRConst,
-	IRLabel,
-	IRVReg
-} IRValKind;
-
-typedef struct IRVal {
-	IRValKind kind;
-	int64 v;
-	char  *label;
-} IRVal;
-
-typedef enum {
-	Opalloca,
-	Opret,
-	Opjmp
-} Opcode; 
-
-typedef struct Instruction {
-	Opcode op;
-	IRVal a, b, c;
-} Instruction;
-
-typedef struct Terminator {
-	Opcode op;
-	IRVal v;
-	char *label1;
-	char *label2;
-} Terminator;
-
-typedef struct BasicBlock {
-	Vec *labels;
-	Instruction *instructions;
-	Terminator terminator;
-	int cap;
-	int ninstructions;
-	int terminated;
-} BasicBlock;
-
-static BasicBlock *
-mkbasicblock()
-{
-	BasicBlock *bb;
-
-	bb = xmalloc(sizeof(BasicBlock));
-	bb->labels = vec();
-	vecappend(bb->labels, newlabel());
-	bb->cap = 64;
-	bb->instructions = xmalloc(bb->cap * sizeof(Instruction));
-	bb->terminated = 0;
-	bb->ninstructions = 0;
-	return bb;
-}
-
-static void bbappend(BasicBlock *bb, Instruction ins)
-{
-	Instruction *instrarray;
-
-	if (bb->cap == bb->ninstructions) {
-		bb->cap += 64;
-		instrarray = xmalloc(bb->cap * sizeof(Instruction));
-		bb->instructions = instrarray;
-		memcpy(instrarray, bb->instructions, bb->ninstructions * sizeof(Instruction));
-	}
-
-	bb->instructions[bb->ninstructions++] = ins;
-}
-
-
 static FILE *outf;
 
-Sym        *curfunc;
 BasicBlock *preludebb;
 BasicBlock *currentbb;
 Vec        *basicblocks;
@@ -146,6 +76,43 @@ out(char *fmt, ...)
 	va_end(va);
 }
 
+static char *
+outirval(IRVal *val)
+{
+	switch (val->kind) {
+	case IRConst:
+		out("%lld", val->v);
+		break;
+	default:
+		panic("unhandled terminator");
+	}
+}
+
+static char *
+outterminator(Terminator *term)
+{
+	switch (term->op) {
+	case Opret:
+		out("ret ");
+		outirval(&term->v);
+		out("\n");
+		break;
+	default:
+		panic("unhandled terminator");
+	}
+}
+
+void endcurbb(Terminator term)
+{
+	if (currentbb->terminated)
+		panic("internal error - current block already terminated.");
+
+	currentbb->terminator = term;
+	currentbb->terminated = 1;
+}
+
+
+
 void
 beginmodule()
 {
@@ -173,93 +140,27 @@ emitsym(Sym *sym)
 }
 
 void
-emitfuncstart(Sym *sym)
+emitfuncstart()
 {
 	int i;
 	NameTy *namety;
 
-	if (sym->k != SYMGLOBAL || !isfunc(sym->type))
+	if (curfunc->k != SYMGLOBAL || !isfunc(curfunc->type))
 		panic("emitfuncstart precondition failed");
 
-	curfunc = sym;
-
+	out("export\n");
 	out("function %s $%s(", ctype2irtype(curfunc->type->Func.rtype), curfunc->name);
 
 	for (i = 0; i < curfunc->type->Func.params->len; i++) {
 		namety = vecget(curfunc->type->Func.params, i);
 		out("%s %s%s", ctype2irtype(namety->type), namety->type, i == curfunc->type->Func.params->len - 1 ? "" : ",");
 	}
-	out(")\n");
+	out(") {\n");
 
 	basicblocks = vec();
 	preludebb = mkbasicblock();
 	currentbb = preludebb;
 	vecappend(basicblocks, preludebb);
-}
-
-static IRVal
-compileexpr(Node *n)
-{
-	switch(n->t){
-	/*
-	case NCOMMA:
-		comma(n);
-		break;
-	case NCAST:
-		cast(n);
-		break;
-	case NSTR:
-		str(n);
-		break;
-	case NSIZEOF:
-		outi("movq $%lld, %%rax\n", n->Sizeof.type->size);
-		break;
-	case NNUM:
-		outi("movq $%lld, %%rax\n", n->Num.v);
-		break;
-	case NIDENT:
-		ident(n);
-		break;
-	case NUNOP:
-		unop(n);
-		break;
-	case NASSIGN:
-		assign(n);
-		break;
-	case NBINOP:
-		binop(n);
-		break;
-	case NIDX:
-		idx(n);
-		break;
-	case NSEL:
-		sel(n);
-		break;
-	case NCOND:
-		cond(n);
-		break;
-	case NCALL:
-		call(n);
-		break;
-	case NPTRADD:
-		ptradd(n);
-		break;
-	case NINCDEC:
-		incdec(n);
-		break;
-	case NBUILTIN:
-		switch(n->Builtin.t) {
-		case BUILTIN_VASTART:
-			vastart(n);
-			break;
-		default:
-			errorposf(&n->pos, "unimplemented builtin");
-		}
-		break;
-	*/
-	default:
-		errorf("unimplemented compileexpr for node at %s:%d:%d\n", n->pos.file, n->pos.line, n->pos.col);
-	}
 }
 
 static void
@@ -269,7 +170,7 @@ emitbb(BasicBlock *bb)
 
 	
 	for (i = 0; i < bb->labels->len; i++) {
-		out("%s:\n", vecget(bb->labels, i));
+		out("@%s\n", vecget(bb->labels, i));
 	}
 
 	for (i = 0; i < bb->ninstructions; i++) {
@@ -277,7 +178,7 @@ emitbb(BasicBlock *bb)
 	}
 
 	if (bb->terminated) {
-		
+		outterminator(&bb->terminator);
 	} else {
 		out("ret\n");
 	}
@@ -298,4 +199,36 @@ void
 endmodule()
 {
 	out("# Compiled with %lld bytes allocated.\n", malloctotal);
+	if (fflush(outf) != 0)
+		panic("error flushing output");
+}
+
+BasicBlock *
+mkbasicblock()
+{
+	BasicBlock *bb;
+
+	bb = xmalloc(sizeof(BasicBlock));
+	bb->labels = vec();
+	vecappend(bb->labels, newlabel());
+	bb->cap = 64;
+	bb->instructions = xmalloc(bb->cap * sizeof(Instruction));
+	bb->terminated = 0;
+	bb->ninstructions = 0;
+	return bb;
+}
+
+void
+bbappend(BasicBlock *bb, Instruction ins)
+{
+	Instruction *instrarray;
+
+	if (bb->cap == bb->ninstructions) {
+		bb->cap += 64;
+		instrarray = xmalloc(bb->cap * sizeof(Instruction));
+		bb->instructions = instrarray;
+		memcpy(instrarray, bb->instructions, bb->ninstructions * sizeof(Instruction));
+	}
+
+	bb->instructions[bb->ninstructions++] = ins;
 }

@@ -55,6 +55,7 @@ static Node  *declinit(CTy *);
 static CTy   *usualarithconv(Node **, Node **);
 static Node  *mkcast(SrcPos *, Node *, CTy *);
 static Node  *mknode(int type, SrcPos *p);
+static IRVal  compileexpr(Node *n);
 
 Tok *tok;
 Tok *nexttok;
@@ -168,6 +169,14 @@ pushbrk(char *lbreak)
 {
         breaks[brkdepth] = lbreak;
         brkdepth += 1;
+}
+
+static void
+popbrk(void)
+{
+	brkdepth -= 1;
+	if(brkdepth < 0)
+		panic("internal error");
 }
 
 static void
@@ -1419,6 +1428,7 @@ exprstmt(void)
 		return;
 	}
 	e = expr();
+	compileexpr(e);
 	expect(';');
 }
 
@@ -1426,10 +1436,15 @@ static void
 preturn(void)
 {   
 	Node *e;
+	IRVal ret;
 
 	expect(TOKRETURN);
-	if (tok->k != ';')
+	if (tok->k != ';') {
 		e = expr();
+		e = mkcast(&e->pos, e, curfunc->type->Func.rtype);
+		ret = compileexpr(e);
+		endcurbb((Terminator){.op=Opret, .v=ret});
+	}
 	expect(';');
 }
 
@@ -2309,4 +2324,71 @@ compile()
 	}
 	
 	endmodule();
+}
+
+static IRVal
+compileexpr(Node *n)
+{
+	switch(n->t){
+	/*
+	case NCOMMA:
+		comma(n);
+		break;
+	case NCAST:
+		cast(n);
+		break;
+	case NSTR:
+		str(n);
+		break;
+	case NSIZEOF:
+		outi("movq $%lld, %%rax\n", n->Sizeof.type->size);
+		break;
+	*/
+	case NNUM:
+		//outi("movq $%lld, %%rax\n", n->Num.v);
+		return (IRVal){.kind=IRConst, .v=n->Num.v};
+	/*
+	case NIDENT:
+		ident(n);
+		break;
+	case NUNOP:
+		unop(n);
+		break;
+	case NASSIGN:
+		assign(n);
+		break;
+	case NBINOP:
+		binop(n);
+		break;
+	case NIDX:
+		idx(n);
+		break;
+	case NSEL:
+		sel(n);
+		break;
+	case NCOND:
+		cond(n);
+		break;
+	case NCALL:
+		call(n);
+		break;
+	case NPTRADD:
+		ptradd(n);
+		break;
+	case NINCDEC:
+		incdec(n);
+		break;
+	case NBUILTIN:
+		switch(n->Builtin.t) {
+		case BUILTIN_VASTART:
+			vastart(n);
+			break;
+		default:
+			errorposf(&n->pos, "unimplemented builtin");
+		}
+		break;
+	*/
+	default:
+		errorf("unimplemented compileexpr for node at %s:%d:%d\n", n->pos.file, n->pos.line, n->pos.col);
+	}
 }
