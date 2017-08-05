@@ -53,11 +53,25 @@ mkbasicblock()
 	bb = xmalloc(sizeof(BasicBlock));
 	bb->labels = vec();
 	vecappend(bb->labels, newlabel());
-	bb->cap = 32;
-	bb->instructions = xmalloc(sizeof(Instruction) * bb->cap);
+	bb->cap = 64;
+	bb->instructions = xmalloc(bb->cap * sizeof(Instruction));
 	bb->terminated = 0;
 	bb->ninstructions = 0;
 	return bb;
+}
+
+static void bbappend(BasicBlock *bb, Instruction ins)
+{
+	Instruction *instrarray;
+
+	if (bb->cap == bb->ninstructions) {
+		bb->cap += 64;
+		instrarray = xmalloc(bb->cap * sizeof(Instruction));
+		bb->instructions = instrarray;
+		memcpy(instrarray, bb->instructions, bb->ninstructions * sizeof(Instruction));
+	}
+
+	bb->instructions[bb->ninstructions++] = ins;
 }
 
 
@@ -181,6 +195,71 @@ emitfuncstart(Sym *sym)
 	preludebb = mkbasicblock();
 	currentbb = preludebb;
 	vecappend(basicblocks, preludebb);
+}
+
+static IRVal
+compileexpr(Node *n)
+{
+	switch(n->t){
+	/*
+	case NCOMMA:
+		comma(n);
+		break;
+	case NCAST:
+		cast(n);
+		break;
+	case NSTR:
+		str(n);
+		break;
+	case NSIZEOF:
+		outi("movq $%lld, %%rax\n", n->Sizeof.type->size);
+		break;
+	case NNUM:
+		outi("movq $%lld, %%rax\n", n->Num.v);
+		break;
+	case NIDENT:
+		ident(n);
+		break;
+	case NUNOP:
+		unop(n);
+		break;
+	case NASSIGN:
+		assign(n);
+		break;
+	case NBINOP:
+		binop(n);
+		break;
+	case NIDX:
+		idx(n);
+		break;
+	case NSEL:
+		sel(n);
+		break;
+	case NCOND:
+		cond(n);
+		break;
+	case NCALL:
+		call(n);
+		break;
+	case NPTRADD:
+		ptradd(n);
+		break;
+	case NINCDEC:
+		incdec(n);
+		break;
+	case NBUILTIN:
+		switch(n->Builtin.t) {
+		case BUILTIN_VASTART:
+			vastart(n);
+			break;
+		default:
+			errorposf(&n->pos, "unimplemented builtin");
+		}
+		break;
+	*/
+	default:
+		errorf("unimplemented compileexpr for node at %s:%d:%d\n", n->pos.file, n->pos.line, n->pos.col);
+	}
 }
 
 static void
