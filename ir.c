@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include <string.h>
 #include "util.h"
 #include "ctypes.h"
 #include "cc.h"
@@ -15,7 +16,7 @@ Vec        *basicblocks;
 int labelcount;
 
 char *
-newlabel(void)
+newlabel()
 {
 	char *s;
 	int   n;
@@ -31,7 +32,14 @@ newlabel(void)
 	return s;
 }
 
-static char *
+int vregcount;
+
+IRVal nextvreg(char *irtype)
+{
+	return (IRVal){.kind=IRVReg, .irtype=irtype, .v=vregcount++};
+}
+
+char *
 ctype2irtype(CTy *ty)
 {
 	switch (ty->t) {
@@ -76,19 +84,22 @@ out(char *fmt, ...)
 	va_end(va);
 }
 
-static char *
+static void
 outirval(IRVal *val)
 {
 	switch (val->kind) {
 	case IRConst:
 		out("%lld", val->v);
 		break;
+	case IRVReg:
+		out("%%v%d", val->v);
+		break;
 	default:
-		panic("unhandled terminator");
+		panic("unhandled irval");
 	}
 }
 
-static char *
+static void
 outterminator(Terminator *term)
 {
 	switch (term->op) {
@@ -102,6 +113,23 @@ outterminator(Terminator *term)
 	}
 }
 
+static void
+outinstruction(Instruction *instr)
+{
+	switch (instr->op) {
+	case Opadd:
+		outirval(&instr->a);
+		out(" =%s add ", instr->a.irtype);
+		outirval(&instr->b);
+		out(", ");
+		outirval(&instr->c);
+		out("\n");
+		break;
+	default:
+		panic("unhandled instrction");
+	}
+}
+
 void endcurbb(Terminator term)
 {
 	if (currentbb->terminated)
@@ -110,8 +138,6 @@ void endcurbb(Terminator term)
 	currentbb->terminator = term;
 	currentbb->terminated = 1;
 }
-
-
 
 void
 beginmodule()
@@ -161,6 +187,7 @@ emitfuncstart()
 	preludebb = mkbasicblock();
 	currentbb = preludebb;
 	vecappend(basicblocks, preludebb);
+	vregcount = 0;
 }
 
 static void
@@ -174,7 +201,7 @@ emitbb(BasicBlock *bb)
 	}
 
 	for (i = 0; i < bb->ninstructions; i++) {
-		/* bb->instructions[i] */
+		outinstruction(&bb->instructions[i]);
 	}
 
 	if (bb->terminated) {

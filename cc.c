@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "util.h"
 #include "cpp.h"
 #include "ctypes.h"
@@ -56,6 +57,8 @@ static CTy   *usualarithconv(Node **, Node **);
 static Node  *mkcast(SrcPos *, Node *, CTy *);
 static Node  *mknode(int type, SrcPos *p);
 static IRVal  compileexpr(Node *n);
+static IRVal  compilebinop(Node *n);
+
 
 Tok *tok;
 Tok *nexttok;
@@ -2346,7 +2349,7 @@ compileexpr(Node *n)
 	*/
 	case NNUM:
 		//outi("movq $%lld, %%rax\n", n->Num.v);
-		return (IRVal){.kind=IRConst, .v=n->Num.v};
+		return (IRVal){.kind=IRConst, .irtype=ctype2irtype(n->type), .v=n->Num.v};
 	/*
 	case NIDENT:
 		ident(n);
@@ -2357,9 +2360,10 @@ compileexpr(Node *n)
 	case NASSIGN:
 		assign(n);
 		break;
+	*/
 	case NBINOP:
-		binop(n);
-		break;
+		return compilebinop(n);
+	/*
 	case NIDX:
 		idx(n);
 		break;
@@ -2389,6 +2393,49 @@ compileexpr(Node *n)
 		break;
 	*/
 	default:
-		errorf("unimplemented compileexpr for node at %s:%d:%d\n", n->pos.file, n->pos.line, n->pos.col);
+		panic("unimplemented compileexpr for node at %s:%d:%d\n", n->pos.file, n->pos.line, n->pos.col);
 	}
 }
+
+static IRVal
+compilebinop(Node *n)
+{
+	IRVal  res, l, r;
+
+	if (n->Binop.op == TOKLAND || n->Binop.op == TOKLOR) {
+		panic("shortcircuit unimplemented");
+		// shortcircuit(n);
+		// return;
+	}
+	l = compileexpr(n->Binop.l);
+	r = compileexpr(n->Binop.r);
+
+	res = nextvreg(ctype2irtype(n->type));
+	
+	switch (n->Binop.op) {
+	case '+':
+		bbappend(currentbb, (Instruction){.op=Opadd, .a=res, .b=l, .c=r});
+		break;
+	case '-':
+	case '*':
+	case '/':
+	case '%':
+	case '|':
+	case '&':
+	case '^':
+	case TOKSHR:
+	case TOKSHL:
+	case TOKEQL:
+	case TOKNEQ:
+	case TOKGEQ:
+	case TOKLEQ:
+	case '>':
+	case '<':
+	default:
+		errorf("unimplemented binop %d\n", n->Binop.op);
+	}
+
+	return res;
+}
+
+

@@ -1,6 +1,4 @@
 
-typedef struct Node Node;
-
 typedef enum {
 	SCNONE,
 	SCEXTERN,
@@ -17,6 +15,8 @@ typedef enum {
 	SYMGLOBAL,
 	SYMLOCAL
 } Symkind;
+
+typedef struct Node Node;
 
 typedef struct Sym {
 	Symkind k;
@@ -73,7 +73,7 @@ typedef enum {
 	BUILTIN_VASTART
 } Builtinkind;
 
-typedef struct Node {
+struct Node {
 	/* type tag, one of the N* types */
 	Nodekind t;
 	SrcPos pos;
@@ -151,7 +151,7 @@ typedef struct Node {
 			};
 		} Builtin;
 	};
-} Node;
+};
 
 extern Sym *curfunc;
 
