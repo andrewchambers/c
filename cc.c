@@ -2417,12 +2417,26 @@ compilebinop(Node *n)
 		bbappend(currentbb, (Instruction){.op=Opadd, .a=res, .b=l, .c=r});
 		break;
 	case '-':
+		bbappend(currentbb, (Instruction){.op=Opsub, .a=res, .b=l, .c=r});
+		break;
 	case '*':
+		bbappend(currentbb, (Instruction){.op=Opmul, .a=res, .b=l, .c=r});
+		break;
 	case '/':
+		bbappend(currentbb, (Instruction){.op=Opdiv, .a=res, .b=l, .c=r});
+		break;
 	case '%':
+		bbappend(currentbb, (Instruction){.op=Oprem, .a=res, .b=l, .c=r});
+		break;
 	case '|':
+		bbappend(currentbb, (Instruction){.op=Opbor, .a=res, .b=l, .c=r});
+		break;
 	case '&':
+		bbappend(currentbb, (Instruction){.op=Opband, .a=res, .b=l, .c=r});
+		break;
 	case '^':
+		bbappend(currentbb, (Instruction){.op=Opbxor, .a=res, .b=l, .c=r});
+		break;
 	case TOKSHR:
 	case TOKSHL:
 	case TOKEQL:

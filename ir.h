@@ -17,6 +17,13 @@ typedef enum {
 	Opret,
 	Opjmp,
 	Opadd,
+	Opsub,
+	Opmul,
+	Opdiv,
+	Oprem,
+	Opband,
+	Opbor,
+	Opbxor
 } Opcode;
 
 typedef struct Instruction {

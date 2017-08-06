@@ -116,18 +116,43 @@ outterminator(Terminator *term)
 static void
 outinstruction(Instruction *instr)
 {
+	char *opname;
+
 	switch (instr->op) {
 	case Opadd:
-		outirval(&instr->a);
-		out(" =%s add ", instr->a.irtype);
-		outirval(&instr->b);
-		out(", ");
-		outirval(&instr->c);
-		out("\n");
+		opname = "add";
+		break;
+	case Opsub:
+		opname = "sub";
+		break;
+	case Opmul:
+		opname = "mul";
+		break;
+	case Opdiv:
+		opname = "div";
+		break;
+	case Oprem:
+		opname = "rem";
+		break;
+	case Opband:
+		opname = "and";
+		break;
+	case Opbor:
+		opname = "or";
+		break;
+	case Opbxor:
+		opname = "xor";
 		break;
 	default:
 		panic("unhandled instrction");
 	}
+
+	outirval(&instr->a);
+	out(" =%s %s ", instr->a.irtype, opname);
+	outirval(&instr->b);
+	out(", ");
+	outirval(&instr->c);
+	out("\n");
 }
 
 void endcurbb(Terminator term)
@@ -195,7 +220,6 @@ emitbb(BasicBlock *bb)
 {
 	int i;
 
-	
 	for (i = 0; i < bb->labels->len; i++) {
 		out("@%s\n", vecget(bb->labels, i));
 	}
