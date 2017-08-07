@@ -58,6 +58,11 @@ static Node  *mkcast(SrcPos *, Node *, CTy *);
 static Node  *mknode(int type, SrcPos *p);
 static IRVal  compileexpr(Node *n);
 static IRVal  compilebinop(Node *n);
+static IRVal  compileunop(Node *n);
+static IRVal  compileident(Node *n);
+static IRVal  compileaddr(Node *n);
+static IRVal  compileload(IRVal v, CTy *t);
+
 
 
 Tok *tok;
@@ -1695,31 +1700,11 @@ mknode(int type, SrcPos *p)
 	return n;
 }
 
-static int
-islval(Node *n)
-{
-	switch (n->t) {
-	case NUNOP:
-		if (n->Unop.op == '*')
-			return 1;
-		return 0;
-	case NIDENT:
-	case NIDX:
-	case NSEL:
-	case NINIT:
-		return 1;
-	default:
-		return 0;
-	}
-}
-
 static Node *
 mkincdec(SrcPos *p, int op, int post, Node *operand)
 {
 	Node *n;
 
-	if (!islval(operand))
-		errorposf(&operand->pos, "++ and -- expects an lvalue");
 	n = mknode(NINCDEC, p);
 	n->Incdec.op = op;
 	n->Incdec.post = post;
@@ -1780,8 +1765,6 @@ mkassign(SrcPos *p, int op, Node *l, Node *r)
 	Node *n;
 	CTy  *t;
 
-	if (!islval(l))
-		errorposf(&l->pos, "assign expects an lvalue");
 	r = mkcast(p, r, l->type);
 	t = l->type;
 	n = mknode(NASSIGN, p);
@@ -1822,8 +1805,6 @@ mkunop(SrcPos *p, int op, Node *o)
 	n->Unop.op = op;
 	switch (op) {
 	case '&':
-		if (!islval(o))
-			errorposf(&o->pos, "& expects an lvalue");
 		n->type = mkptr(o->type);
 		break;
 	case '*':
@@ -2506,13 +2487,13 @@ compileexpr(Node *n)
 		return (IRVal){.kind=IRConst, .irtype=ctype2irtype(n->type), .v=n->Sizeof.type->size};
 	case NNUM:
 		return (IRVal){.kind=IRConst, .irtype=ctype2irtype(n->type), .v=n->Num.v};
-	/*
 	case NIDENT:
-		ident(n);
+		return compileident(n);
 		break;
 	case NUNOP:
-		unop(n);
+		compileunop(n);
 		break;
+	/*
 	case NASSIGN:
 		assign(n);
 		break;
@@ -2557,6 +2538,10 @@ static IRVal
 compilebinop(Node *n)
 {
 	IRVal  res, l, r;
+
+
+	if (!n->t != NBINOP)
+		panic("compileident precondition failed");
 
 	if (n->Binop.op == TOKLAND || n->Binop.op == TOKLOR) {
 		panic("shortcircuit unimplemented");
@@ -2608,4 +2593,115 @@ compilebinop(Node *n)
 	return res;
 }
 
+static IRVal
+compileunop(Node *n)
+{
+	IRVal v;
 
+	switch(n->Unop.op) {
+	case '*':
+		v = compileexpr(n->Unop.operand);
+		return compileload(v, n->type);
+	case '&':
+		return compileaddr(n->Unop.operand);
+	case '~':
+		v = compileexpr(n->Unop.operand);
+		panic("unimplemented unop !");
+		break;
+	case '!':
+		v = compileexpr(n->Unop.operand);
+		panic("unimplemented unop !");
+		break;
+	case '-':
+		v = compileexpr(n->Unop.operand);
+		panic("unimplemented unop -");
+		break;
+	default:
+		errorf("unimplemented unop %d\n", n->Unop.op);
+	}
+}
+
+static IRVal
+compileident(Node *n)
+{
+	Sym *sym;
+	IRVal v;
+
+	if (!n->t != NIDENT)
+		panic("compileident precondition failed");
+
+	sym = n->Ident.sym;
+	if (sym->k == SYMENUM)
+		return (IRVal){.kind=IRConst, .irtype=ctype2irtype(n->type), .v=n->Num.v};
+
+	v = compileaddr(n);
+	if (sym->k == SYMLOCAL)
+	if (sym->Local.isparam)
+	if (isarray(sym->type))
+		panic("array param unimplemented...");
+
+	return compileload(v, n->type);
+}
+
+static IRVal
+compileaddr(Node *n)
+{
+	int sz;
+	int offset;
+	Sym *sym;
+	IRVal v, res;
+
+	switch(n->t) {
+	case NUNOP:
+		if (n->Unop.op == '*')
+			return compileexpr(n->Unop.operand);
+		break;
+	case NSEL:
+		v = compileexpr(n->Sel.operand);
+		if (isptr(n->Sel.operand->type))
+			offset = structoffsetfromname(n->Sel.operand->type->Ptr.subty, n->Sel.name);
+		else if (isstruct(n->Sel.operand->type))
+			offset = structoffsetfromname(n->Sel.operand->type, n->Sel.name);
+		else
+			panic("internal error");
+		if (offset < 0)
+			panic("internal error");
+
+		res = nextvreg("l");
+		bbappend(currentbb, (Instruction){.op=Opadd, .a=res, .b=v, .c=(IRVal){.kind=IRConst, .irtype="l", .v=offset}});
+		return res;
+	case NIDENT:
+		sym = n->Ident.sym;
+		switch (sym->k) {
+		case SYMGLOBAL:
+			// XXX
+			break;
+		case SYMLOCAL:
+			return sym->Local.addr;
+		default:
+			panic("internal error");
+		}
+		break;
+	case NIDX:
+		/*
+		expr(n->Idx.idx);
+		sz = n->type->size;
+		if(sz != 1) {
+			outi("imul $%d, %%rax\n", sz);
+		}
+		pushq("rax");
+		expr(n->Idx.operand);
+		popq("rcx");
+		outi("addq %%rcx, %%rax\n");
+		*/
+		break;
+	}
+	errorposf(&n->pos, "expected an addressable value");
+}
+
+static IRVal
+compileload(IRVal v, CTy *t)
+{
+	panic("unimplemented - compileload");
+	return v;
+}
