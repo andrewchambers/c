@@ -1126,27 +1126,6 @@ dowhile(void)
 }
 
 static void
-pswitch(void)
-{
-	SrcPos *p;
-	Node   *e;
-	char   *lbreak;
-	
-	lbreak = newlabel();
-	p = &tok->pos;
-	expect(TOKSWITCH);
-	expect('(');
-	e = expr();
-	expect(')');
-	pushbrk(lbreak);
-	panic("unimplemented switch");
-	pushswitch(NULL); // XXX TODO
-	stmt();
-	popswitch();
-	popbrk();
-}
-
-static void
 pgoto()
 {
 	Goto *go;
@@ -1515,6 +1494,27 @@ pbreak(void)
 		errorposf(pos, "break without parent statement");
 	expect(TOKBREAK);
 	expect(';');
+}
+
+static void
+pswitch(void)
+{
+	SrcPos *p;
+	Node   *e;
+	char   *lbreak;
+	
+	lbreak = newlabel();
+	p = &tok->pos;
+	expect(TOKSWITCH);
+	expect('(');
+	e = expr();
+	expect(')');
+	pushbrk(lbreak);
+	panic("unimplemented switch");
+	pushswitch(NULL); // XXX TODO
+	stmt();
+	popswitch();
+	popbrk();
 }
 
 static void
