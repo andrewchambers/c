@@ -14,6 +14,11 @@ typedef enum {
 	Opbxor,
 	Opceql,
 	Opceqw,
+	Opload,
+	Oploadsh,
+	Oploadsb,
+	Oploaduh,
+	Oploadub
 } Opcode;
 
 typedef struct Instruction {

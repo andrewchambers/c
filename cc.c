@@ -2489,10 +2489,8 @@ compileexpr(Node *n)
 		return (IRVal){.kind=IRConst, .irtype=ctype2irtype(n->type), .v=n->Num.v};
 	case NIDENT:
 		return compileident(n);
-		break;
 	case NUNOP:
-		compileunop(n);
-		break;
+		return compileunop(n);
 	/*
 	case NASSIGN:
 		assign(n);
@@ -2539,9 +2537,8 @@ compilebinop(Node *n)
 {
 	IRVal  res, l, r;
 
-
-	if (!n->t != NBINOP)
-		panic("compileident precondition failed");
+	if (n->t != NBINOP)
+		panic("compilebinop precondition failed");
 
 	if (n->Binop.op == TOKLAND || n->Binop.op == TOKLOR) {
 		panic("shortcircuit unimplemented");
@@ -2598,6 +2595,9 @@ compileunop(Node *n)
 {
 	IRVal v;
 
+	if (n->t != NUNOP)
+		panic("compileunop precondition failed");
+
 	switch(n->Unop.op) {
 	case '*':
 		v = compileexpr(n->Unop.operand);
@@ -2627,7 +2627,7 @@ compileident(Node *n)
 	Sym *sym;
 	IRVal v;
 
-	if (!n->t != NIDENT)
+	if (n->t != NIDENT)
 		panic("compileident precondition failed");
 
 	sym = n->Ident.sym;
@@ -2702,6 +2702,66 @@ compileaddr(Node *n)
 static IRVal
 compileload(IRVal v, CTy *t)
 {
-	panic("unimplemented - compileload");
-	return v;
+	IRVal res;
+
+	if (isstruct(t))
+		return v;
+	if (isarray(t))
+		return v;
+	if (isfunc(t))
+		return v;
+
+	if (isptr(t)) {
+		res = nextvreg("l");
+		bbappend(currentbb, (Instruction){.op=Opload, .a=res, .b=v});
+		return res;
+	}
+
+	if (isitype(t)) {
+		if (t->Prim.issigned) {
+			switch (t->size) {
+			case 8:
+				res = nextvreg("l");
+				bbappend(currentbb, (Instruction){.op=Opload, .a=res, .b=v});
+				return res;
+			case 4:
+				res = nextvreg("w");
+				bbappend(currentbb, (Instruction){.op=Opload, .a=res, .b=v});
+				return res;
+			case 2:
+				res = nextvreg("w");
+				bbappend(currentbb, (Instruction){.op=Oploadsh, .a=res, .b=v});
+				return res;
+			case 1:
+				res = nextvreg("w");
+				bbappend(currentbb, (Instruction){.op=Oploadsb, .a=res, .b=v});
+				return res;
+			default:
+				panic("internal error compile load signed int\n");
+			}
+		} else {
+			switch (t->size) {
+			case 8:
+				res = nextvreg("l");
+				bbappend(currentbb, (Instruction){.op=Opload, .a=res, .b=v});
+				return res;
+			case 4:
+				res = nextvreg("w");
+				bbappend(currentbb, (Instruction){.op=Opload, .a=res, .b=v});
+				return res;
+			case 2:
+				res = nextvreg("w");
+				bbappend(currentbb, (Instruction){.op=Oploaduh, .a=res, .b=v});
+				return res;
+			case 1:
+				res = nextvreg("w");
+				bbappend(currentbb, (Instruction){.op=Oploadub, .a=res, .b=v});
+				return res;
+			default:
+				panic("internal error compile load unsigned int\n");
+			}
+		}
+	}
+	panic("unimplemented load %d\n", t->t);
 }
+

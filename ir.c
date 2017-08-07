@@ -152,6 +152,9 @@ static void
 outinstruction(Instruction *instr)
 {
 	char *opname;
+	int twoargs;
+
+	twoargs = 0;
 
 	if (instr->op == Opalloca) {
 		outalloca(instr);
@@ -189,6 +192,26 @@ outinstruction(Instruction *instr)
 	case Opceqw:
 		opname = "ceqw";
 		break;
+	case Opload:
+		twoargs = 1;
+		opname = "load";
+		break;
+	case Oploadsh:
+		twoargs = 1;
+		opname = "loadsh";
+		break;
+	case Oploadsb:
+		twoargs = 1;
+		opname = "loadsb";
+		break;
+	case Oploaduh:
+		twoargs = 1;
+		opname = "loaduh";
+		break;
+	case Oploadub:
+		twoargs = 1;
+		opname = "loadub";
+		break;
 	default:
 		panic("unhandled instruction");
 	}
@@ -196,8 +219,10 @@ outinstruction(Instruction *instr)
 	outirval(&instr->a);
 	out(" =%s %s ", instr->a.irtype, opname);
 	outirval(&instr->b);
-	out(", ");
-	outirval(&instr->c);
+	if (!twoargs) {
+		out(", ");
+		outirval(&instr->c);
+	}
 	out("\n");
 }
 
