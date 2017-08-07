@@ -42,7 +42,7 @@ char *newlabel();
 void  setiroutput(FILE *);
 void  beginmodule();
 void  emitsym(Sym *);
-void  emitfuncstart(Sym *);
+void  emitfuncstart();
 void  emitfuncend();
 void  endmodule();
 

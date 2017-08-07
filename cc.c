@@ -1060,17 +1060,19 @@ pif(void)
 static void
 pfor(void)
 {
-	SrcPos *p;
 	Node   *n, *i, *c, *s;
-	char   *lstart, *lstep, *lend;
+	BasicBlock *condbb, *stepbb, *bodybb, *stopbb;
+	IRVal cond;
 
+	condbb = mkbasicblock();
+	stepbb = mkbasicblock();
+	bodybb = mkbasicblock();
+	stopbb = mkbasicblock();
+	
 	i = 0;
 	c = 0;
 	s = 0;
-	lstart = newlabel(); 
-	lstep = newlabel();
-	lend = newlabel();
-	p = &tok->pos;
+	
 	expect(TOKFOR);
 	expect('(');
 	if (tok->k == ';') {
@@ -1088,9 +1090,28 @@ pfor(void)
 	if (tok->k != ')')
 		s = expr();
 	expect(')');
-	pushcontbrk(lstep, lend);
+	
+	if (i)
+		compileexpr(i);
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(condbb)});
+	setcurbb(condbb);
+	if (c)
+		cond = compileexpr(c);
+	else
+		cond = (IRVal){.kind=IRConst, .v=1};
+	bbterminate(currentbb, (Terminator){.op=Opcond, .v=cond, .label1=bbgetlabel(bodybb), .label2=bbgetlabel(stopbb)});
+	setcurbb(bodybb);
+	pushcontbrk(bbgetlabel(stepbb), bbgetlabel(stopbb));
 	stmt();
 	popcontbrk();
+
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(stepbb)});
+	setcurbb(stepbb);
+	if(s)
+		compileexpr(s);
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(condbb)});
+
+	setcurbb(stopbb);
 }
 
 static void
