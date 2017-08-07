@@ -10,6 +10,7 @@
 static FILE *outf;
 
 BasicBlock *preludebb;
+BasicBlock *entrybb;
 BasicBlock *currentbb;
 Vec        *basicblocks;
 
@@ -170,15 +171,6 @@ setcurbb(BasicBlock *bb)
 	vecappend(basicblocks, bb);
 }
 
-void endcurbb(Terminator term)
-{
-	if (currentbb->terminated)
-		return;
-
-	currentbb->terminator = term;
-	currentbb->terminated = 1;
-}
-
 void
 beginmodule()
 {
@@ -225,8 +217,10 @@ emitfuncstart()
 
 	basicblocks = vec();
 	preludebb = mkbasicblock();
+	entrybb = mkbasicblock();
 	currentbb = preludebb;
-	vecappend(basicblocks, preludebb);
+	setcurbb(preludebb);
+	setcurbb(entrybb);
 	vregcount = 0;
 }
 
@@ -254,6 +248,8 @@ void
 emitfuncend()
 {
 	int i;
+
+	bbterminate(preludebb, (Terminator){.op=Opjmp, .label1=bbgetlabel(entrybb)});
 
 	for (i = 0; i < basicblocks->len; i++) {
 		emitbb(vecget(basicblocks, i));
@@ -306,4 +302,14 @@ char *
 bbgetlabel(BasicBlock *bb)
 {
 	return vecget(bb->labels, 0);
+}
+
+void
+bbterminate(BasicBlock *bb, Terminator term)
+{
+	if (currentbb->terminated)
+		return;
+
+	currentbb->terminator = term;
+	currentbb->terminated = 1;
 }

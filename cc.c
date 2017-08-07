@@ -1019,17 +1019,17 @@ pif (void)
 	iffalsebb = mkbasicblock();
 	donebb = mkbasicblock();
 
-	endcurbb((Terminator){.op=Opcond, .v=cond, .label1=bbgetlabel(iftruebb), .label2=bbgetlabel(iffalsebb)});
+	bbterminate(currentbb, (Terminator){.op=Opcond, .v=cond, .label1=bbgetlabel(iftruebb), .label2=bbgetlabel(iffalsebb)});
 	setcurbb(iftruebb);
 	stmt();
-	endcurbb((Terminator){.op=Opjmp, .label1=bbgetlabel(donebb)});
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(donebb)});
 	setcurbb(iffalsebb);
 
 	if (tok->k == TOKELSE) {
 		expect(TOKELSE);
 		stmt();
 	}
-	endcurbb((Terminator){.op=Opjmp, .label1=bbgetlabel(donebb)});
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(donebb)});
 	setcurbb(donebb);
 }
 
@@ -1463,7 +1463,7 @@ preturn(void)
 		e = expr();
 		e = mkcast(&e->pos, e, curfunc->type->Func.rtype);
 		ret = compileexpr(e);
-		endcurbb((Terminator){.op=Opret, .v=ret});
+		bbterminate(currentbb, (Terminator){.op=Opret, .v=ret});
 	}
 	expect(';');
 }

@@ -58,12 +58,12 @@ void  emitfuncend();
 void  endmodule();
 
 void setcurbb(BasicBlock *);
-void endcurbb(Terminator);
 IRVal nextvreg();
 
 BasicBlock *mkbasicblock();
-void        bbappend(BasicBlock *bb, Instruction ins);
-char       *bbgetlabel(BasicBlock *bb);
+char       *bbgetlabel(BasicBlock *);
+void        bbappend(BasicBlock *, Instruction);
+void        bbterminate(BasicBlock *, Terminator);
 
 extern BasicBlock *preludebb;
 extern BasicBlock *currentbb;
