@@ -35,9 +35,23 @@ newlabel()
 
 int vregcount;
 
-IRVal nextvreg(char *irtype)
+IRVal
+nextvreg(char *irtype)
 {
 	return (IRVal){.kind=IRVReg, .irtype=irtype, .v=vregcount++};
+}
+
+IRVal
+alloclocal(CTy *ty)
+{
+	IRVal v;
+
+	if (ty->incomplete)
+		panic("cannot alloc a local of incomplete type");
+
+	v = nextvreg("l");
+	bbappend(preludebb, (Instruction){.op=Opalloca, .a=v, .c=ty->size});
+	return v;
 }
 
 char *
@@ -123,9 +137,26 @@ outterminator(Terminator *term)
 }
 
 static void
+outalloca(Instruction *instr)
+{
+	if (instr->op != Opalloca)
+		panic("internal error, not a valid alloca");
+
+	outirval(&instr->a);
+	out(" =l alloc16 ");
+	outirval(&instr->b);
+	out("\n");
+}
+
+static void
 outinstruction(Instruction *instr)
 {
 	char *opname;
+
+	if (instr->op == Opalloca) {
+		outalloca(instr);
+		return;
+	}
 
 	switch (instr->op) {
 	case Opadd:
@@ -215,13 +246,12 @@ emitfuncstart()
 	}
 	out(") {\n");
 
+	vregcount = 0;
 	basicblocks = vec();
 	preludebb = mkbasicblock();
 	entrybb = mkbasicblock();
-	currentbb = preludebb;
 	setcurbb(preludebb);
 	setcurbb(entrybb);
-	vregcount = 0;
 }
 
 static void
@@ -307,9 +337,9 @@ bbgetlabel(BasicBlock *bb)
 void
 bbterminate(BasicBlock *bb, Terminator term)
 {
-	if (currentbb->terminated)
+	if (bb->terminated)
 		return;
 
-	currentbb->terminator = term;
-	currentbb->terminated = 1;
+	bb->terminator = term;
+	bb->terminated = 1;
 }

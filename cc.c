@@ -330,12 +330,7 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 	switch (sclass) {
 	case SCAUTO:
 		sym->k = SYMLOCAL;
-		/* XXX This should be changed for new backend.
-		sym->Local.slot = xmalloc(sizeof(StkSlot));
-		sym->Local.slot->size = sym->type->size;
-		sym->Local.slot->align = sym->type->align;
-		vecappend(curfunc->Func.stkslots, sym->Local.slot);
-		*/
+		sym->Local.addr = alloclocal(sym->type);
 		break;
 	case SCTYPEDEF:
 		sym->k = SYMTYPE;

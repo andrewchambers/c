@@ -1,18 +1,5 @@
 
 typedef enum {
-	IRConst,
-	IRLabel,
-	IRVReg
-} IRValKind;
-
-typedef struct IRVal {
-	IRValKind kind;
-	int64 v;
-	char  *irtype;
-	char  *label;
-} IRVal;
-
-typedef enum {
 	Opalloca,
 	Opret,
 	Opjmp,
@@ -59,6 +46,7 @@ void  endmodule();
 
 void setcurbb(BasicBlock *);
 IRVal nextvreg();
+IRVal alloclocal(CTy *ty);
 
 BasicBlock *mkbasicblock();
 char       *bbgetlabel(BasicBlock *);

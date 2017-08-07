@@ -1,5 +1,19 @@
 
 typedef enum {
+	IRConst,
+	IRLabel,
+	IRVReg
+} IRValKind;
+
+// XXX: a circular dep between ir.h and cc.h means this is here, untangle this.
+typedef struct IRVal {
+	IRValKind kind;
+	int64 v;
+	char  *irtype;
+	char  *label;
+} IRVal;
+
+typedef enum {
 	SCNONE,
 	SCEXTERN,
 	SCSTATIC,
@@ -32,6 +46,7 @@ typedef struct Sym {
 		struct {
 			int paramidx;
 			int isparam;
+			IRVal addr;
 		} Local;
 		struct {
 			int64 v;
