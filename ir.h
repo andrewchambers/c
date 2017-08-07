@@ -16,6 +16,7 @@ typedef enum {
 	Opalloca,
 	Opret,
 	Opjmp,
+	Opcond,
 	Opadd,
 	Opsub,
 	Opmul,
@@ -56,11 +57,13 @@ void  emitfuncstart(Sym *);
 void  emitfuncend();
 void  endmodule();
 
+void setcurbb(BasicBlock *);
 void endcurbb(Terminator);
 IRVal nextvreg();
 
 BasicBlock *mkbasicblock();
 void        bbappend(BasicBlock *bb, Instruction ins);
+char       *bbgetlabel(BasicBlock *bb);
 
 extern BasicBlock *preludebb;
 extern BasicBlock *currentbb;

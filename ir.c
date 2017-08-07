@@ -108,6 +108,14 @@ outterminator(Terminator *term)
 		outirval(&term->v);
 		out("\n");
 		break;
+	case Opjmp:
+		out("jmp @%s\n", term->label1);
+		break;
+	case Opcond:
+		out("jnz ");
+		outirval(&term->v);
+		out(", @%s, @%s\n", term->label1, term->label2);
+		break;
 	default:
 		panic("unhandled terminator");
 	}
@@ -155,10 +163,17 @@ outinstruction(Instruction *instr)
 	out("\n");
 }
 
+void
+setcurbb(BasicBlock *bb)
+{
+	currentbb = bb;
+	vecappend(basicblocks, bb);
+}
+
 void endcurbb(Terminator term)
 {
 	if (currentbb->terminated)
-		panic("internal error - current block already terminated.");
+		return;
 
 	currentbb->terminator = term;
 	currentbb->terminated = 1;
@@ -274,6 +289,9 @@ bbappend(BasicBlock *bb, Instruction ins)
 {
 	Instruction *instrarray;
 
+	if (bb->terminated)
+		return;
+
 	if (bb->cap == bb->ninstructions) {
 		bb->cap += 64;
 		instrarray = xmalloc(bb->cap * sizeof(Instruction));
@@ -282,4 +300,10 @@ bbappend(BasicBlock *bb, Instruction ins)
 	}
 
 	bb->instructions[bb->ninstructions++] = ins;
+}
+
+char *
+bbgetlabel(BasicBlock *bb)
+{
+	return vecget(bb->labels, 0);
 }

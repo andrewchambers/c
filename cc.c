@@ -1003,17 +1003,34 @@ pif (void)
 {
 	SrcPos *p;
 	Node   *e;
+	IRVal   cond;
+	BasicBlock *iftruebb;
+	BasicBlock *iffalsebb;
+	BasicBlock *donebb;
 	
 	p = &tok->pos;
 	expect(TOKIF);
 	expect('(');
 	e = expr();
+	cond = compileexpr(e);
 	expect(')');
+
+	iftruebb = mkbasicblock();
+	iffalsebb = mkbasicblock();
+	donebb = mkbasicblock();
+
+	endcurbb((Terminator){.op=Opcond, .v=cond, .label1=bbgetlabel(iftruebb), .label2=bbgetlabel(iffalsebb)});
+	setcurbb(iftruebb);
 	stmt();
+	endcurbb((Terminator){.op=Opjmp, .label1=bbgetlabel(donebb)});
+	setcurbb(iffalsebb);
+
 	if (tok->k == TOKELSE) {
 		expect(TOKELSE);
 		stmt();
 	}
+	endcurbb((Terminator){.op=Opjmp, .label1=bbgetlabel(donebb)});
+	setcurbb(donebb);
 }
 
 static void
