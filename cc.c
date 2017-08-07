@@ -2355,12 +2355,13 @@ compileexpr(Node *n)
 	case NSTR:
 		str(n);
 		break;
-	case NSIZEOF:
-		outi("movq $%lld, %%rax\n", n->Sizeof.type->size);
-		break;
 	*/
+	case NSIZEOF:
+		if (n->Sizeof.type->incomplete)
+			errorposf(&n->pos, "cannot use incomplete type in sizeof");
+		
+		return (IRVal){.kind=IRConst, .irtype=ctype2irtype(n->type), .v=n->Sizeof.type->size};
 	case NNUM:
-		//outi("movq $%lld, %%rax\n", n->Num.v);
 		return (IRVal){.kind=IRConst, .irtype=ctype2irtype(n->type), .v=n->Num.v};
 	/*
 	case NIDENT:
