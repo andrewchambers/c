@@ -11,7 +11,9 @@ typedef enum {
 	Oprem,
 	Opband,
 	Opbor,
-	Opbxor
+	Opbxor,
+	Opceql,
+	Opceqw,
 } Opcode;
 
 typedef struct Instruction {

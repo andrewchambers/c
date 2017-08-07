@@ -260,6 +260,12 @@ vecremove(Vec *v, void *x)
 	return 1;
 }
 
+void
+vecsort(Vec *v, int (*compar)(const void *, const void *))
+{
+	qsort(v->d, v->len, sizeof(void*), compar);
+}
+
 typedef struct MapEnt MapEnt;
 struct MapEnt {
 	char *k;

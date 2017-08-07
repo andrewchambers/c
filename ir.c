@@ -183,8 +183,14 @@ outinstruction(Instruction *instr)
 	case Opbxor:
 		opname = "xor";
 		break;
+	case Opceql:
+		opname = "ceql";
+		break;
+	case Opceqw:
+		opname = "ceqw";
+		break;
 	default:
-		panic("unhandled instrction");
+		panic("unhandled instruction");
 	}
 
 	outirval(&instr->a);

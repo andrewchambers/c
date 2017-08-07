@@ -85,8 +85,17 @@ static int nscopes;
 static Map *tags[MAXSCOPES];
 static Map *syms[MAXSCOPES];
 
-typedef struct Switch {
 
+typedef struct Case {
+	SrcPos *pos;
+	char *label;
+	int64 v;
+} Case;
+
+typedef struct Switch {
+	SrcPos *pos;
+	Vec  *cases;
+	char *defaultlabel;
 } Switch;
 
 #define MAXLABELDEPTH 2048
@@ -1014,7 +1023,7 @@ funcbody()
 
 
 static void
-pif (void)
+pif(void)
 {
 	SrcPos *p;
 	Node   *e;
@@ -1496,67 +1505,133 @@ pbreak(void)
 	expect(';');
 }
 
+static int
+switchcasecmp(const void *a, const void *b)
+{
+	Case *ca, *cb;
+	ca = (Case *)a;
+	cb = (Case *)b;
+
+	if (ca->v < cb->v)
+		return -1;
+	if (ca->v > cb->v)
+		return 1;
+	
+	return 0;
+}
+
 static void
 pswitch(void)
 {
+	int i;
 	SrcPos *p;
 	Node   *e;
-	char   *lbreak;
-	
-	lbreak = newlabel();
-	p = &tok->pos;
+	Switch *sw;
+	Case   *cs1, *cs2;
+	IRVal   swval;
+	IRVal   cmpval;
+	BasicBlock *startbb;
+	BasicBlock *bodybb;
+	BasicBlock *nextbb;
+	BasicBlock *donebb;
+
+	startbb = currentbb;
+	bodybb = mkbasicblock();
+	donebb = mkbasicblock();
+
+	sw = xmalloc(sizeof(Switch));
+	sw->pos = &tok->pos;
+	sw->defaultlabel = 0;
+	sw->cases = vec();
+
 	expect(TOKSWITCH);
 	expect('(');
 	e = expr();
 	expect(')');
-	pushbrk(lbreak);
-	panic("unimplemented switch");
-	pushswitch(NULL); // XXX TODO
+	swval = compileexpr(e);
+
+	pushbrk(bbgetlabel(donebb));
+	pushswitch(sw);
+	setcurbb(bodybb);
 	stmt();
 	popswitch();
 	popbrk();
+
+	vecsort(sw->cases, switchcasecmp);
+	for (i = 0; i < sw->cases->len - 1; i++) {
+		cs1 = vecget(sw->cases, i);
+		cs2 = vecget(sw->cases, i + 1);
+		if (cs1->v == cs2->v)
+			errorposf(cs1->pos, "duplicate case");
+	}
+
+
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(donebb)});
+	/* we are backtracking to write out the switch cases, which we didn't know before. */
+	currentbb = startbb;
+
+	for (i = 0; i < sw->cases->len; i++) {
+		cs1 = vecget(sw->cases, i);
+		nextbb = mkbasicblock();
+		cmpval = nextvreg("w");
+		/* XXX: compare op depends on type of something? */
+		bbappend(currentbb, (Instruction){.op=Opceql, .a=cmpval, .b=swval, .c=(IRVal){.kind=IRConst, .v=cs1->v}});
+		bbterminate(currentbb, (Terminator){.op=Opcond, .v=cmpval, .label1=cs1->label, .label2=bbgetlabel(nextbb)});
+		setcurbb(nextbb);
+	}
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(donebb)});
+	setcurbb(donebb);
 }
 
 static void
 pdefault(void)
 {
 	SrcPos *pos;
-	Node   *s;
-	char   *l;
+	Switch *s;
+	BasicBlock *defaultbb;
 
 	pos = &tok->pos;
-	l = newlabel();
-	panic("unimplemented pdefault");
-	/*
-	s = curswitch();
-	if (s->Switch.ldefault)
-		errorposf(pos, "switch already has default");
-	s->Switch.ldefault = l;
-	*/
 	expect(TOKDEFAULT);
 	expect(':');
+	s = curswitch();
+	if (s->defaultlabel)
+		errorposf(pos, "switch already has a default case");
+	defaultbb = mkbasicblock();
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(defaultbb)});
+	setcurbb(defaultbb);
 	stmt();
 }
 
 static void
 pcase(void)
 {
+	int i;
 	SrcPos *pos;
 	Const  *c;
+	Switch *sw;
+	Case   *cs;
+	BasicBlock *casebb;
 
-	panic("unimplemented pcase");
-	/*
 	pos = &tok->pos;
-	s = curswitch();
+	sw = curswitch();
 	expect(TOKCASE);
 	c = constexpr();
 	if (c->p)
 		errorposf(pos, "case cannot have pointer derived constant");
-	n->Case.cond = c->v;
 	expect(':');
+
+	casebb = mkbasicblock();
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(casebb)});
+	setcurbb(casebb);
+
+	cs = xmalloc(sizeof(Case));
+	cs->v = c->v;
+	cs->label = bbgetlabel(casebb);
+	cs->pos = pos;
+
+	vecappend(sw->cases, cs);
+
 	stmt();
-	vecappend(s->Switch.cases, n);
-	*/
 }
 
 static void
@@ -1800,6 +1875,17 @@ usualarithconv(Node **a, Node **b)
 	return t;
 }
 
+Const *
+foldexpr(Node *n)
+{
+	Const *c;
+
+	c = xmalloc(sizeof(constexpr));
+	c->p = 0;
+	c->v = 0;
+	return c;
+}
+
 static Node *
 expr(void)
 {
@@ -1862,21 +1948,14 @@ assignexpr(void)
 static Const *
 constexpr(void)
 {
-	/*
 	Node  *n;
-	*/
 	Const *c;
 
-	c = xmalloc(sizeof(constexpr));
-	c->p = 0;
-	c->v = 0;
-
-	/*
 	n = condexpr();
 	c = foldexpr(n);
 	if (!c)
 		errorposf(&n->pos, "not a constant expression");
-	*/
+
 	return c;
 }
 

@@ -74,3 +74,4 @@ Vec  *vec();
 void *vecget(Vec *, int);
 void  vecset(Vec *, int, void *);
 void  vecappend(Vec *, void *);
+void  vecsort(Vec *, int (*compar)(const void *, const void *));
