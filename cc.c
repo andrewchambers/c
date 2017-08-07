@@ -1109,28 +1109,38 @@ pfor(void)
 	setcurbb(stepbb);
 	if(s)
 		compileexpr(s);
+	
 	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(condbb)});
-
 	setcurbb(stopbb);
 }
 
 static void
 pwhile(void)
 {
-	SrcPos *p;
-	Node   *e;
-	char   *lcont, *lbreak;
+	BasicBlock *condbb, *bodybb, *stopbb;
+	IRVal cond;
+
+	condbb = mkbasicblock();
+	stopbb = mkbasicblock();
+	bodybb = mkbasicblock();
 	
-	lcont = newlabel();
-	lbreak = newlabel();
-	p = &tok->pos;	
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(condbb)});
+	setcurbb(condbb);
+
 	expect(TOKWHILE);
 	expect('(');
-	e = expr();
+	cond = compileexpr(expr());
 	expect(')');
-	pushcontbrk(lcont, lbreak);
+
+	bbterminate(currentbb, (Terminator){.op=Opcond, .v=cond, .label1=bbgetlabel(bodybb), .label2=bbgetlabel(stopbb)});
+	setcurbb(bodybb);
+
+	pushcontbrk(bbgetlabel(condbb), bbgetlabel(stopbb));
 	stmt();
 	popcontbrk();
+
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(condbb)});
+	setcurbb(bodybb);
 }
 
 static void
@@ -1494,6 +1504,8 @@ preturn(void)
 		e = mkcast(&e->pos, e, curfunc->type->Func.rtype);
 		ret = compileexpr(e);
 		bbterminate(currentbb, (Terminator){.op=Opret, .v=ret});
+	} else {
+		bbterminate(currentbb, (Terminator){.op=Opret, .v=(IRVal){.kind=IRConst, .v=0}});
 	}
 	expect(';');
 }
