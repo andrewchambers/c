@@ -97,18 +97,38 @@ static char   *breaks[MAXLABELDEPTH];
 static char   *conts[MAXLABELDEPTH];
 static Switch *switches[MAXLABELDEPTH];
 
+Vec  *tentativesyms;
+
 Sym  *curfunc;
 
-/* source label -> backend label */
-Map  *labels;
+typedef struct GotoLabel {
+	int defined;
+	char *backendlabel;
+} GotoLabel;
 
 typedef struct Goto {
 	SrcPos pos;
-	char *label;
+	GotoLabel *label;
 } Goto;
 
+
+Map  *labels;
 Vec  *gotos;
-Vec  *tentativesyms;
+
+static GotoLabel *
+lookuplabel(char *name)
+{
+	GotoLabel *label;
+
+	label = mapget(labels, name);
+	if (!label) {
+		label = xmalloc(sizeof(GotoLabel));
+		label->backendlabel = newlabel();
+		label->defined = 0;
+		mapset(labels, name, label);
+	}
+	return label;
+}
 
 static void
 pushswitch (Switch *s)
@@ -987,7 +1007,7 @@ funcbody()
 
 	for (i = 0 ; i < gotos->len ; i++) {
 		go = vecget(gotos, i);
-		if (!mapget(labels, go->label))
+		if (!go->label->defined)
 			errorposf(&go->pos, "goto target not defined");
 	}
 }
@@ -1129,13 +1149,16 @@ pswitch(void)
 static void
 pgoto()
 {
-	Goto *go = xmalloc(sizeof(Goto));
+	Goto *go;
+
+	go = xmalloc(sizeof(Goto));
 	go->pos = tok->pos;
 	expect(TOKGOTO);
-	go->label = tok->v;
+	go->label = lookuplabel(tok->v);
 	expect(TOKIDENT);
 	expect(';');
 	vecappend(gotos, go);
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=go->label->backendlabel});
 }
 
 static int
@@ -1204,16 +1227,19 @@ static void
 stmt(void)
 {
 	Tok  *t;
-	char *label;
+	GotoLabel *label;
 
 	if (tok->k == TOKIDENT && nexttok->k == ':') {
 		t = tok;
-		label = newlabel();
+		label = lookuplabel(t->v);
 		next();
 		next();
-		if (mapget(labels, t->v))
+		if (label->defined)
 			errorposf(&t->pos, "redefinition of label %s", t->v);
-		mapset(labels, t->v, label);
+		label->defined = 1;
+		bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=label->backendlabel});
+		setcurbb(mkbasicblock());
+		vecappend(currentbb->labels, label->backendlabel);
 		return;
 	}
 	switch (tok->k) {
@@ -2359,7 +2385,7 @@ compileexpr(Node *n)
 	case NSIZEOF:
 		if (n->Sizeof.type->incomplete)
 			errorposf(&n->pos, "cannot use incomplete type in sizeof");
-		
+
 		return (IRVal){.kind=IRConst, .irtype=ctype2irtype(n->type), .v=n->Sizeof.type->size};
 	case NNUM:
 		return (IRVal){.kind=IRConst, .irtype=ctype2irtype(n->type), .v=n->Num.v};
