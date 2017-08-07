@@ -1117,8 +1117,8 @@ pfor(void)
 static void
 pwhile(void)
 {
-	BasicBlock *condbb, *bodybb, *stopbb;
 	IRVal cond;
+	BasicBlock *condbb, *bodybb, *stopbb;
 
 	condbb = mkbasicblock();
 	stopbb = mkbasicblock();
@@ -1146,23 +1146,28 @@ pwhile(void)
 static void
 dowhile(void)
 {
-	SrcPos *p;
-	Node   *e;
-	char   *lstart, *lcont, *lbreak;
-	
-	lstart = newlabel();
-	lcont = newlabel();
-	lbreak = newlabel();
-	p = &tok->pos;
+	IRVal cond;
+	BasicBlock *condbb, *bodybb, *stopbb;
+
+	condbb = mkbasicblock();
+	stopbb = mkbasicblock();
+	bodybb = mkbasicblock();
+
 	expect(TOKDO);
-	pushcontbrk(lcont, lbreak);
+	pushcontbrk(bbgetlabel(condbb), bbgetlabel(stopbb));
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(bodybb)});
+	setcurbb(bodybb);
 	stmt();
 	popcontbrk();
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(condbb)});
+	setcurbb(condbb);
 	expect(TOKWHILE);
 	expect('(');
-	e = expr();
+	cond = compileexpr(expr());
 	expect(')');
 	expect(';');
+	bbterminate(currentbb, (Terminator){.op=Opcond, .v=cond, .label1=bbgetlabel(bodybb), .label2=bbgetlabel(stopbb)});
+	setcurbb(stopbb);
 }
 
 static void
