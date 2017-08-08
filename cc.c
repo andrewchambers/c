@@ -2972,16 +2972,28 @@ compilebinop(Node *n)
 		irop = n->Binop.l->type->size == 4 ? Opcnew : Opcnel;
 		break;
 	case TOKGEQ:
-		irop = n->Binop.l->type->size == 4 ? Opcsgew : Opcsgel;
+		if (issignedtype(n->Binop.l->type))
+			irop = n->Binop.l->type->size == 4 ? Opcsgew : Opcsgel;
+		else
+			irop = n->Binop.l->type->size == 4 ? Opcugew : Opcugel;
 		break;
 	case TOKLEQ:
-		irop = n->Binop.l->type->size == 4 ? Opcslew : Opcslel;
+		if (issignedtype(n->Binop.l->type))
+			irop = n->Binop.l->type->size == 4 ? Opcslew : Opcslel;
+		else
+			irop = n->Binop.l->type->size == 4 ? Opculew : Opculel;
 		break;
 	case '>':
-		irop = n->Binop.l->type->size == 4 ? Opcsgtw : Opcsgtl;
+		if (issignedtype(n->Binop.l->type))
+			irop = n->Binop.l->type->size == 4 ? Opcsgtw : Opcsgtl;
+		else
+			irop = n->Binop.l->type->size == 4 ? Opcugtw : Opcugtl;
 		break;
 	case '<':
-		irop = n->Binop.l->type->size == 4 ? Opcsltw : Opcsltl;
+		if (issignedtype(n->Binop.l->type))
+			irop = n->Binop.l->type->size == 4 ? Opcsltw : Opcsltl;
+		else
+			irop = n->Binop.l->type->size == 4 ? Opcultw : Opcultl;
 		break;
 	case TOKSHR:
 	case TOKSHL:
@@ -3629,6 +3641,12 @@ outinstruction(Instruction *instr)
 	case Opcnew:
 		opname = "cnew";
 		break;
+	case Opceql:
+		opname = "ceql";
+		break;
+	case Opcnel:
+		opname = "cnel";
+		break;
 	case Opcsgew:
 		opname = "csgew";
 		break;
@@ -3641,12 +3659,6 @@ outinstruction(Instruction *instr)
 	case Opcsltw:
 		opname = "csltw";
 		break;
-	case Opceql:
-		opname = "ceql";
-		break;
-	case Opcnel:
-		opname = "cnel";
-		break;
 	case Opcsgel:
 		opname = "csgel";
 		break;
@@ -3658,6 +3670,30 @@ outinstruction(Instruction *instr)
 		break;
 	case Opcsltl:
 		opname = "csltl";
+		break;
+	case Opcugew:
+		opname = "cugew";
+		break;
+	case Opculew:
+		opname = "culew";
+		break;
+	case Opcugtw:
+		opname = "cugtw";
+		break;
+	case Opcultw:
+		opname = "cultw";
+		break;
+	case Opcugel:
+		opname = "cugel";
+		break;
+	case Opculel:
+		opname = "culel";
+		break;
+	case Opcugtl:
+		opname = "cugtl";
+		break;
+	case Opcultl:
+		opname = "cultl";
 		break;
 	default:
 		panic("unhandled instruction");
