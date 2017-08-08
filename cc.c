@@ -63,9 +63,11 @@ static Const *foldexpr(Node *);
 static IRVal  compileexpr(Node *n);
 static IRVal  compilebinop(Node *n);
 static IRVal  compileunop(Node *n);
+static IRVal  compileidx(Node *n);
 static IRVal  compileident(Node *n);
 static IRVal  compileaddr(Node *n);
 static IRVal  compileload(IRVal v, CTy *t);
+static IRVal  compileassign(Node *n);
 static void   compilestore(IRVal src, IRVal dest, CTy *t);
 static void   compilesym(Sym *sym);
 static void   outdata(Data *d);
@@ -1237,7 +1239,7 @@ pwhile(void)
 	popcontbrk();
 
 	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(condbb)});
-	setcurbb(bodybb);
+	setcurbb(stopbb);
 }
 
 static void
@@ -2769,17 +2771,13 @@ compileexpr(Node *n)
 		return compileident(n);
 	case NUNOP:
 		return compileunop(n);
-	/*
 	case NASSIGN:
-		assign(n);
-		break;
-	*/
+		return compileassign(n);
 	case NBINOP:
 		return compilebinop(n);
-	/*
 	case NIDX:
-		idx(n);
-		break;
+		return compileidx(n);
+	/*
 	case NSEL:
 		sel(n);
 		break;
@@ -2900,6 +2898,30 @@ compileunop(Node *n)
 }
 
 static IRVal
+compileidxaddr(Node *n)
+{
+	IRVal addr, idxv, idxv2, operand;
+
+	idxv = compileexpr(n->Idx.idx);
+	idxv2 = nextvreg("l");
+	bbappend(currentbb, (Instruction){.op=Opmul, .a=idxv2, .b=idxv, .c=(IRVal){.kind=IRConst, .irtype="l", .v=n->type->size}});
+	operand = compileexpr(n->Idx.operand);
+	addr = nextvreg("l");
+	bbappend(currentbb, (Instruction){.op=Opadd, .a=addr, .b=operand, .c=idxv2});
+	return addr;
+	
+}
+
+static IRVal
+compileidx(Node *n)
+{
+	IRVal addr;
+
+	addr = compileidxaddr(n);
+	return compileload(addr, n->type);
+}
+
+static IRVal
 compileident(Node *n)
 {
 	Sym *sym;
@@ -2960,18 +2982,7 @@ compileaddr(Node *n)
 		}
 		break;
 	case NIDX:
-		/*
-		expr(n->Idx.idx);
-		sz = n->type->size;
-		if(sz != 1) {
-			outi("imul $%d, %%rax\n", sz);
-		}
-		pushq("rax");
-		expr(n->Idx.operand);
-		popq("rcx");
-		outi("addq %%rcx, %%rax\n");
-		*/
-		break;
+		return compileidxaddr(n);
 	default:
 		;
 	}
@@ -3073,6 +3084,41 @@ compilestore(IRVal src, IRVal dest, CTy *t)
 	}
 	errorf("unimplemented store\n");
 }
+
+static IRVal
+compileassign(Node *n)
+{
+	Node *ln, *rn;
+	IRVal l, r;
+
+	ln = n->Assign.l;
+	rn = n->Assign.r;
+
+	if(n->Assign.op == '=') {
+		r = compileexpr(rn);
+		l = compileaddr(ln);
+		if(!isptr(ln->type) && !isitype(ln->type) && !isstruct(ln->type))
+			errorf("unimplemented assign\n");
+		compilestore(r, l, ln->type);
+		return compileload(l, ln->type);
+	}
+	/*
+	addr(l);
+	pushq("rax");
+	load(l->type);
+	pushq("rax");
+	expr(r);
+	outi("movq %%rax, %%rcx\n");
+	popq("rax");
+	obinop(op, n->type);
+	outi("movq %%rax, %%rcx\n");
+	popq("rax");
+	store(l->type);
+	outi("movq %%rcx, %%rax\n");
+	*/
+	panic("unimplemented compileassign");
+}
+
 
 static void
 compilesym(Sym *sym)
