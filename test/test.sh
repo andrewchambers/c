@@ -1,7 +1,5 @@
 set -e
 
-
-
 for t in test/execute/*.c
 do
 	echo -n "$t "
@@ -9,25 +7,25 @@ do
 	if ! timeout 2s ./cc -I./test/execute/include $t > $t.ssa
 	then
 		echo "cc failed"
-		continue
+		exit 1
 	fi
 	
 	if ! timeout 2s qbe $t.ssa > $t.s
 	then
 		echo "qbe failed"
-		continue
+		exit 1
 	fi
 	
 	if ! timeout 2s cc -fno-pie -static $t.s -o $t.bin
 	then
 		echo "assembling failed"
-		continue
+		exit 1
 	fi
 	
 	if ! timeout 2s $t.bin 
 	then
 		echo "test returned non zero"
-		continue
+		exit 1
 	fi
 	
 	echo "ok"
@@ -40,22 +38,16 @@ do
 	if timeout 2s ./cc $t > /dev/null 2> $t.stderr
 	then
 		echo "fail cc returned zero"
-		continue
+		exit 1
 	fi
 	
-	status=pass
 	for p in `sed -n '/^PATTERN:/s/PATTERN://gp' $t`
 	do
 		if ! grep -q $p $t.stderr
 		then
 			echo "fail pattern $p not found"
-			status=fail
-			break
+			exit 1
 		fi
 	done
 	
-	if [ $status = pass ]
-	then
-		echo "ok"
-	fi
 done

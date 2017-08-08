@@ -474,8 +474,6 @@ canrepresent(CTy *l, CTy *r)
 	return getmaxval(l) <= getmaxval(r) && getminval(l) >= getminval(r);
 }
 
-
-
 int64
 getminval(CTy *l)
 {

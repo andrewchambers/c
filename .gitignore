@@ -1,4 +1,5 @@
 .ninja_log
+.ninja_deps
 cc
 *.o
 test/error/*.stderr
