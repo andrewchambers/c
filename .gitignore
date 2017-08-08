@@ -1,0 +1,7 @@
+.ninja_log
+cc
+*.o
+test/error/*.stderr
+test/execute/*.s
+test/execute/*.ssa
+test/execute/*.bin
