@@ -60,7 +60,10 @@ static CTy   *usualarithconv(Node **, Node **);
 static Node  *mkcast(SrcPos *, Node *, CTy *);
 static Node  *mknode(int type, SrcPos *p);
 static Const *foldexpr(Node *);
+static char  *ctype2irtype(CTy *ty);
 static IRVal  compileexpr(Node *n);
+static IRVal  compilestr(Node *n);
+static IRVal  compilecall(Node *n);
 static IRVal  compilebinop(Node *n);
 static IRVal  compileunop(Node *n);
 static IRVal  compileidx(Node *n);
@@ -1106,6 +1109,7 @@ funcbody()
 			sym = definesym(curfunc->pos, SCAUTO, nt->name, nt->type, 0);
 			sym->Local.isparam = 1;
 			sym->Local.paramidx = i;
+			compilestore((IRVal){.kind=IRNamedVReg, .irtype=ctype2irtype(nt->type), .label=nt->name}, sym->Local.addr, nt->type);
 		}
 	}
 
@@ -2757,10 +2761,9 @@ compileexpr(Node *n)
 	case NCAST:
 		cast(n);
 		break;
-	case NSTR:
-		str(n);
-		break;
 	*/
+	case NSTR:
+		return compilestr(n);
 	case NSIZEOF:
 		if (n->Sizeof.type->incomplete)
 			errorposf(&n->pos, "cannot use incomplete type in sizeof");
@@ -2780,12 +2783,11 @@ compileexpr(Node *n)
 		return compileidx(n);
 	case NSEL:
 		return compilesel(n);
+	case NCALL:
+		return compilecall(n);
 	/*
 	case NCOND:
 		cond(n);
-		break;
-	case NCALL:
-		call(n);
 		break;
 	case NPTRADD:
 		ptradd(n);
@@ -2806,6 +2808,42 @@ compileexpr(Node *n)
 	default:
 		panic("unimplemented compileexpr for node at %s:%d:%d\n", n->pos.file, n->pos.line, n->pos.col);
 	}
+}
+
+static IRVal
+compilestr(Node *n)
+{
+	char *l;
+
+	l = newdatalabel();
+	penddata(l, n->type, n, 0);
+	return compileload((IRVal){.kind=IRLabel, .irtype="l", .label=l}, n->type);
+}
+
+static IRVal
+compilecall(Node *n)
+{
+	int i;
+	IRVal funclike;
+	IRVal res;
+	IRVal *irargs;
+	Vec  *args;
+	Node *arg;
+
+	args = n->Call.args;
+	irargs = xmalloc(sizeof(IRVal) * args->len);
+
+	for (i = 0; i < args->len; i++) {
+		arg = vecget(args, i);
+		if(!isitype(arg->type) && !isptr(arg->type) && !isarray(arg->type) && !isfunc(arg->type))
+			errorposf(&arg->pos, "unimplemented arg type\n");
+		irargs[i] = compileexpr(arg);
+	}
+
+	funclike = compileexpr(n->Call.funclike);
+	res = nextvreg(ctype2irtype(n->type));
+	bbappend(currentbb, (Instruction){.op=Opcall, .a=res, .b=funclike, .args=irargs, .nargs=args->len});
+	return res;
 }
 
 static IRVal
@@ -3233,7 +3271,7 @@ outdata(Data *d)
 	if(d->init->t == NSTR) {
 		l = newdatalabel();
 		out("{l $%s}\n", l);
-		out("data $%s = %s\n", l, d->init->Str.v);
+		out("data $%s = {b %s, b 0}\n", l, d->init->Str.v);
 		return;
 	}
 
@@ -3274,7 +3312,10 @@ outirval(IRVal *val)
 		out("%lld", val->v);
 		break;
 	case IRVReg:
-		out("%%v%d", val->v);
+		out("%%.v%d", val->v);
+		break;
+	case IRNamedVReg:
+		out("%%%s", val->label);
 		break;
 	case IRLabel:
 		out("$%s", val->label);
@@ -3378,6 +3419,24 @@ outload(Instruction *instr)
 	out("\n");
 }
 
+static void
+outcall(Instruction *instr)
+{
+	int i;
+
+	outirval(&instr->a);
+	out(" =%s call ", instr->a.irtype);
+	outirval(&instr->b);
+	out("(");
+	for (i = 0; i < instr->nargs; i++) {
+		out("%s ", instr->args[i].irtype);
+		outirval(&instr->args[i]);
+		if (i != instr->nargs - 1)
+			out(", ");
+	}
+	out(")\n");
+}
+
 static int
 isstoreinstr(Instruction *instr)
 {
@@ -3407,6 +3466,11 @@ outinstruction(Instruction *instr)
 
 	if (isloadinstr(instr)) {
 		outload(instr);
+		return;
+	}
+
+	if (instr->op == Opcall) {
+		outcall(instr);
 		return;
 	}
 
@@ -3467,7 +3531,7 @@ outfuncstart()
 
 	for (i = 0; i < curfunc->type->Func.params->len; i++) {
 		namety = vecget(curfunc->type->Func.params, i);
-		out("%s %s%s", ctype2irtype(namety->type), namety->type, i == curfunc->type->Func.params->len - 1 ? "" : ",");
+		out("%s %%%s%s", ctype2irtype(namety->type), namety->name, i == curfunc->type->Func.params->len - 1 ? "" : ", ");
 	}
 	out(") {\n");
 }
@@ -3500,5 +3564,5 @@ outfuncend()
 	for (i = 0; i < basicblocks->len; i++) {
 		outbb(vecget(basicblocks, i));
 	}
-	out("}\n");
+	out("}\n\n");
 }

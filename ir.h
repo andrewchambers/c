@@ -2,14 +2,17 @@
 typedef enum {
 	IRConst,
 	IRLabel,
-	IRVReg
+	IRVReg,
+	IRNamedVReg
 } IRValKind;
 
 typedef struct IRVal {
 	IRValKind kind;
-	int64 v;
 	char  *irtype;
-	char  *label;
+	union {
+		int64 v;
+		char  *label;
+	};
 } IRVal;
 
 typedef enum {
@@ -35,12 +38,15 @@ typedef enum {
 	Opstorel,
 	Opstorew,
 	Opstoreh,
-	Opstoreb
+	Opstoreb,
+	Opcall
 } Opcode;
 
 typedef struct Instruction {
 	Opcode op;
 	IRVal a, b, c;
+	IRVal *args;
+	int nargs;
 } Instruction;
 
 typedef struct Terminator {
