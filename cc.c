@@ -2,12 +2,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 #include "util.h"
 #include "cpp.h"
 #include "ctypes.h"
-#include "cc.h"
 #include "ir.h"
+#include "cc.h"
 
+static char  *newlabel();
 static CTy   *declspecs(int *);
 static CTy   *ptag(void);
 static CTy   *pstruct(int);
@@ -56,6 +58,7 @@ static Node  *declinit(CTy *);
 static CTy   *usualarithconv(Node **, Node **);
 static Node  *mkcast(SrcPos *, Node *, CTy *);
 static Node  *mknode(int type, SrcPos *p);
+static Const *foldexpr(Node *);
 static IRVal  compileexpr(Node *n);
 static IRVal  compilebinop(Node *n);
 static IRVal  compileunop(Node *n);
@@ -63,11 +66,61 @@ static IRVal  compileident(Node *n);
 static IRVal  compileaddr(Node *n);
 static IRVal  compileload(IRVal v, CTy *t);
 static void   compilestore(IRVal src, IRVal dest, CTy *t);
+static void   compilesym(Sym *sym);
+static void   outdata(Data *d);
+static void   outfuncstart();
+static void   outfuncend();
 
 
+static Tok *tok;
+static Tok *nexttok;
 
-Tok *tok;
-Tok *nexttok;
+#define MAXSCOPES 1024
+static int nscopes;
+static Map *tags[MAXSCOPES];
+static Map *syms[MAXSCOPES];
+
+#define MAXLABELDEPTH 2048
+static int     switchdepth;
+static int     brkdepth;
+static int     contdepth;
+static char   *breaks[MAXLABELDEPTH];
+static char   *conts[MAXLABELDEPTH];
+static Switch *switches[MAXLABELDEPTH];
+
+static Vec *tentativesyms;
+static Vec *pendingdata;
+static Sym *curfunc;
+
+static Map  *labels;
+static Vec  *gotos;
+
+static BasicBlock *preludebb;
+static BasicBlock *entrybb;
+static BasicBlock *currentbb;
+static Vec        *basicblocks;
+
+static int labelcount;
+static int vregcount;
+
+static FILE *outf;
+
+void
+setoutput(FILE *f)
+{
+	outf = f;
+}
+
+static void
+out(char *fmt, ...)
+{
+	va_list va;
+
+	va_start(va, fmt);
+	if(vfprintf(outf, fmt, va) < 0)
+		errorf("error printing\n");
+	va_end(va);
+}
 
 static void
 next(void)
@@ -85,53 +138,8 @@ expect(Tokkind kind)
 	next();
 }
 
-
-#define MAXSCOPES 1024
-static int nscopes;
-static Map *tags[MAXSCOPES];
-static Map *syms[MAXSCOPES];
-
-
-typedef struct Case {
-	SrcPos *pos;
-	char *label;
-	int64 v;
-} Case;
-
-typedef struct Switch {
-	SrcPos *pos;
-	Vec  *cases;
-	char *defaultlabel;
-} Switch;
-
-#define MAXLABELDEPTH 2048
-static int     switchdepth;
-static int     brkdepth;
-static int     contdepth;
-static char   *breaks[MAXLABELDEPTH];
-static char   *conts[MAXLABELDEPTH];
-static Switch *switches[MAXLABELDEPTH];
-
-Vec  *tentativesyms;
-
-Sym  *curfunc;
-
-typedef struct GotoLabel {
-	int defined;
-	char *backendlabel;
-} GotoLabel;
-
-typedef struct Goto {
-	SrcPos pos;
-	GotoLabel *label;
-} Goto;
-
-
-Map  *labels;
-Vec  *gotos;
-
 static GotoLabel *
-lookuplabel(char *name)
+lookupgotolabel(char *name)
 {
 	GotoLabel *label;
 
@@ -143,6 +151,49 @@ lookuplabel(char *name)
 		mapset(labels, name, label);
 	}
 	return label;
+}
+
+static char *
+newlabel()
+{
+	char *s;
+	int   n;
+
+	n = snprintf(0, 0, ".L%d", labelcount);
+	if(n < 0)
+		panic("internal error");
+	n += 1;
+	s = xmalloc(n);
+	if(snprintf(s, n, ".L%d", labelcount) < 0)
+		panic("internal error");
+	labelcount++;
+	return s;
+}
+
+static void
+setcurbb(BasicBlock *bb)
+{
+	currentbb = bb;
+	vecappend(basicblocks, bb);
+}
+
+static IRVal
+nextvreg(char *irtype)
+{
+	return (IRVal){.kind=IRVReg, .irtype=irtype, .v=vregcount++};
+}
+
+static IRVal
+alloclocal(SrcPos *pos, CTy *ty)
+{
+	IRVal v;
+
+	if (ty->incomplete)
+		errorposf(pos, "cannot alloc a local of incomplete type");
+
+	v = nextvreg("l");
+	bbappend(preludebb, (Instruction){.op=Opalloca, .a=v, .c=ty->size});
+	return v;
 }
 
 static void
@@ -242,7 +293,6 @@ isglobal(void)
 {
         return nscopes == 1;
 }
-
 
 static int
 define(Map *scope[], char *k, void *v)
@@ -346,7 +396,7 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 			if (!sym->init && n) {
 				sym->init = n;
 				if (!isfunc(sym->type))
-					emitsym(sym);
+					compilesym(sym);
 				removetentativesym(sym);
 			}
 			break;
@@ -365,7 +415,7 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 	switch (sclass) {
 	case SCAUTO:
 		sym->k = SYMLOCAL;
-		sym->Local.addr = alloclocal(sym->type);
+		sym->Local.addr = alloclocal(p, sym->type);
 		break;
 	case SCTYPEDEF:
 		sym->k = SYMTYPE;
@@ -391,7 +441,7 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 	if (!isfunc(sym->type)) {
 		if (sym->k == SYMGLOBAL) {
 			if (sym->init || sym->Global.sclass == SCEXTERN)
-				emitsym(sym);
+				compilesym(sym);
 			else
 				addtentativesym(sym);
 		}
@@ -402,6 +452,18 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 	return sym;
 }
 
+static void
+penddata(char *label, CTy *ty, Node *init, int isglobal)
+{
+	Data *d;
+
+	d = xmalloc(sizeof(Data));
+	d->label = label;
+	d->type = ty;
+	d->init = init;
+	d->isglobal = isglobal;
+	vecappend(pendingdata, d);
+}
 
 static void
 params(CTy *fty)
@@ -475,9 +537,9 @@ decl()
 			if (type->t != CFUNC)
 				errorposf(pos, "expected a function");
 			curfunc = sym;
-			emitfuncstart(sym);
+			outfuncstart();
 			funcbody();
-			emitfuncend();
+			outfuncend();
 			definesym(pos, sclass, name, type, (Node*)1);
 			curfunc = 0;
 			return;
@@ -1003,6 +1065,13 @@ funcbody()
 	Goto   *go;
 	int     i;
 
+	vregcount = 0;
+	basicblocks = vec();
+	preludebb = mkbasicblock(newlabel());
+	entrybb = mkbasicblock(newlabel());
+	setcurbb(preludebb);
+	setcurbb(entrybb);
+
 	pushscope();
 	
 	labels = map();
@@ -1025,6 +1094,8 @@ funcbody()
 		if (!go->label->defined)
 			errorposf(&go->pos, "goto target not defined");
 	}
+
+	bbterminate(preludebb, (Terminator){.op=Opjmp, .label1=bbgetlabel(entrybb)});
 }
 
 
@@ -1045,9 +1116,9 @@ pif(void)
 	cond = compileexpr(e);
 	expect(')');
 
-	iftruebb = mkbasicblock();
-	iffalsebb = mkbasicblock();
-	donebb = mkbasicblock();
+	iftruebb = mkbasicblock(newlabel());
+	iffalsebb = mkbasicblock(newlabel());
+	donebb = mkbasicblock(newlabel());
 
 	bbterminate(currentbb, (Terminator){.op=Opcond, .v=cond, .label1=bbgetlabel(iftruebb), .label2=bbgetlabel(iffalsebb)});
 	setcurbb(iftruebb);
@@ -1070,10 +1141,10 @@ pfor(void)
 	BasicBlock *condbb, *stepbb, *bodybb, *stopbb;
 	IRVal cond;
 
-	condbb = mkbasicblock();
-	stepbb = mkbasicblock();
-	bodybb = mkbasicblock();
-	stopbb = mkbasicblock();
+	condbb = mkbasicblock(newlabel());
+	stepbb = mkbasicblock(newlabel());
+	bodybb = mkbasicblock(newlabel());
+	stopbb = mkbasicblock(newlabel());
 	
 	i = 0;
 	c = 0;
@@ -1126,9 +1197,9 @@ pwhile(void)
 	IRVal cond;
 	BasicBlock *condbb, *bodybb, *stopbb;
 
-	condbb = mkbasicblock();
-	stopbb = mkbasicblock();
-	bodybb = mkbasicblock();
+	condbb = mkbasicblock(newlabel());
+	stopbb = mkbasicblock(newlabel());
+	bodybb = mkbasicblock(newlabel());
 	
 	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(condbb)});
 	setcurbb(condbb);
@@ -1155,9 +1226,9 @@ dowhile(void)
 	IRVal cond;
 	BasicBlock *condbb, *bodybb, *stopbb;
 
-	condbb = mkbasicblock();
-	stopbb = mkbasicblock();
-	bodybb = mkbasicblock();
+	condbb = mkbasicblock(newlabel());
+	stopbb = mkbasicblock(newlabel());
+	bodybb = mkbasicblock(newlabel());
 
 	expect(TOKDO);
 	pushcontbrk(bbgetlabel(condbb), bbgetlabel(stopbb));
@@ -1184,7 +1255,7 @@ pgoto()
 	go = xmalloc(sizeof(Goto));
 	go->pos = tok->pos;
 	expect(TOKGOTO);
-	go->label = lookuplabel(tok->v);
+	go->label = lookupgotolabel(tok->v);
 	expect(TOKIDENT);
 	expect(';');
 	vecappend(gotos, go);
@@ -1261,14 +1332,14 @@ stmt(void)
 
 	if (tok->k == TOKIDENT && nexttok->k == ':') {
 		t = tok;
-		label = lookuplabel(t->v);
+		label = lookupgotolabel(t->v);
 		next();
 		next();
 		if (label->defined)
 			errorposf(&t->pos, "redefinition of label %s", t->v);
 		label->defined = 1;
 		bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=label->backendlabel});
-		setcurbb(mkbasicblock());
+		setcurbb(mkbasicblock(newlabel()));
 		vecappend(currentbb->labels, label->backendlabel);
 		return;
 	}
@@ -1580,8 +1651,8 @@ pswitch(void)
 	BasicBlock *donebb;
 
 	startbb = currentbb;
-	bodybb = mkbasicblock();
-	donebb = mkbasicblock();
+	bodybb = mkbasicblock(newlabel());
+	donebb = mkbasicblock(newlabel());
 
 	sw = xmalloc(sizeof(Switch));
 	sw->pos = &tok->pos;
@@ -1616,7 +1687,7 @@ pswitch(void)
 
 	for (i = 0; i < sw->cases->len; i++) {
 		cs1 = vecget(sw->cases, i);
-		nextbb = mkbasicblock();
+		nextbb = mkbasicblock(newlabel());
 		cmpval = nextvreg("w");
 		/* XXX: compare op depends on type of something? */
 		bbappend(currentbb, (Instruction){.op=Opceql, .a=cmpval, .b=swval, .c=(IRVal){.kind=IRConst, .v=cs1->v}});
@@ -1640,7 +1711,7 @@ pdefault(void)
 	s = curswitch();
 	if (s->defaultlabel)
 		errorposf(pos, "switch already has a default case");
-	defaultbb = mkbasicblock();
+	defaultbb = mkbasicblock(newlabel());
 	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(defaultbb)});
 	setcurbb(defaultbb);
 	stmt();
@@ -1664,7 +1735,7 @@ pcase(void)
 		errorposf(pos, "case cannot have pointer derived constant");
 	expect(':');
 
-	casebb = mkbasicblock();
+	casebb = mkbasicblock(newlabel());
 	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(casebb)});
 	setcurbb(casebb);
 
@@ -1893,17 +1964,6 @@ usualarithconv(Node **a, Node **b)
 	*large = mkcast(&(*large)->pos, *large, t);
 	*small = mkcast(&(*small)->pos, *small, t);
 	return t;
-}
-
-Const *
-foldexpr(Node *n)
-{
-	Const *c;
-
-	c = xmalloc(sizeof(constexpr));
-	c->p = 0;
-	c->v = 0;
-	return c;
 }
 
 static Node *
@@ -2438,6 +2498,169 @@ vastart()
 	return n;
 }
 
+static Const *
+mkconst(char *p, int64 v)
+{
+	Const *c;
+
+	c = xmalloc(sizeof(Const));
+	c->p = p;
+	c->v = v;
+	return c;
+}
+
+static Const *
+foldbinop(Node *n)
+{
+	Const *l, *r;
+
+	l = foldexpr(n->Binop.l);
+	r = foldexpr(n->Binop.r);
+	if(!l || !r)
+		return 0;
+	if(isitype(n->type)) {
+		switch(n->Binop.op) {
+		case '+':
+			if(l->p && r->p)
+				return 0;
+			if(l->p)
+				mkconst(l->p, l->v + r->v);
+			if(r->p)
+				mkconst(r->p, l->v + r->v);
+			return mkconst(0, l->v + r->v);
+		case '-':
+			if(l->p || r->p) {
+				if(l->p && !r->p)
+					return mkconst(l->p, l->v - r->v);
+				if(!l->p && r->p)
+					return 0;
+				if(strcmp(l->p, r->p) == 0)
+					return mkconst(0, l->v - r->v);
+				return 0;
+			}
+			return mkconst(0, l->v - r->v);
+		case '*':
+			if(l->p || r->p)
+				return 0;
+			return mkconst(0, l->v * r->v);
+		case '/':
+			if(l->p || r->p)
+				return 0;
+			if(r->v == 0)
+				return 0;
+			return mkconst(0, l->v / r->v);
+		case TOKSHL:
+			if(l->p || r->p)
+				return 0;
+			return mkconst(0, l->v << r->v);
+		case '|':
+			if(l->p || r->p)
+				return 0;
+			return mkconst(0, l->v | r->v);
+		default:
+			errorposf(&n->pos, "unimplemented fold binop %d", n->Binop.op);
+		}
+	}
+	panic("unimplemented fold binop");
+	return 0;
+}
+
+static Const *
+foldaddr(Node *n)
+{
+	char *l;
+	Sym  *sym;
+
+	if(n->Unop.operand->t == NINIT) {
+		l = newlabel();
+		penddata(l, n->Unop.operand->type, n->Unop.operand, 0);
+		return mkconst(l, 0);
+	}
+	if(n->Unop.operand->t != NIDENT)
+		return 0;
+	sym = n->Unop.operand->Ident.sym;
+	if(sym->k != SYMGLOBAL)
+		return 0;
+	return mkconst(sym->Global.label, 0);
+}
+
+static Const *
+foldunop(Node *n)
+{
+	Const *c;
+
+	switch(n->Unop.op) {
+	case '&':
+		return foldaddr(n);
+	case '-':
+		c = foldexpr(n->Unop.operand);
+		if(!c)
+			return 0;
+		if(c->p)
+			return 0;
+		return mkconst(0, -c->v);
+	default:
+		panic("unimplemented fold unop %d", n->Binop.op);
+	}
+	panic("unimplemented fold unop");
+	return 0;
+}
+
+static Const *
+foldcast(Node *n)
+{
+	if(!isitype(n->type))
+		return 0;
+	if(!isitype(n->Cast.operand->type))
+		return 0;
+	return foldexpr(n->Cast.operand);
+}
+
+static Const *
+foldident(Node *n)
+{
+	Sym *sym;
+
+	sym = n->Ident.sym;
+	switch(sym->k) {
+	case SYMENUM:
+		return mkconst(0, sym->Enum.v);
+	default:
+		return 0;
+	}
+}
+
+static Const *
+foldexpr(Node *n)
+{
+	char *l;
+	CTy  *ty;
+
+	switch(n->t) {
+	case NBINOP:
+		return foldbinop(n);
+	case NUNOP:
+		return foldunop(n);
+	case NNUM:
+		return mkconst(0, n->Num.v);
+	case NSIZEOF:
+		return mkconst(0, n->Sizeof.type->size);
+	case NCAST:
+		return foldcast(n);
+	case NIDENT:
+		return foldident(n);
+	case NSTR:
+		l = newlabel();
+		ty = newtype(CARR);
+		ty->Arr.subty = cchar;
+		/* XXX DIM? */
+		penddata(l, ty, n, 0);
+		return mkconst(l, 0);
+	default:
+		return 0;
+	}
+}
+
 void
 compile()
 {
@@ -2448,22 +2671,58 @@ compile()
 	brkdepth = 0;
 	contdepth = 0;
 	nscopes = 0;
+	pendingdata = vec();
 	tentativesyms = vec();
 	pushscope();
 	next();
 	next();
 
-	beginmodule();
-	
 	while (tok->k != TOKEOF)
 		decl();
 	
 	for(i = 0; i < tentativesyms->len; i++) {
 		sym = vecget(tentativesyms, i);
-		emitsym(sym);
+		compilesym(sym);
 	}
+
+	out("\n");
+
+	for(i = 0; i < pendingdata->len; i++)
+		outdata(vecget(pendingdata, i));
 	
-	endmodule();
+	out("\n");
+
+	out("# Compiled with %lld bytes allocated.\n", malloctotal);
+	if (fflush(outf) != 0)
+		panic("error flushing output");
+}
+
+static char *
+ctype2irtype(CTy *ty)
+{
+	switch (ty->t) {
+	case CVOID:
+		return "";
+	case CPRIM:
+		switch (ty->Prim.type) {
+		case PRIMCHAR:
+			return "w";
+		case PRIMSHORT:
+			return "w";
+		case PRIMINT:
+			return "w";
+		case PRIMLONG:
+			return "l";
+		case PRIMLLONG:
+			return "l";
+		default:
+			panic("unhandled cprim");
+		}
+	case CPTR:
+		return "l";
+	default:
+		panic("unhandled ctype");
+	}
 }
 
 static IRVal
@@ -2794,4 +3053,357 @@ compilestore(IRVal src, IRVal dest, CTy *t)
 		return;
 	}
 	errorf("unimplemented store\n");
+}
+
+static void
+compilesym(Sym *sym)
+{
+	if (isfunc(sym->type))
+		panic("compilesym precondition failed");
+
+	switch(sym->k){
+	case SYMGLOBAL:
+		if (sym->Global.sclass == SCEXTERN)
+			break;
+		penddata(sym->Global.label, sym->type, sym->init, sym->Global.sclass == SCGLOBAL);
+		break;
+	case SYMLOCAL:
+		break;
+	case SYMENUM:
+		break;
+	case SYMTYPE:
+		break;
+	}
+}
+
+static void
+outitypedata(Node *prim)
+{
+	Const *c;
+
+	if(!isitype(prim->type) && !isptr(prim->type))
+		panic("internal error %d");
+	c = foldexpr(prim);
+	if(!c)
+		errorposf(&prim->pos, "not a constant expression");
+	if(c->p) {
+		switch(prim->type->size) {
+		case 8:
+			out(".quad %s + %d\n", c->p, c->v);
+			return;
+		case 4:
+			out(".long %s + %d\n", c->p, c->v);
+			return;
+		case 2:
+			out(".short %s + %d\n", c->p, c->v);
+			return;
+		case 1:
+			out(".byte %s + %d\n", c->p, c->v);
+			return;
+		default:
+			panic("unimplemented");
+		}
+	}
+	switch(prim->type->size) {
+	case 8:
+		out(".quad %d\n", c->v);
+		return;
+	case 4:
+		out(".long %d\n", c->v);
+		return;
+	case 2:
+		out(".short %d\n", c->v);
+		return;
+	case 1:
+		out(".byte %d\n", c->v);
+		return;
+	default:
+		panic("unimplemented");
+	}
+	panic("internal error");
+}
+
+static void
+outdata(Data *d)
+{
+	InitMember *initmemb;
+	int   i, offset;
+	char *l;
+	
+	if(!d->init) {
+		out(".comm %s, %d, %d\n", d->label, d->type->size, d->type->align);
+		return;
+	}
+	if(d->isglobal)
+		out(".globl %s\n", d->label);
+	out("%s:\n", d->label);
+	
+	if(ischararray(d->type))
+	if(d->init->t == NSTR) {
+		out(".string %s\n", d->init->Str.v);
+		return;
+	}
+	
+	if(ischarptr(d->type))
+	if(d->init->t == NSTR) {
+		l = newlabel();
+		out(".quad %s\n", l);
+		out("%s:\n", l);
+		out(".string %s\n", d->init->Str.v);
+		return;
+	}
+	if(isitype(d->type) || isptr(d->type)) {
+		outitypedata(d->init);
+		return;
+	}
+	if(isarray(d->type) || isstruct(d->type)) {
+		if(d->init->t != NINIT)
+			errorposf(&d->init->pos, "array/struct expects a '{' style initializer");
+		offset = 0;
+		for(i = 0; i < d->init->Init.inits->len ; i++) {
+			initmemb = vecget(d->init->Init.inits, i);
+			if(initmemb->offset != offset)
+				out(".fill %d, 1, 0\n", initmemb->offset - offset);
+			outitypedata(initmemb->n);
+			offset = initmemb->offset + initmemb->n->type->size;
+		}
+		if(offset < d->type->size)
+			out(".fill %d, 1, 0\n", d->type->size - offset);
+		return;
+	}
+	panic("internal error");
+}
+
+static void
+outirval(IRVal *val)
+{
+	switch (val->kind) {
+	case IRConst:
+		out("%lld", val->v);
+		break;
+	case IRVReg:
+		out("%%v%d", val->v);
+		break;
+	default:
+		panic("unhandled irval");
+	}
+}
+
+static void
+outterminator(Terminator *term)
+{
+	switch (term->op) {
+	case Opret:
+		out("ret ");
+		outirval(&term->v);
+		out("\n");
+		break;
+	case Opjmp:
+		out("jmp @%s\n", term->label1);
+		break;
+	case Opcond:
+		out("jnz ");
+		outirval(&term->v);
+		out(", @%s, @%s\n", term->label1, term->label2);
+		break;
+	default:
+		panic("unhandled terminator");
+	}
+}
+
+static void
+outalloca(Instruction *instr)
+{
+	if (instr->op != Opalloca)
+		panic("internal error, not a valid alloca");
+
+	outirval(&instr->a);
+	out(" =l alloc16 ");
+	outirval(&instr->b);
+	out("\n");
+}
+
+static void
+outstore(Instruction *instr)
+{
+	char *opname;
+
+	switch (instr->op) {
+	case Opstorel:
+		opname = "storel";
+		break;
+	case Opstorew:
+		opname = "storew";
+		break;
+	case Opstoreh:
+		opname = "storeh";
+		break;
+	case Opstoreb:
+		opname = "storeb";
+		break;
+	default:
+		panic("unhandled load instruction");
+	}
+
+	out("%s ", opname);
+	outirval(&instr->a);
+	out(", ");
+	outirval(&instr->b);
+	out("\n");
+}
+
+static void
+outload(Instruction *instr)
+{
+	char *opname;
+
+	switch (instr->op) {
+	case Opload:
+		opname = "load";
+		break;
+	case Oploadsh:
+		opname = "loadsh";
+		break;
+	case Oploadsb:
+		opname = "loadsb";
+		break;
+	case Oploaduh:
+		opname = "loaduh";
+		break;
+	case Oploadub:
+		opname = "loadub";
+		break;
+	default:
+		panic("unhandled load instruction");
+	}
+
+	outirval(&instr->a);
+	out(" =%s %s ", instr->a.irtype, opname);
+	outirval(&instr->b);
+	out("\n");
+}
+
+static int
+isstoreinstr(Instruction *instr)
+{
+	return instr->op >= Opstorel && instr->op <= Opstoreb;
+}
+
+static int
+isloadinstr(Instruction *instr)
+{
+	return instr->op >= Opload && instr->op <= Oploadsb;
+}
+
+static void
+outinstruction(Instruction *instr)
+{
+	char *opname;
+
+	if (instr->op == Opalloca) {
+		outalloca(instr);
+		return;
+	}
+
+	if (isstoreinstr(instr)) {
+		outstore(instr);
+		return;
+	}
+
+	if (isloadinstr(instr)) {
+		outload(instr);
+		return;
+	}
+
+	switch (instr->op) {
+	case Opadd:
+		opname = "add";
+		break;
+	case Opsub:
+		opname = "sub";
+		break;
+	case Opmul:
+		opname = "mul";
+		break;
+	case Opdiv:
+		opname = "div";
+		break;
+	case Oprem:
+		opname = "rem";
+		break;
+	case Opband:
+		opname = "and";
+		break;
+	case Opbor:
+		opname = "or";
+		break;
+	case Opbxor:
+		opname = "xor";
+		break;
+	case Opceql:
+		opname = "ceql";
+		break;
+	case Opceqw:
+		opname = "ceqw";
+		break;
+	default:
+		panic("unhandled instruction");
+	}
+
+	outirval(&instr->a);
+	out(" =%s %s ", instr->a.irtype, opname);
+	outirval(&instr->b);
+	out(", ");
+	outirval(&instr->c);
+	out("\n");
+}
+
+static void
+outfuncstart()
+{
+	int i;
+	NameTy *namety;
+
+	if (curfunc->k != SYMGLOBAL || !isfunc(curfunc->type))
+		panic("emitfuncstart precondition failed");
+
+	out("export\n");
+	out("function %s $%s(", ctype2irtype(curfunc->type->Func.rtype), curfunc->name);
+
+	for (i = 0; i < curfunc->type->Func.params->len; i++) {
+		namety = vecget(curfunc->type->Func.params, i);
+		out("%s %s%s", ctype2irtype(namety->type), namety->type, i == curfunc->type->Func.params->len - 1 ? "" : ",");
+	}
+	out(") {\n");
+}
+
+static void
+outbb(BasicBlock *bb)
+{
+	int i;
+
+	for (i = 0; i < bb->labels->len; i++) {
+		out("@%s\n", vecget(bb->labels, i));
+	}
+
+	for (i = 0; i < bb->ninstructions; i++) {
+		outinstruction(&bb->instructions[i]);
+	}
+
+	if (bb->terminated) {
+		outterminator(&bb->terminator);
+	} else {
+		out("ret\n");
+	}
+}
+
+static void
+outfuncend()
+{
+	int i;
+
+	for (i = 0; i < basicblocks->len; i++) {
+		outbb(vecget(basicblocks, i));
+	}
+	out("}\n");
 }

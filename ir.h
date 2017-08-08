@@ -1,5 +1,18 @@
 
 typedef enum {
+	IRConst,
+	IRLabel,
+	IRVReg
+} IRValKind;
+
+typedef struct IRVal {
+	IRValKind kind;
+	int64 v;
+	char  *irtype;
+	char  *label;
+} IRVal;
+
+typedef enum {
 	Opalloca,
 	Opret,
 	Opjmp,
@@ -46,24 +59,10 @@ typedef struct BasicBlock {
 	int terminated;
 } BasicBlock;
 
-char *ctype2irtype(CTy *ty);
-char *newlabel();
-void  setiroutput(FILE *);
-void  beginmodule();
-void  emitsym(Sym *);
-void  emitfuncstart();
-void  emitfuncend();
-void  endmodule();
-
-void setcurbb(BasicBlock *);
-IRVal nextvreg();
-IRVal alloclocal(CTy *ty);
-
-BasicBlock *mkbasicblock();
+BasicBlock *mkbasicblock(char *label);
 char       *bbgetlabel(BasicBlock *);
 void        bbappend(BasicBlock *, Instruction);
 void        bbterminate(BasicBlock *, Terminator);
 
-extern BasicBlock *preludebb;
-extern BasicBlock *currentbb;
-extern Vec        *basicblocks;
+void  setiroutput(FILE *);
+

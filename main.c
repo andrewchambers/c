@@ -5,8 +5,8 @@
 #include "util.h"
 #include "cpp.h"
 #include "ctypes.h"
-#include "cc.h"
 #include "ir.h"
+#include "cc.h"
 
 void
 usage()
@@ -43,7 +43,7 @@ main(int argc, char *argv[])
 	if (!cfile)
 		usage();
 	cppinit(cfile, includedirs);
-	setiroutput(stdout);
+	setoutput(stdout);
 	compile();
 	return 0;
 }

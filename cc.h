@@ -1,19 +1,5 @@
 
 typedef enum {
-	IRConst,
-	IRLabel,
-	IRVReg
-} IRValKind;
-
-// XXX: a circular dep between ir.h and cc.h means this is here, untangle this.
-typedef struct IRVal {
-	IRValKind kind;
-	int64 v;
-	char  *irtype;
-	char  *label;
-} IRVal;
-
-typedef enum {
 	SCNONE,
 	SCEXTERN,
 	SCSTATIC,
@@ -168,6 +154,34 @@ struct Node {
 	};
 };
 
-extern Sym *curfunc;
+typedef struct Case {
+	SrcPos *pos;
+	char *label;
+	int64 v;
+} Case;
 
+typedef struct Switch {
+	SrcPos *pos;
+	Vec  *cases;
+	char *defaultlabel;
+} Switch;
+
+typedef struct Data {
+	char *label;
+	CTy  *type;
+	Node *init;
+	int   isglobal;
+} Data;
+
+typedef struct GotoLabel {
+	int defined;
+	char *backendlabel;
+} GotoLabel;
+
+typedef struct Goto {
+	SrcPos pos;
+	GotoLabel *label;
+} Goto;
+
+void setoutput(FILE *);
 void compile();
