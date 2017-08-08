@@ -9,7 +9,8 @@
 #include "ir.h"
 #include "cc.h"
 
-static char  *newlabel();
+static char  *newbblabel();
+static char  *newdatalabel();
 static CTy   *declspecs(int *);
 static CTy   *ptag(void);
 static CTy   *pstruct(int);
@@ -92,7 +93,7 @@ static Vec *tentativesyms;
 static Vec *pendingdata;
 static Sym *curfunc;
 
-static Map  *labels;
+static Map  *gotolabels;
 static Vec  *gotos;
 
 static BasicBlock *preludebb;
@@ -100,7 +101,8 @@ static BasicBlock *entrybb;
 static BasicBlock *currentbb;
 static Vec        *basicblocks;
 
-static int labelcount;
+static int datalabelcount;
+static int bblabelcount;
 static int vregcount;
 
 static FILE *outf;
@@ -143,30 +145,47 @@ lookupgotolabel(char *name)
 {
 	GotoLabel *label;
 
-	label = mapget(labels, name);
+	label = mapget(gotolabels, name);
 	if (!label) {
 		label = xmalloc(sizeof(GotoLabel));
-		label->backendlabel = newlabel();
+		label->backendlabel = newbblabel();
 		label->defined = 0;
-		mapset(labels, name, label);
+		mapset(gotolabels, name, label);
 	}
 	return label;
 }
 
 static char *
-newlabel()
+newbblabel()
 {
 	char *s;
 	int   n;
 
-	n = snprintf(0, 0, ".L%d", labelcount);
+	n = snprintf(0, 0, ".L%d", bblabelcount);
 	if(n < 0)
 		panic("internal error");
 	n += 1;
 	s = xmalloc(n);
-	if(snprintf(s, n, ".L%d", labelcount) < 0)
+	if(snprintf(s, n, ".L%d", bblabelcount) < 0)
 		panic("internal error");
-	labelcount++;
+	bblabelcount++;
+	return s;
+}
+
+static char *
+newdatalabel()
+{
+	char *s;
+	int   n;
+
+	n = snprintf(0, 0, ".D%d", datalabelcount);
+	if(n < 0)
+		panic("internal error");
+	n += 1;
+	s = xmalloc(n);
+	if(snprintf(s, n, ".D%d", datalabelcount) < 0)
+		panic("internal error");
+	datalabelcount++;
 	return s;
 }
 
@@ -432,7 +451,7 @@ definesym(SrcPos *p, int sclass, char *name, CTy *type, Node *n)
 		break;
 	case SCSTATIC:
 		sym->k = SYMGLOBAL;
-		sym->Global.label = newlabel();
+		sym->Global.label = newbblabel();
 		sym->Global.sclass = SCSTATIC;
 		break;
 	default:
@@ -1066,15 +1085,16 @@ funcbody()
 	int     i;
 
 	vregcount = 0;
+	bblabelcount = 0;
 	basicblocks = vec();
-	preludebb = mkbasicblock(newlabel());
-	entrybb = mkbasicblock(newlabel());
+	preludebb = mkbasicblock(newbblabel());
+	entrybb = mkbasicblock(newbblabel());
 	setcurbb(preludebb);
 	setcurbb(entrybb);
 
 	pushscope();
 	
-	labels = map();
+	gotolabels = map();
 	gotos = vec();
 
 	for (i = 0; i < curfunc->type->Func.params->len; i++) {
@@ -1116,9 +1136,9 @@ pif(void)
 	cond = compileexpr(e);
 	expect(')');
 
-	iftruebb = mkbasicblock(newlabel());
-	iffalsebb = mkbasicblock(newlabel());
-	donebb = mkbasicblock(newlabel());
+	iftruebb = mkbasicblock(newbblabel());
+	iffalsebb = mkbasicblock(newbblabel());
+	donebb = mkbasicblock(newbblabel());
 
 	bbterminate(currentbb, (Terminator){.op=Opcond, .v=cond, .label1=bbgetlabel(iftruebb), .label2=bbgetlabel(iffalsebb)});
 	setcurbb(iftruebb);
@@ -1141,10 +1161,10 @@ pfor(void)
 	BasicBlock *condbb, *stepbb, *bodybb, *stopbb;
 	IRVal cond;
 
-	condbb = mkbasicblock(newlabel());
-	stepbb = mkbasicblock(newlabel());
-	bodybb = mkbasicblock(newlabel());
-	stopbb = mkbasicblock(newlabel());
+	condbb = mkbasicblock(newbblabel());
+	stepbb = mkbasicblock(newbblabel());
+	bodybb = mkbasicblock(newbblabel());
+	stopbb = mkbasicblock(newbblabel());
 	
 	i = 0;
 	c = 0;
@@ -1197,9 +1217,9 @@ pwhile(void)
 	IRVal cond;
 	BasicBlock *condbb, *bodybb, *stopbb;
 
-	condbb = mkbasicblock(newlabel());
-	stopbb = mkbasicblock(newlabel());
-	bodybb = mkbasicblock(newlabel());
+	condbb = mkbasicblock(newbblabel());
+	stopbb = mkbasicblock(newbblabel());
+	bodybb = mkbasicblock(newbblabel());
 	
 	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(condbb)});
 	setcurbb(condbb);
@@ -1226,9 +1246,9 @@ dowhile(void)
 	IRVal cond;
 	BasicBlock *condbb, *bodybb, *stopbb;
 
-	condbb = mkbasicblock(newlabel());
-	stopbb = mkbasicblock(newlabel());
-	bodybb = mkbasicblock(newlabel());
+	condbb = mkbasicblock(newbblabel());
+	stopbb = mkbasicblock(newbblabel());
+	bodybb = mkbasicblock(newbblabel());
 
 	expect(TOKDO);
 	pushcontbrk(bbgetlabel(condbb), bbgetlabel(stopbb));
@@ -1339,7 +1359,7 @@ stmt(void)
 			errorposf(&t->pos, "redefinition of label %s", t->v);
 		label->defined = 1;
 		bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=label->backendlabel});
-		setcurbb(mkbasicblock(newlabel()));
+		setcurbb(mkbasicblock(newbblabel()));
 		vecappend(currentbb->labels, label->backendlabel);
 		return;
 	}
@@ -1651,8 +1671,8 @@ pswitch(void)
 	BasicBlock *donebb;
 
 	startbb = currentbb;
-	bodybb = mkbasicblock(newlabel());
-	donebb = mkbasicblock(newlabel());
+	bodybb = mkbasicblock(newbblabel());
+	donebb = mkbasicblock(newbblabel());
 
 	sw = xmalloc(sizeof(Switch));
 	sw->pos = &tok->pos;
@@ -1687,7 +1707,7 @@ pswitch(void)
 
 	for (i = 0; i < sw->cases->len; i++) {
 		cs1 = vecget(sw->cases, i);
-		nextbb = mkbasicblock(newlabel());
+		nextbb = mkbasicblock(newbblabel());
 		cmpval = nextvreg("w");
 		/* XXX: compare op depends on type of something? */
 		bbappend(currentbb, (Instruction){.op=Opceql, .a=cmpval, .b=swval, .c=(IRVal){.kind=IRConst, .v=cs1->v}});
@@ -1711,7 +1731,7 @@ pdefault(void)
 	s = curswitch();
 	if (s->defaultlabel)
 		errorposf(pos, "switch already has a default case");
-	defaultbb = mkbasicblock(newlabel());
+	defaultbb = mkbasicblock(newbblabel());
 	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(defaultbb)});
 	setcurbb(defaultbb);
 	stmt();
@@ -1735,7 +1755,7 @@ pcase(void)
 		errorposf(pos, "case cannot have pointer derived constant");
 	expect(':');
 
-	casebb = mkbasicblock(newlabel());
+	casebb = mkbasicblock(newbblabel());
 	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(casebb)});
 	setcurbb(casebb);
 
@@ -2572,7 +2592,7 @@ foldaddr(Node *n)
 	Sym  *sym;
 
 	if(n->Unop.operand->t == NINIT) {
-		l = newlabel();
+		l = newdatalabel();
 		penddata(l, n->Unop.operand->type, n->Unop.operand, 0);
 		return mkconst(l, 0);
 	}
@@ -2650,7 +2670,7 @@ foldexpr(Node *n)
 	case NIDENT:
 		return foldident(n);
 	case NSTR:
-		l = newlabel();
+		l = newdatalabel();
 		ty = newtype(CARR);
 		ty->Arr.subty = cchar;
 		/* XXX DIM? */
@@ -3146,7 +3166,7 @@ outdata(Data *d)
 	
 	if(ischarptr(d->type))
 	if(d->init->t == NSTR) {
-		l = newlabel();
+		l = newdatalabel();
 		out(".quad %s\n", l);
 		out("%s:\n", l);
 		out(".string %s\n", d->init->Str.v);
