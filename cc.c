@@ -2924,6 +2924,7 @@ compilecall(Node *n)
 static IRVal
 compilebinop(Node *n)
 {
+	int irop;
 	IRVal  res, l, r;
 
 	if (n->t != NBINOP)
@@ -2941,41 +2942,54 @@ compilebinop(Node *n)
 	
 	switch (n->Binop.op) {
 	case '+':
-		bbappend(currentbb, (Instruction){.op=Opadd, .a=res, .b=l, .c=r});
+		irop = Opadd;
 		break;
 	case '-':
-		bbappend(currentbb, (Instruction){.op=Opsub, .a=res, .b=l, .c=r});
+		irop = Opsub;
 		break;
 	case '*':
-		bbappend(currentbb, (Instruction){.op=Opmul, .a=res, .b=l, .c=r});
+		irop = Opmul;
 		break;
 	case '/':
-		bbappend(currentbb, (Instruction){.op=Opdiv, .a=res, .b=l, .c=r});
+		irop = Opdiv;
 		break;
 	case '%':
-		bbappend(currentbb, (Instruction){.op=Oprem, .a=res, .b=l, .c=r});
+		irop = Oprem;
 		break;
 	case '|':
-		bbappend(currentbb, (Instruction){.op=Opbor, .a=res, .b=l, .c=r});
+		irop = Opbor;
 		break;
 	case '&':
-		bbappend(currentbb, (Instruction){.op=Opband, .a=res, .b=l, .c=r});
+		irop = Opband;
 		break;
 	case '^':
-		bbappend(currentbb, (Instruction){.op=Opbxor, .a=res, .b=l, .c=r});
+		irop = Opbxor;
+		break;
+	case TOKEQL:
+		irop = n->Binop.l->type->size == 4 ? Opceqw : Opceql;
+		break;
+	case TOKNEQ:
+		irop = n->Binop.l->type->size == 4 ? Opcnew : Opcnel;
+		break;
+	case TOKGEQ:
+		irop = n->Binop.l->type->size == 4 ? Opcsgew : Opcsgel;
+		break;
+	case TOKLEQ:
+		irop = n->Binop.l->type->size == 4 ? Opcslew : Opcslel;
+		break;
+	case '>':
+		irop = n->Binop.l->type->size == 4 ? Opcsgtw : Opcsgtl;
+		break;
+	case '<':
+		irop = n->Binop.l->type->size == 4 ? Opcsltw : Opcsltl;
 		break;
 	case TOKSHR:
 	case TOKSHL:
-	case TOKEQL:
-	case TOKNEQ:
-	case TOKGEQ:
-	case TOKLEQ:
-	case '>':
-	case '<':
 	default:
 		errorf("unimplemented binop %d\n", n->Binop.op);
 	}
 
+	bbappend(currentbb, (Instruction){.op=irop, .a=res, .b=l, .c=r});
 	return res;
 }
 
@@ -3609,11 +3623,41 @@ outinstruction(Instruction *instr)
 	case Opbxor:
 		opname = "xor";
 		break;
+	case Opceqw:
+		opname = "ceqw";
+		break;
+	case Opcnew:
+		opname = "cnew";
+		break;
+	case Opcsgew:
+		opname = "csgew";
+		break;
+	case Opcslew:
+		opname = "cslew";
+		break;
+	case Opcsgtw:
+		opname = "csgtw";
+		break;
+	case Opcsltw:
+		opname = "csltw";
+		break;
 	case Opceql:
 		opname = "ceql";
 		break;
-	case Opceqw:
-		opname = "ceqw";
+	case Opcnel:
+		opname = "cnel";
+		break;
+	case Opcsgel:
+		opname = "csgel";
+		break;
+	case Opcslel:
+		opname = "cslel";
+		break;
+	case Opcsgtl:
+		opname = "csgtl";
+		break;
+	case Opcsltl:
+		opname = "csltl";
 		break;
 	default:
 		panic("unhandled instruction");
