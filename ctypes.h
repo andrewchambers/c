@@ -101,7 +101,7 @@ int isfunc(CTy *);
 int isfuncptr(CTy *);
 int isstruct(CTy *);
 int isarray(CTy *);
-int issignedty(CTy *)
+int issignedtype(CTy *);
 int sametype(CTy *, CTy *);
 int convrank(CTy *);
 int canrepresent(CTy *, CTy *);

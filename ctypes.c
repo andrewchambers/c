@@ -531,7 +531,7 @@ getmaxval(CTy *l)
 int
 issignedtype(CTy *t)
 {
-	return t->t == CPRIME && t->Prim.issigned;
+	return t->t == CPRIM && t->Prim.issigned;
 }
 
 CTy *cvoid    = &(CTy){ .t = CVOID, .incomplete = 1};

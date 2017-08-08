@@ -3092,7 +3092,6 @@ compileident(Node *n)
 static IRVal
 compileaddr(Node *n)
 {
-	int offset;
 	Sym *sym;
 
 	switch(n->t) {
