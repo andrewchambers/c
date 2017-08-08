@@ -19,6 +19,7 @@ typedef enum {
 	Opalloca,
 	Opret,
 	Opjmp,
+	Opcall,
 	Opcond,
 	Opadd,
 	Opsub,
@@ -39,7 +40,12 @@ typedef enum {
 	Opstorew,
 	Opstoreh,
 	Opstoreb,
-	Opcall
+	Opextsw,
+	Opextsh,
+	Opextsb,
+	Opextuw,
+	Opextuh,
+	Opextub,
 } Opcode;
 
 typedef struct Instruction {

@@ -101,6 +101,7 @@ int isfunc(CTy *);
 int isfuncptr(CTy *);
 int isstruct(CTy *);
 int isarray(CTy *);
+int issignedty(CTy *)
 int sametype(CTy *, CTy *);
 int convrank(CTy *);
 int canrepresent(CTy *, CTy *);
@@ -113,6 +114,7 @@ void structwalk(StructIter *, StructMember **, int *);
 void addtostruct(CTy *, char *, CTy *);
 void finalizestruct(SrcPos *, CTy *);
 NameTy *newnamety(char *n, CTy *t);
+
 
 uint64 getmaxval(CTy *);
 int64  getminval(CTy *);

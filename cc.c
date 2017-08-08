@@ -72,6 +72,7 @@ static IRVal  compileident(Node *n);
 static IRVal  compileaddr(Node *n);
 static IRVal  compileload(IRVal v, CTy *t);
 static IRVal  compileassign(Node *n);
+static IRVal  compilecast(Node *n);
 static void   compilestore(IRVal src, IRVal dest, CTy *t);
 static void   compilesym(Sym *sym);
 static void   outdata(Data *d);
@@ -2758,10 +2759,9 @@ compileexpr(Node *n)
 	case NCOMMA:
 		comma(n);
 		break;
-	case NCAST:
-		cast(n);
-		break;
 	*/
+	case NCAST:
+		return compilecast(n);
 	case NSTR:
 		return compilestr(n);
 	case NSIZEOF:
@@ -2808,6 +2808,81 @@ compileexpr(Node *n)
 	default:
 		panic("unimplemented compileexpr for node at %s:%d:%d\n", n->pos.file, n->pos.line, n->pos.col);
 	}
+}
+
+static IRVal
+compilecast(Node *n)
+{
+	IRVal v1, v2;
+
+	v1 = compileexpr(n->Cast.operand);
+	v2 = nextvreg(ctype2irtype(n->type));
+
+	// We are assuming the cast was validated during parsing.
+	
+	switch (n->Cast.operand->type->t) {
+	case CPRIM:
+		switch (n->Cast.operand->type->size) {
+		case 8:
+			switch (n->type->size) {
+			case 8:
+			case 4:
+			case 2:
+			case 1:
+				return v1;
+			default:
+				break;
+			}
+			break;
+		case 4:
+			switch (n->type->size) {
+			case 8:
+				bbappend(currentbb, (Instruction){.op=issignedtype(n->type) ? Opextsw : Opextuw, .a=v2, .b=v1});
+				return v2;
+			case 4:
+			case 2:
+			case 1:
+				return v1;
+			default:
+				break;
+			}
+			break;
+		case 2:
+			switch (n->type->size) {
+			case 8:
+			case 4:
+				bbappend(currentbb, (Instruction){.op=issignedtype(n->type) ? Opextsh : Opextuh, .a=v2, .b=v1});
+				return v2;
+			case 2:
+			case 1:
+				return v1;
+			default:
+				break;
+			}
+			break;
+		case 1:
+			switch (n->type->size) {
+			case 8:
+			case 4:
+			case 2:
+				bbappend(currentbb, (Instruction){.op=issignedtype(n->type) ? Opextsb : Opextub, .a=v2, .b=v1});
+				return v2;
+			case 1:
+				return v1;
+			default:
+				break;
+			}
+			break;
+		default:
+			panic("internal error");
+		}
+	case CPTR:
+		return v1;
+	default:
+		;
+	}
+
+	panic("unimplemented compilecast for node at %s:%d:%d\n", n->pos.file, n->pos.line, n->pos.col);
 }
 
 static IRVal
@@ -3378,7 +3453,7 @@ outstore(Instruction *instr)
 		opname = "storeb";
 		break;
 	default:
-		panic("unhandled load instruction");
+		panic("unhandled store instruction");
 	}
 
 	out("%s ", opname);
@@ -3420,6 +3495,31 @@ outload(Instruction *instr)
 }
 
 static void
+outextend(Instruction *instr)
+{
+	char *opname;
+
+	switch (instr->op) {
+	case Opextsw:
+		opname = "extsw";
+		break;
+	case Opextsh:
+		opname = "extsh";
+		break;
+	case Opextsb:
+		opname = "extsb";
+		break;
+	default:
+		panic("unhandled extend instruction");
+	}
+
+	outirval(&instr->a);
+	out(" =%s %s ", instr->a.irtype, opname);
+	outirval(&instr->b);
+	out("\n");
+}
+
+static void
 outcall(Instruction *instr)
 {
 	int i;
@@ -3449,6 +3549,12 @@ isloadinstr(Instruction *instr)
 	return instr->op >= Opload && instr->op <= Oploadsb;
 }
 
+static int
+isextendinstr(Instruction *instr)
+{
+	return instr->op >= Opextsw && instr->op <= Opextub;
+}
+
 static void
 outinstruction(Instruction *instr)
 {
@@ -3466,6 +3572,11 @@ outinstruction(Instruction *instr)
 
 	if (isloadinstr(instr)) {
 		outload(instr);
+		return;
+	}
+
+	if (isextendinstr(instr)) {
+		outextend(instr);
 		return;
 	}
 

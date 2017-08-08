@@ -528,6 +528,12 @@ getmaxval(CTy *l)
         return 0;
 }
 
+int
+issignedtype(CTy *t)
+{
+	return t->t == CPRIME && t->Prim.issigned;
+}
+
 CTy *cvoid    = &(CTy){ .t = CVOID, .incomplete = 1};
 CTy *cchar    = &(CTy){ .t = CPRIM, .size = 1, .align = 1, .Prim = {.type = PRIMCHAR, .issigned = 1}};
 CTy *cshort   = &(CTy){ .t = CPRIM, .size = 2, .align = 2, .Prim = {.type = PRIMSHORT, .issigned = 1}};
