@@ -3428,6 +3428,7 @@ outirval(IRVal *val)
 static void
 outterminator(Terminator *term)
 {
+	out("  ");
 	switch (term->op) {
 	case Opret:
 		out("ret ");
@@ -3453,6 +3454,7 @@ outalloca(Instruction *instr)
 	if (instr->op != Opalloca)
 		panic("internal error, not a valid alloca");
 
+	out("  ");
 	outirval(&instr->a);
 	out(" =l alloc16 ");
 	outirval(&instr->b);
@@ -3481,6 +3483,7 @@ outstore(Instruction *instr)
 		panic("unhandled store instruction");
 	}
 
+	out("  ");
 	out("%s ", opname);
 	outirval(&instr->a);
 	out(", ");
@@ -3513,6 +3516,7 @@ outload(Instruction *instr)
 		panic("unhandled load instruction");
 	}
 
+	out("  ");
 	outirval(&instr->a);
 	out(" =%s %s ", instr->a.irtype, opname);
 	outirval(&instr->b);
@@ -3538,6 +3542,7 @@ outextend(Instruction *instr)
 		panic("unhandled extend instruction");
 	}
 
+	out("  ");
 	outirval(&instr->a);
 	out(" =%s %s ", instr->a.irtype, opname);
 	outirval(&instr->b);
@@ -3549,6 +3554,7 @@ outcall(Instruction *instr)
 {
 	int i;
 
+	out("  ");
 	outirval(&instr->a);
 	out(" =%s call ", instr->a.irtype);
 	outirval(&instr->b);
@@ -3699,6 +3705,7 @@ outinstruction(Instruction *instr)
 		panic("unhandled instruction");
 	}
 
+	out("  ");
 	outirval(&instr->a);
 	out(" =%s %s ", instr->a.irtype, opname);
 	outirval(&instr->b);
@@ -3732,7 +3739,7 @@ outbb(BasicBlock *bb)
 	int i;
 
 	for (i = 0; i < bb->labels->len; i++) {
-		out("@%s\n", vecget(bb->labels, i));
+		out(" @%s\n", vecget(bb->labels, i));
 	}
 
 	for (i = 0; i < bb->ninstructions; i++) {
@@ -3742,7 +3749,7 @@ outbb(BasicBlock *bb)
 	if (bb->terminated) {
 		outterminator(&bb->terminator);
 	} else {
-		out("ret\n");
+		out("  ret\n");
 	}
 }
 
