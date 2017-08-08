@@ -1,0 +1,7 @@
+
+/*
+PATTERN: expected
+*/
+
+#define X(
+

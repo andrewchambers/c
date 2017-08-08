@@ -1,0 +1,7 @@
+/*
+PATTERN: expression
+*/
+
+#if
+#endif
+

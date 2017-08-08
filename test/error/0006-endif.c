@@ -1,0 +1,7 @@
+
+/*
+PATTERN: endif
+*/
+
+#endif
+

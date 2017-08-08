@@ -211,7 +211,7 @@ alloclocal(SrcPos *pos, CTy *ty)
 		errorposf(pos, "cannot alloc a local of incomplete type");
 
 	v = nextvreg("l");
-	bbappend(preludebb, (Instruction){.op=Opalloca, .a=v, .c=ty->size});
+	bbappend(preludebb, (Instruction){.op=Opalloca, .a=v, .b=(IRVal){.kind=IRConst, .irtype="l", .v=ty->size}});
 	return v;
 }
 
@@ -1157,7 +1157,7 @@ pif(void)
 static void
 pfor(void)
 {
-	Node   *n, *i, *c, *s;
+	Node   *i, *c, *s;
 	BasicBlock *condbb, *stepbb, *bodybb, *stopbb;
 	IRVal cond;
 
@@ -1659,7 +1659,6 @@ static void
 pswitch(void)
 {
 	int i;
-	SrcPos *p;
 	Node   *e;
 	Switch *sw;
 	Case   *cs1, *cs2;
@@ -1740,7 +1739,6 @@ pdefault(void)
 static void
 pcase(void)
 {
-	int i;
 	SrcPos *pos;
 	Const  *c;
 	Switch *sw;
@@ -2926,7 +2924,6 @@ compileident(Node *n)
 static IRVal
 compileaddr(Node *n)
 {
-	int sz;
 	int offset;
 	Sym *sym;
 	IRVal v, res;
@@ -2975,6 +2972,8 @@ compileaddr(Node *n)
 		outi("addq %%rcx, %%rax\n");
 		*/
 		break;
+	default:
+		;
 	}
 	errorposf(&n->pos, "expected an addressable value");
 }
