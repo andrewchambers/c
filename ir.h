@@ -18,7 +18,11 @@ typedef enum {
 	Oploadsh,
 	Oploadsb,
 	Oploaduh,
-	Oploadub
+	Oploadub,
+	Opstorel,
+	Opstorew,
+	Opstoreh,
+	Opstoreb
 } Opcode;
 
 typedef struct Instruction {

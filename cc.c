@@ -62,6 +62,7 @@ static IRVal  compileunop(Node *n);
 static IRVal  compileident(Node *n);
 static IRVal  compileaddr(Node *n);
 static IRVal  compileload(IRVal v, CTy *t);
+static void   compilestore(IRVal src, IRVal dest, CTy *t);
 
 
 
@@ -2765,3 +2766,32 @@ compileload(IRVal v, CTy *t)
 	panic("unimplemented load %d\n", t->t);
 }
 
+static void
+compilestore(IRVal src, IRVal dest, CTy *t)
+{
+	if (isitype(t) || isptr(t)) {
+		switch(t->size) {
+		case 8:
+			bbappend(currentbb, (Instruction){.op=Opstorel, .a=src, .b=dest});
+			break;
+		case 4:
+			bbappend(currentbb, (Instruction){.op=Opstorew, .a=src, .b=dest});
+			break;
+		case 2:
+			bbappend(currentbb, (Instruction){.op=Opstoreh, .a=src, .b=dest});
+			break;
+		case 1:
+			bbappend(currentbb, (Instruction){.op=Opstoreb, .a=src, .b=dest});
+			break;
+		default:
+			panic("internal error\n");
+		}
+		return;
+	}
+
+	if (isstruct(t)) {
+		panic("unimplemented struct store");
+		return;
+	}
+	errorf("unimplemented store\n");
+}

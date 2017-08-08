@@ -149,15 +149,94 @@ outalloca(Instruction *instr)
 }
 
 static void
+outstore(Instruction *instr)
+{
+	char *opname;
+
+	switch (instr->op) {
+	case Opstorel:
+		opname = "storel";
+		break;
+	case Opstorew:
+		opname = "storew";
+		break;
+	case Opstoreh:
+		opname = "storeh";
+		break;
+	case Opstoreb:
+		opname = "storeb";
+		break;
+	default:
+		panic("unhandled load instruction");
+	}
+
+	out("%s ", opname);
+	outirval(&instr->a);
+	out(", ");
+	outirval(&instr->b);
+	out("\n");
+}
+
+static void
+outload(Instruction *instr)
+{
+	char *opname;
+
+	switch (instr->op) {
+	case Opload:
+		opname = "load";
+		break;
+	case Oploadsh:
+		opname = "loadsh";
+		break;
+	case Oploadsb:
+		opname = "loadsb";
+		break;
+	case Oploaduh:
+		opname = "loaduh";
+		break;
+	case Oploadub:
+		opname = "loadub";
+		break;
+	default:
+		panic("unhandled load instruction");
+	}
+
+	outirval(&instr->a);
+	out(" =%s %s ", instr->a.irtype, opname);
+	outirval(&instr->b);
+	out("\n");
+}
+
+static int
+isstoreinstr(Instruction *instr)
+{
+	return instr->op >= Opstorel && instr->op <= Opstoreb;
+}
+
+static int
+isloadinstr(Instruction *instr)
+{
+	return instr->op >= Opload && instr->op <= Oploadsb;
+}
+
+static void
 outinstruction(Instruction *instr)
 {
 	char *opname;
-	int twoargs;
-
-	twoargs = 0;
 
 	if (instr->op == Opalloca) {
 		outalloca(instr);
+		return;
+	}
+
+	if (isstoreinstr(instr)) {
+		outstore(instr);
+		return;
+	}
+
+	if (isloadinstr(instr)) {
+		outload(instr);
 		return;
 	}
 
@@ -192,26 +271,6 @@ outinstruction(Instruction *instr)
 	case Opceqw:
 		opname = "ceqw";
 		break;
-	case Opload:
-		twoargs = 1;
-		opname = "load";
-		break;
-	case Oploadsh:
-		twoargs = 1;
-		opname = "loadsh";
-		break;
-	case Oploadsb:
-		twoargs = 1;
-		opname = "loadsb";
-		break;
-	case Oploaduh:
-		twoargs = 1;
-		opname = "loaduh";
-		break;
-	case Oploadub:
-		twoargs = 1;
-		opname = "loadub";
-		break;
 	default:
 		panic("unhandled instruction");
 	}
@@ -219,10 +278,8 @@ outinstruction(Instruction *instr)
 	outirval(&instr->a);
 	out(" =%s %s ", instr->a.irtype, opname);
 	outirval(&instr->b);
-	if (!twoargs) {
-		out(", ");
-		outirval(&instr->c);
-	}
+	out(", ");
+	outirval(&instr->c);
 	out("\n");
 }
 
@@ -334,7 +391,7 @@ mkbasicblock()
 	bb = xmalloc(sizeof(BasicBlock));
 	bb->labels = vec();
 	vecappend(bb->labels, newlabel());
-	bb->cap = 64;
+	bb->cap = 16;
 	bb->instructions = xmalloc(bb->cap * sizeof(Instruction));
 	bb->terminated = 0;
 	bb->ninstructions = 0;
