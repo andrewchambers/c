@@ -2993,8 +2993,7 @@ compileaddr(Node *n)
 		sym = n->Ident.sym;
 		switch (sym->k) {
 		case SYMGLOBAL:
-			// XXX
-			break;
+			return (IRVal){.kind=IRLabel, .irtype="l", .label=sym->Global.label};
 		case SYMLOCAL:
 			return sym->Local.addr;
 		default:
@@ -3276,6 +3275,9 @@ outirval(IRVal *val)
 		break;
 	case IRVReg:
 		out("%%v%d", val->v);
+		break;
+	case IRLabel:
+		out("$%s", val->label);
 		break;
 	default:
 		panic("unhandled irval");
