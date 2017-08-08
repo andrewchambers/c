@@ -64,6 +64,7 @@ static IRVal  compileexpr(Node *n);
 static IRVal  compilebinop(Node *n);
 static IRVal  compileunop(Node *n);
 static IRVal  compileidx(Node *n);
+static IRVal  compilesel(Node *n);
 static IRVal  compileident(Node *n);
 static IRVal  compileaddr(Node *n);
 static IRVal  compileload(IRVal v, CTy *t);
@@ -2777,10 +2778,9 @@ compileexpr(Node *n)
 		return compilebinop(n);
 	case NIDX:
 		return compileidx(n);
-	/*
 	case NSEL:
-		sel(n);
-		break;
+		return compilesel(n);
+	/*
 	case NCOND:
 		cond(n);
 		break;
@@ -2922,6 +2922,39 @@ compileidx(Node *n)
 }
 
 static IRVal
+compileseladdr(Node *n)
+{
+	CTy *t;
+	IRVal v1, v2;
+	int offset;
+
+	v1 = compileexpr(n->Sel.operand);
+	t = n->Sel.operand->type;
+	if(isptr(t))
+		offset = structoffsetfromname(t->Ptr.subty, n->Sel.name);
+	else if(isstruct(t))
+		offset = structoffsetfromname(t, n->Sel.name);
+	else
+		panic("internal error");
+	if(offset < 0)
+		panic("internal error");
+	if(offset == 0)
+		return v1;
+	v2 = nextvreg("l");
+	bbappend(currentbb, (Instruction){.op=Opadd, .a=v2, .b=v1, .c=(IRVal){.kind=IRConst, .irtype="l", .v=offset}});
+	return v2;
+}
+
+static IRVal
+compilesel(Node *n)
+{
+	IRVal addr;
+
+	addr = compileseladdr(n);
+	return compileload(addr, n->type);
+}
+
+static IRVal
 compileident(Node *n)
 {
 	Sym *sym;
@@ -2948,7 +2981,6 @@ compileaddr(Node *n)
 {
 	int offset;
 	Sym *sym;
-	IRVal v, res;
 
 	switch(n->t) {
 	case NUNOP:
@@ -2956,19 +2988,7 @@ compileaddr(Node *n)
 			return compileexpr(n->Unop.operand);
 		break;
 	case NSEL:
-		v = compileexpr(n->Sel.operand);
-		if (isptr(n->Sel.operand->type))
-			offset = structoffsetfromname(n->Sel.operand->type->Ptr.subty, n->Sel.name);
-		else if (isstruct(n->Sel.operand->type))
-			offset = structoffsetfromname(n->Sel.operand->type, n->Sel.name);
-		else
-			panic("internal error");
-		if (offset < 0)
-			panic("internal error");
-
-		res = nextvreg("l");
-		bbappend(currentbb, (Instruction){.op=Opadd, .a=res, .b=v, .c=(IRVal){.kind=IRConst, .irtype="l", .v=offset}});
-		return res;
+		return compileseladdr(n);
 	case NIDENT:
 		sym = n->Ident.sym;
 		switch (sym->k) {
