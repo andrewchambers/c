@@ -3109,33 +3109,34 @@ outitypedata(Node *prim)
 	if(c->p) {
 		switch(prim->type->size) {
 		case 8:
-			out(".quad %s + %d\n", c->p, c->v);
+			out("l %s + %d", c->p, c->v);
 			return;
 		case 4:
-			out(".long %s + %d\n", c->p, c->v);
+			out("w %s + %d", c->p, c->v);
 			return;
 		case 2:
-			out(".short %s + %d\n", c->p, c->v);
+			out("h %s + %d", c->p, c->v);
 			return;
 		case 1:
-			out(".byte %s + %d\n", c->p, c->v);
+			out("b %s + %d", c->p, c->v);
 			return;
 		default:
 			panic("unimplemented");
 		}
 	}
+
 	switch(prim->type->size) {
 	case 8:
-		out(".quad %d\n", c->v);
+		out("l %d", c->v);
 		return;
 	case 4:
-		out(".long %d\n", c->v);
+		out("w %d", c->v);
 		return;
 	case 2:
-		out(".short %d\n", c->v);
+		out("h %d", c->v);
 		return;
 	case 1:
-		out(".byte %d\n", c->v);
+		out("b %d", c->v);
 		return;
 	default:
 		panic("unimplemented");
@@ -3151,46 +3152,53 @@ outdata(Data *d)
 	char *l;
 	
 	if(!d->init) {
-		out(".comm %s, %d, %d\n", d->label, d->type->size, d->type->align);
+		out("data $%s = {z %d}", d->label, d->type->size);
 		return;
 	}
 	if(d->isglobal)
-		out(".globl %s\n", d->label);
-	out("%s:\n", d->label);
+		out("export ");
+	out("data $%s = ", d->label);
 	
 	if(ischararray(d->type))
 	if(d->init->t == NSTR) {
-		out(".string %s\n", d->init->Str.v);
+		out("%s\n", d->init->Str.v);
 		return;
 	}
 	
 	if(ischarptr(d->type))
 	if(d->init->t == NSTR) {
 		l = newdatalabel();
-		out(".quad %s\n", l);
-		out("%s:\n", l);
-		out(".string %s\n", d->init->Str.v);
+		out("{l $%s}\n", l);
+		out("data $%s = %s\n", l, d->init->Str.v);
 		return;
 	}
+
 	if(isitype(d->type) || isptr(d->type)) {
+		out("{");
 		outitypedata(d->init);
+		out("}\n");
 		return;
 	}
+
 	if(isarray(d->type) || isstruct(d->type)) {
 		if(d->init->t != NINIT)
 			errorposf(&d->init->pos, "array/struct expects a '{' style initializer");
 		offset = 0;
+		out("{");
 		for(i = 0; i < d->init->Init.inits->len ; i++) {
 			initmemb = vecget(d->init->Init.inits, i);
 			if(initmemb->offset != offset)
-				out(".fill %d, 1, 0\n", initmemb->offset - offset);
+				out("z %d, ", initmemb->offset - offset);
 			outitypedata(initmemb->n);
+			out(", ");
 			offset = initmemb->offset + initmemb->n->type->size;
 		}
 		if(offset < d->type->size)
-			out(".fill %d, 1, 0\n", d->type->size - offset);
+			out("z %d", d->type->size - offset);
+		out("}\n");
 		return;
 	}
+	
 	panic("internal error");
 }
 
