@@ -68,6 +68,7 @@ static IRVal  compilebinop(Node *n);
 static IRVal  compileunop(Node *n);
 static IRVal  compileidx(Node *n);
 static IRVal  compilesel(Node *n);
+static IRVal  compileincdec(Node *n);
 static IRVal  compileident(Node *n);
 static IRVal  compileaddr(Node *n);
 static IRVal  compileload(IRVal v, CTy *t);
@@ -2792,9 +2793,10 @@ compileexpr(Node *n)
 	case NPTRADD:
 		ptradd(n);
 		break;
+	*/
 	case NINCDEC:
-		incdec(n);
-		break;
+		return compileincdec(n);
+	/*
 	case NBUILTIN:
 		switch(n->Builtin.t) {
 		case BUILTIN_VASTART:
@@ -3091,6 +3093,39 @@ compilesel(Node *n)
 
 	addr = compileseladdr(n);
 	return compileload(addr, n->type);
+}
+
+static IRVal
+compileincdec(Node *n)
+{
+	IRVal addr;
+	IRVal val;
+	IRVal newval;
+	IRVal offset;
+
+        if(!isitype(n->type) && !isptr(n->type))
+                panic("unimplemented incdec");
+        
+	addr = compileaddr(n->Incdec.operand);
+	val = compileload(addr, n->type);
+	
+	offset = (IRVal){.kind=IRConst, .irtype=val.irtype, .v=1};
+
+	if(isptr(n->type))
+		offset.v = n->type->Ptr.subty->size;
+        
+	if(n->Incdec.op == TOKDEC)
+                offset.v = -offset.v;
+
+	newval = nextvreg(val.irtype);        
+	bbappend(currentbb, (Instruction){.op=Opadd, .a=newval, .b=val, .c=offset });
+
+	compilestore(newval, addr, n->type);
+
+	if(n->Incdec.post)
+		return val;
+	else
+		return newval;
 }
 
 static IRVal
