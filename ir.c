@@ -31,8 +31,8 @@ bbappend(BasicBlock *bb, Instruction ins)
 	if (bb->cap == bb->ninstructions) {
 		bb->cap += 64;
 		instrarray = xmalloc(bb->cap * sizeof(Instruction));
-		bb->instructions = instrarray;
 		memcpy(instrarray, bb->instructions, bb->ninstructions * sizeof(Instruction));
+		bb->instructions = instrarray;
 	}
 
 	bb->instructions[bb->ninstructions++] = ins;
