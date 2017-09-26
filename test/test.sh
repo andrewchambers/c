@@ -4,25 +4,25 @@ for t in test/execute/*.c
 do
 	echo -n "$t "
 	
-	if ! timeout 2s ./cc -I./test/execute/include $t > $t.ssa
+	if !  ./cc -I./test/execute/include $t > $t.ssa
 	then
 		echo "cc failed"
 		exit 1
 	fi
 	
-	if ! timeout 2s qbe $t.ssa > $t.s
+	if !  qbe $t.ssa > $t.s
 	then
 		echo "qbe failed"
 		exit 1
 	fi
 	
-	if ! timeout 2s cc -fno-pie -static $t.s -o $t.bin
+	if !  cc -fno-pie -static $t.s -o $t.bin
 	then
 		echo "assembling failed"
 		exit 1
 	fi
 	
-	if ! timeout 2s $t.bin 
+	if !  $t.bin 
 	then
 		echo "test returned non zero"
 		exit 1
@@ -35,7 +35,7 @@ for t in test/error/*.c
 do
 	echo -n "$t "
 	
-	if timeout 2s ./cc $t > /dev/null 2> $t.stderr
+	if  ./cc $t > /dev/null 2> $t.stderr
 	then
 		echo "fail cc returned zero"
 		exit 1

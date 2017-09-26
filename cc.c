@@ -2924,6 +2924,50 @@ compilecall(Node *n)
 }
 
 static IRVal
+compileshortcircuit(Node *n)
+{
+        BasicBlock *next, *t, *f, *end;
+	IRVal l, r, v;
+
+	next = mkbasicblock(newbblabel());
+        t = mkbasicblock(newbblabel());
+        f = mkbasicblock(newbblabel());
+        end = mkbasicblock(newbblabel());
+
+	v = nextvreg("l");
+
+        l = compileexpr(n->Binop.l);
+        if(n->Binop.op == TOKLAND) {
+		bbterminate(currentbb, (Terminator){.op=Opcond, .v=l, .label1=bbgetlabel(next), .label2=bbgetlabel(f)});
+        } else if(n->Binop.op == TOKLOR) {
+		bbterminate(currentbb, (Terminator){.op=Opcond, .v=l, .label1=bbgetlabel(t), .label2=bbgetlabel(next)});
+        } else {
+                panic("internal error");
+        }
+	
+	setcurbb(next);
+        r = compileexpr(n->Binop.r);
+
+        if(n->Binop.op == TOKLAND) {
+		bbterminate(currentbb, (Terminator){.op=Opcond, .v=r, .label1=bbgetlabel(t), .label2=bbgetlabel(f)});
+        } else if(n->Binop.op == TOKLOR) {
+		bbterminate(currentbb, (Terminator){.op=Opcond, .v=r, .label1=bbgetlabel(t), .label2=bbgetlabel(f)});
+        } else {
+                panic("internal error");
+        }
+
+	setcurbb(t);
+	bbappend(t, (Instruction){.op=Opcopy, .a=v, .b=(IRVal){.kind=IRConst,.irtype="l", .v=1}});
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(end)});
+	setcurbb(f);
+	bbappend(f, (Instruction){.op=Opcopy, .a=v, .b=(IRVal){.kind=IRConst,.irtype="l", .v=0}});
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(end)});
+
+	setcurbb(end);
+	return v;
+}
+
+static IRVal
 compilebinop(Node *n)
 {
 	int irop;
@@ -2933,9 +2977,7 @@ compilebinop(Node *n)
 		panic("compilebinop precondition failed");
 
 	if (n->Binop.op == TOKLAND || n->Binop.op == TOKLOR) {
-		panic("shortcircuit unimplemented");
-		// shortcircuit(n);
-		// return;
+		return compileshortcircuit(n);
 	}
 	l = compileexpr(n->Binop.l);
 	r = compileexpr(n->Binop.r);
@@ -3497,6 +3539,16 @@ outalloca(Instruction *instr)
 }
 
 static void
+outcopy(Instruction *instr)
+{
+	out("  ");
+	outirval(&instr->a);
+	out("=%s copy ", instr->a.irtype);
+	outirval(&instr->b);
+	out("\n");
+}
+
+static void
 outstore(Instruction *instr)
 {
 	char *opname;
@@ -3628,6 +3680,11 @@ outinstruction(Instruction *instr)
 
 	if (instr->op == Opalloca) {
 		outalloca(instr);
+		return;
+	}
+
+	if (instr->op == Opcopy) {
+		outcopy(instr);
 		return;
 	}
 

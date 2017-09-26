@@ -1,5 +1,5 @@
 cc = clang
-cflags = -std=c11 -Wall -pedantic -O3 -g
+cflags = -std=c11 -Wall -pedantic -O0 -g
 
 rule cc
   command = $cc $cflags -c -o $out $in

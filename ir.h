@@ -21,6 +21,7 @@ typedef enum {
 	Opjmp,
 	Opcall,
 	Opcond,
+	Opcopy,
 	Opadd,
 	Opsub,
 	Opmul,
