@@ -1632,6 +1632,7 @@ pcontinue(void)
 	if (!l)
 		errorposf(pos, "continue without parent statement");
 	expect(TOKCONTINUE);
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=l});
 	expect(';');
 }
 
@@ -1646,6 +1647,7 @@ pbreak(void)
 	if (!l)
 		errorposf(pos, "break without parent statement");
 	expect(TOKBREAK);
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=l});
 	expect(';');
 }
 
