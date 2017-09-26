@@ -3054,29 +3054,38 @@ compilebinop(Node *n)
 static IRVal
 compileunop(Node *n)
 {
-	IRVal v;
+	IRVal v1, v2;
+	int64 notconst;
 
 	if (n->t != NUNOP)
 		panic("compileunop precondition failed");
 
 	switch(n->Unop.op) {
 	case '*':
-		v = compileexpr(n->Unop.operand);
-		return compileload(v, n->type);
+		v1 = compileexpr(n->Unop.operand);
+		return compileload(v1, n->type);
 	case '&':
 		return compileaddr(n->Unop.operand);
 	case '~':
-		v = compileexpr(n->Unop.operand);
-		panic("unimplemented unop !");
-		break;
+		v1 = compileexpr(n->Unop.operand);
+		if(strcmp(v1.irtype, "l") == 0)
+			notconst = 0xffffffffffffffff;
+		else if(strcmp(v1.irtype, "w") == 0)
+			notconst = 0xffffffff;
+		else
+			panic("internal error");
+		v2 = nextvreg(v1.irtype);
+		bbappend(currentbb, (Instruction){.op=Opbxor, .a=v2, .b=v1, .c=(IRVal){.kind=IRConst, .irtype=v1.irtype, .v=notconst}});
+		return v2;
 	case '!':
-		v = compileexpr(n->Unop.operand);
+		v1 = compileexpr(n->Unop.operand);
 		panic("unimplemented unop !");
 		break;
 	case '-':
-		v = compileexpr(n->Unop.operand);
-		panic("unimplemented unop -");
-		break;
+		v1 = compileexpr(n->Unop.operand);
+		v2 = nextvreg(v1.irtype);
+		bbappend(currentbb, (Instruction){.op=Opsub, .a=v2, .b=(IRVal){.kind=IRConst, .irtype=v1.irtype, .v=0}, .c=v1});
+		return v2;
 	default:
 		errorf("unimplemented unop %d\n", n->Unop.op);
 	}
