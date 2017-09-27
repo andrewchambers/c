@@ -3052,6 +3052,35 @@ compilebinop(Node *n)
 }
 
 static IRVal
+compilelnot(Node *n)
+{
+	IRVal v, res;
+	BasicBlock *next, *t, *f, *end;
+	
+
+	next = mkbasicblock(newbblabel());
+        t = mkbasicblock(newbblabel());
+        f = mkbasicblock(newbblabel());
+        end = mkbasicblock(newbblabel());
+
+	v = compileexpr(n->Unop.operand);
+	res = nextvreg("l");
+
+	bbterminate(currentbb, (Terminator){.op=Opcond, .v=v, .label1=bbgetlabel(f), .label2=bbgetlabel(t)});
+
+	setcurbb(t);
+	bbappend(t, (Instruction){.op=Opcopy, .a=res, .b=(IRVal){.kind=IRConst,.irtype="l", .v=1}});
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(end)});
+	setcurbb(f);
+	bbappend(f, (Instruction){.op=Opcopy, .a=res, .b=(IRVal){.kind=IRConst,.irtype="l", .v=0}});
+	bbterminate(currentbb, (Terminator){.op=Opjmp, .label1=bbgetlabel(end)});
+
+	setcurbb(end);
+	return res;
+
+}
+
+static IRVal
 compileunop(Node *n)
 {
 	IRVal v1, v2;
@@ -3078,9 +3107,7 @@ compileunop(Node *n)
 		bbappend(currentbb, (Instruction){.op=Opbxor, .a=v2, .b=v1, .c=(IRVal){.kind=IRConst, .irtype=v1.irtype, .v=notconst}});
 		return v2;
 	case '!':
-		v1 = compileexpr(n->Unop.operand);
-		panic("unimplemented unop !");
-		break;
+		return compilelnot(n);
 	case '-':
 		v1 = compileexpr(n->Unop.operand);
 		v2 = nextvreg(v1.irtype);
