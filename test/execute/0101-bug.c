@@ -8,7 +8,7 @@ vecresize(Vec *v, int cap)
 	return;
 }
 
-int main()
+int main(void)
 {
 	return 0;
 }

@@ -1,6 +1,6 @@
 
 int
-main()
+main(void)
 {
 	struct S { struct S *p; int x; } s;
 	

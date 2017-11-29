@@ -1,7 +1,7 @@
 
 
 
-int main()
+int main(void)
 {
 	char * s;
 	

@@ -1,7 +1,7 @@
 int x = 0;
 
 int
-main()
+main(void)
 {
 	switch(x)
 		case 0:

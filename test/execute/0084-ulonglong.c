@@ -1,6 +1,6 @@
 
 int
-main()
+main(void)
 {
 	unsigned long long x;
 	

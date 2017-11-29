@@ -3,7 +3,7 @@
 #define SEMI ;
 
 int
-main()
+main(void)
 {
 	if(FOO(1, 2, A) != 6)
 		return 1 SEMI

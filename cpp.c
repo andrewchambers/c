@@ -483,8 +483,8 @@ static Vec *includedirs;
 static List *toks;
 static Map  *macros;
 
-static Tok *ppnoexpand();
-static int64 ifexpr();
+static Tok *ppnoexpand(void);
+static int64 ifexpr(void);
 
 static void
 pushlex(char *path)
@@ -500,6 +500,8 @@ pushlex(char *path)
 	l->pos.line = 1;
 	l->pos.col = 1;
 	l->nl = 1;
+	l->indirective = 0;
+	l->includestate = INCLUDEBEGIN;
 	l->f = fopen(path, "r");
 	if (!l->f)
 		errorf("error opening file %s\n", path);
@@ -508,7 +510,7 @@ pushlex(char *path)
 }
 
 static void
-poplex()
+poplex(void)
 {
 	nlexers--;
 	fclose(lexers[nlexers]->f);
@@ -543,7 +545,7 @@ findinclude(char *path, int issysinclude)
 }
 
 static void
-include()
+include(void)
 {
 	int  n;
 	Tok  *t;
@@ -589,7 +591,7 @@ lookupmacro(Tok *t)
 }
 
 static void
-define()
+define(void)
 {
 	Macro *m;
 	Tok   *n, *t;
@@ -634,7 +636,7 @@ define()
 }
 
 static void
-undef()
+undef(void)
 {
 	Tok *t;
 
@@ -648,38 +650,38 @@ undef()
 }
 
 static void
-pif()
+pif(void)
 {
 	ifexpr();
 	panic("unimplemented");
 }
 
 static void
-elseif()
+elseif(void)
 {
 	panic("unimplemented");
 }
 
 static void
-pelse()
+pelse(void)
 {
 	panic("unimplemented");
 }
 
 static void
-endif()
+endif(void)
 {
 	panic("unimplemented");
 }
 
 static int64
-ifexpr()
+ifexpr(void)
 {
 	return 0;
 }
 
 static void
-directive()
+directive(void)
 {
 	Tok  *t;
 	char *dir;
@@ -754,7 +756,7 @@ identkind(char *s) {
 }
 
 static Tok *
-ppnoexpand()
+ppnoexpand(void)
 {
 	Tok *t;
 
@@ -815,7 +817,7 @@ expandfunclike(SrcPos *pos, Macro *m, Vec *params, StrSet *hs)
 }
 
 Tok *
-pp()
+pp(void)
 {
 	int	i, depth;
 	Macro  *m;

@@ -1,5 +1,5 @@
 int
-main()
+main(void)
 {
 	start:
 		goto next;

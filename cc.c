@@ -9,8 +9,8 @@
 #include "ir.h"
 #include "cc.h"
 
-static char  *newbblabel();
-static char  *newdatalabel();
+static char  *newbblabel(void);
+static char  *newdatalabel(void);
 static CTy   *declspecs(int *);
 static CTy   *ptag(void);
 static CTy   *pstruct(int);
@@ -77,8 +77,8 @@ static IRVal  compilecast(Node *n);
 static void   compilestore(IRVal src, IRVal dest, CTy *t);
 static void   compilesym(Sym *sym);
 static void   outdata(Data *d);
-static void   outfuncstart();
-static void   outfuncend();
+static void   outfuncstart(void);
+static void   outfuncend(void);
 
 
 static Tok *tok;
@@ -164,7 +164,7 @@ lookupgotolabel(char *name)
 }
 
 static char *
-newbblabel()
+newbblabel(void)
 {
 	char *s;
 	int   n;
@@ -181,7 +181,7 @@ newbblabel()
 }
 
 static char *
-newdatalabel()
+newdatalabel(void)
 {
 	char *s;
 	int   n;
@@ -265,7 +265,7 @@ popcontbrk(void)
 }
 
 static char *
-curcont()
+curcont(void)
 {
         if (contdepth == 0)
                 return 0;
@@ -273,7 +273,7 @@ curcont()
 }
 
 static char *
-curbrk()
+curbrk(void)
 {
         if (brkdepth == 0)
                 return 0;
@@ -526,7 +526,7 @@ params(CTy *fty)
 }
 
 static void
-decl()
+decl(void)
 {
 	Node   *init;
 	char   *name;
@@ -905,7 +905,7 @@ declaratortail(CTy *basety)
 }
 
 static CTy *
-ptag()
+ptag(void)
 {
 	SrcPos *pos;
 	char   *name;
@@ -1042,7 +1042,7 @@ pstruct(int isunion)
 }
 
 static CTy *
-penum()
+penum(void)
 {
 	SrcPos *p;
 	char   *name;
@@ -1085,7 +1085,7 @@ penum()
 
 
 static void
-funcbody()
+funcbody(void)
 {
 	NameTy *nt;
 	Sym    *sym;
@@ -1277,7 +1277,7 @@ dowhile(void)
 }
 
 static void
-pgoto()
+pgoto(void)
 {
 	Goto *go;
 
@@ -1345,7 +1345,7 @@ isdeclstart(Tok *t)
 }
 
 static void
-declorstmt()
+declorstmt(void)
 {
 	if (isdeclstart(tok))
 		decl();
@@ -2504,7 +2504,7 @@ primaryexpr(void)
 }
 
 static Node *
-vastart()
+vastart(void)
 {
 	Node *n, *valist, *param;
 	
@@ -2691,7 +2691,7 @@ foldexpr(Node *n)
 }
 
 void
-compile()
+compile(void)
 {
 	int i;
 	Sym *sym;
@@ -3845,7 +3845,7 @@ outinstruction(Instruction *instr)
 }
 
 static void
-outfuncstart()
+outfuncstart(void)
 {
 	int i;
 	NameTy *namety;
@@ -3884,7 +3884,7 @@ outbb(BasicBlock *bb)
 }
 
 static void
-outfuncend()
+outfuncend(void)
 {
 	int i;
 

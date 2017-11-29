@@ -26,7 +26,7 @@ int x = 0;
 
 #if X
 int
-main()
+main(void)
 {
 	return 0;
 }

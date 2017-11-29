@@ -1,18 +1,18 @@
 
 int
-zero()
+zero(void)
 {
 	return 0;
 }
 
 int
-one()
+one(void)
 {
 	return 1;
 }
 
 int
-main()
+main(void)
 {
 	int x;
 	int y;

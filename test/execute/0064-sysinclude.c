@@ -1,7 +1,7 @@
 #include <0064-sysinclude.h>
 
 int
-main()
+main(void)
 {
 	return x;
 }

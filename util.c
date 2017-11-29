@@ -86,7 +86,7 @@ xstrdup(char *s)
 
 	l = strlen(s);
 	r = xmalloc(l + 1);
-	strncpy(r, s, l);
+	memcpy(r, s, l + 1);
 	return r;
 }
 
@@ -107,11 +107,13 @@ xmalloc(int n)
 }
 
 List *
-list()
+list(void)
 {
 	List *l;
 
 	l = xmalloc(sizeof(List));
+	l->len = 0;
+	l->head = 0;
 	return l;
 }
 
@@ -191,7 +193,7 @@ listpopfront(List *l)
 }
 
 Vec *
-vec()
+vec(void)
 {
 	Vec *v;
 
@@ -273,7 +275,7 @@ struct MapEnt {
 };
 
 Map *
-map()
+map(void)
 {
 	Map *m;
 

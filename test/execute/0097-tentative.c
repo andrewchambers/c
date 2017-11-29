@@ -3,16 +3,16 @@ int x;
 int x = 3;
 int x;
 
-int main();
+int main(void);
 
 void *
-foo()
+foo(void)
 {
 	return &main;
 }
 
 int
-main()
+main(void)
 {
 	if (x != 3)
 		return 0;

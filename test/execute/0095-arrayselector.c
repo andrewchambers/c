@@ -5,7 +5,7 @@
 int a[] = {5, [2] = 2, 3};
 
 int
-main()
+main(void)
 {
 	if (sizeof(a) != 4*sizeof(int))
 		return 1;

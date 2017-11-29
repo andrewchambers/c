@@ -1,12 +1,12 @@
 
 int
-f()
+f(void)
 {
 	return 100;
 }
 
 int
-main()
+main(void)
 {
 	if (f() > 1000)
 		return 1;

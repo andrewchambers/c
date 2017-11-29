@@ -4,7 +4,7 @@ typedef struct { int x; int y; } s;
 s v;
 
 int
-main()
+main(void)
 {
 	v.x = 1;
 	v.y = 2;

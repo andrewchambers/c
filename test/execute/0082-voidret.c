@@ -1,12 +1,12 @@
 
 void
-voidfn()
+voidfn(void)
 {
     return;
 }
 
 int
-main()
+main(void)
 {
     voidfn();
     return 0;

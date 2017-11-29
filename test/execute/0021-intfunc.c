@@ -6,7 +6,7 @@ foo(int a, int b)
 }
 
 int
-main()
+main(void)
 {
 	return foo(1, 3);
 }

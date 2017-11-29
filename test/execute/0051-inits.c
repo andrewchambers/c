@@ -17,7 +17,7 @@ struct S2 {
 struct S2 v = {1, 2, 3, {4, 5}};
 
 int
-main()
+main(void)
 {
 	if(v.a != 1)
 		return 1;

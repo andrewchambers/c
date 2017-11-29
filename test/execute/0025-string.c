@@ -2,7 +2,7 @@
 int strlen(char *);
 
 int
-main()
+main(void)
 {
 	char *p;
 	

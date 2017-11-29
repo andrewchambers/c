@@ -1,7 +1,7 @@
 
 
 int
-main()
+main(void)
 {
 	int x;
 	long long l;

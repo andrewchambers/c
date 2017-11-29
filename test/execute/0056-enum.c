@@ -6,7 +6,7 @@ enum E {
 };
 
 int
-main()
+main(void)
 {
 	enum E e;
 

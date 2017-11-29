@@ -1,5 +1,5 @@
 int
-main()
+main(void)
 {
 	int x;
 	if((sizeof (int) - 4))

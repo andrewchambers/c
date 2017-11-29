@@ -1,6 +1,6 @@
 
 int
-main()
+main(void)
 {
 	return (2 + 2) * 2 - 8;
 }

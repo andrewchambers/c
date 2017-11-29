@@ -13,7 +13,7 @@ typedef struct {
 } s;
 
 int
-main()
+main(void)
 {
 	s v;
 	

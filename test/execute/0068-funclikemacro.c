@@ -2,7 +2,7 @@
 
 
 int
-main()
+main(void)
 {
 	return ADD(1, 2) - 3;
 }

@@ -1,5 +1,5 @@
 
-int main()
+int main(void)
 {
 	int  count, n;
 	char *from, *to;

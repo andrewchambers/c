@@ -1,7 +1,7 @@
 
 
 int
-main()
+main(void)
 {
 
 	struct S { int x; int y; } s;

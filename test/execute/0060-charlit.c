@@ -1,6 +1,6 @@
 
 int
-main()
+main(void)
 {
 	if ('a' != 97)
 		return 1;

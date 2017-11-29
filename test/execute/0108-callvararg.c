@@ -3,7 +3,7 @@ int strcmp(const char *s1, const char *s2);
 int snprintf(char *str, int size, const char *format, ...);
 
 int
-main()
+main(void)
 {
 	char buf[128];
 	

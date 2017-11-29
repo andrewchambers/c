@@ -1,6 +1,6 @@
 
 int
-main()
+main(void)
 {
 	struct T { int x; };
 	{
