@@ -18,6 +18,7 @@ newtype(int type)
 
 	t = xmalloc(sizeof(CTy));
 	t->t = type;
+	t->incomplete = 0;
 	return t;
 }
 

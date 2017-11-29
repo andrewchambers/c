@@ -112,6 +112,8 @@ list()
 	List *l;
 
 	l = xmalloc(sizeof(List));
+	l->len = 0;
+	l->head = 0;
 	return l;
 }
 

@@ -500,6 +500,8 @@ pushlex(char *path)
 	l->pos.line = 1;
 	l->pos.col = 1;
 	l->nl = 1;
+	l->indirective = 0;
+	l->includestate = INCLUDEBEGIN;
 	l->f = fopen(path, "r");
 	if (!l->f)
 		errorf("error opening file %s\n", path);
