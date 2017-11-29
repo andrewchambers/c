@@ -86,7 +86,7 @@ xstrdup(char *s)
 
 	l = strlen(s);
 	r = xmalloc(l + 1);
-	strncpy(r, s, l);
+	memcpy(r, s, l + 1);
 	return r;
 }
 
