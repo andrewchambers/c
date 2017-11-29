@@ -7,7 +7,7 @@ FAIL
 #endif
 
 int
-main()
+main(void)
 {
 	return 0;
 }

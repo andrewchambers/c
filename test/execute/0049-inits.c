@@ -4,7 +4,7 @@ struct S {int a; int b;};
 struct S s = { .b = 2, .a = 1};
 
 int
-main()
+main(void)
 {
 	if(s.a != 1)
 		return 1;

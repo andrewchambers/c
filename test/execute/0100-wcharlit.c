@@ -1,6 +1,6 @@
 
 int
-main()
+main(void)
 {
 	return L'\0';
 }

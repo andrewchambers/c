@@ -5,7 +5,7 @@
 #define ZERO_1_VAR(A, ...) 0
 
 int
-main()
+main(void)
 {
 	if (ZERO_0())
 		return 1;

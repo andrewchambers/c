@@ -6,7 +6,7 @@ struct S {int a; int *p;};
 struct S s = { .p = &x, .a = 1};
 
 int
-main()
+main(void)
 {
 	if(s.a != 1)
 		return 1;

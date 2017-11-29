@@ -14,7 +14,7 @@
 #endif
 
 int
-main()
+main(void)
 {
 	return BAR;
 }

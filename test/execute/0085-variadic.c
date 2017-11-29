@@ -1,7 +1,7 @@
 #define CALL(FUN, ...) FUN(__VA_ARGS__)
 
 int
-none()
+none(void)
 {
 	return 0;
 }
@@ -40,7 +40,7 @@ three(int a, int b, int c)
 }
 
 int
-main()
+main(void)
 {
 	if (CALL(none))
 		return 1;

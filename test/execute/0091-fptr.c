@@ -1,31 +1,31 @@
 
 int
-zero()
+zero(void)
 {
 	return 0;
 }
 
 struct S
 {
-	int (*zerofunc)();
+	int (*zerofunc)(void);
 } s = { &zero };
 
 struct S *
-anon()
+anon(void)
 {
 	return &s;
 }
 
-typedef struct S * (*fty)();
+typedef struct S * (*fty)(void);
 
 fty
-go()
+go(void)
 {
 	return &anon;
 }
 
 int
-main()
+main(void)
 {
 	return go()()->zerofunc();
 }

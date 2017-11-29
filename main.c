@@ -9,7 +9,7 @@
 #include "cc.h"
 
 void
-usage()
+usage(void)
 {
 	puts("Usage: cc file.c");
 	exit(1);

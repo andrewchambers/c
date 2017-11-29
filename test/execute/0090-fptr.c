@@ -3,7 +3,7 @@ int (*fptr)() = 0;
 
 
 int
-main()
+main(void)
 {
 	if (fptr)
 		return 1;

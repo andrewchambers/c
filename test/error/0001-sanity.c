@@ -2,7 +2,7 @@
 PATTERN: undefined symbol FOO
 */
 
-int main()
+int main(void)
 {
 	return FOO;
 }

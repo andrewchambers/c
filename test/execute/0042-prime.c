@@ -1,6 +1,6 @@
 
 int
-main() {
+main(void) {
 	int n;
 	int t;
 	int c;

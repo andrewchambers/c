@@ -1,6 +1,6 @@
 
 int
-main()
+main(void)
 {
 	int x;
 	int *p;

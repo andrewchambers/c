@@ -107,7 +107,7 @@ xmalloc(int n)
 }
 
 List *
-list()
+list(void)
 {
 	List *l;
 
@@ -193,7 +193,7 @@ listpopfront(List *l)
 }
 
 Vec *
-vec()
+vec(void)
 {
 	Vec *v;
 
@@ -275,7 +275,7 @@ struct MapEnt {
 };
 
 Map *
-map()
+map(void)
 {
 	Map *m;
 

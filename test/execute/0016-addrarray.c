@@ -1,5 +1,5 @@
 int
-main()
+main(void)
 {
 	int arr[2];
 	int *p;

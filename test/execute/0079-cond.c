@@ -1,6 +1,6 @@
 
 int
-main()
+main(void)
 {
 	if(0 ? 1 : 0)
 		return 1;

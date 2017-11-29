@@ -2,7 +2,7 @@
 typedef int x;
 
 int
-main()
+main(void)
 {
 	x v;
 	v = 0;

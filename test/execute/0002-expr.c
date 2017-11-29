@@ -1,6 +1,6 @@
 
 int
-main()
+main(void)
 {
 	return 3-3;
 }

@@ -2,7 +2,7 @@
 int x, x = 3, x;
 
 int
-main()
+main(void)
 {
 	if (x != 3)
 		return 0;

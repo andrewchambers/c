@@ -9,7 +9,7 @@
 #define BAR(X, Y, ...) (X + Y + Z)
 
 int
-main()
+main(void)
 {
 	return 0;
 }

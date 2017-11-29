@@ -1,17 +1,17 @@
 
 struct S
 {
-	int	(*fptr)();
+	int	(*fptr)(void);
 };
 
 int
-foo()
+foo(void)
 {
 	return 0;
 }
 
 int
-main()
+main(void)
 {
 	struct S v;
 	

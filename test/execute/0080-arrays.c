@@ -40,7 +40,7 @@ foo(int x[100])
 }
 
 int
-main()
+main(void)
 {
 	int x[100];
 	x[0] = 1000;

@@ -44,7 +44,7 @@ go(int n, int x, int y)
 }
 
 int
-main()
+main(void)
 {
         t = calloc(64, sizeof(int));
         go(0, 0, 0);

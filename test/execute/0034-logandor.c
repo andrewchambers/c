@@ -2,14 +2,14 @@
 int g;
 
 int
-effect()
+effect(void)
 {
 	g = 1;
 	return 1;
 }
 
 int
-main()
+main(void)
 {
     int x;
     

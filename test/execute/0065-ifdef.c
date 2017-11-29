@@ -16,7 +16,7 @@ int x = 0;
 #endif
 
 int
-main()
+main(void)
 {
 	return x;
 }

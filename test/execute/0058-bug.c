@@ -1,6 +1,6 @@
 
 int
-main()
+main(void)
 {
 	char a[16], b[16];
 	

@@ -5,7 +5,7 @@ struct T {
 };
 
 int
-main()
+main(void)
 {
 	struct T v;
 	{ struct T { int z; }; }

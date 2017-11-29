@@ -2,7 +2,7 @@
 
 
 int
-main()
+main(void)
 {
 	union { int a; int b; } u;
 	u.a = 1;

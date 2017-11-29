@@ -8,7 +8,7 @@ X
 #endif
 
 int
-main()
+main(void)
 {
 	return x;
 }

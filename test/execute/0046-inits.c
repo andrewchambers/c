@@ -4,7 +4,7 @@ long y = 6;
 int *p = &x;
 
 int
-main()
+main(void)
 {
 	if (x != 5) 
 		return 1;

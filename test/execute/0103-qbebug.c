@@ -1,6 +1,6 @@
 
 int
-main()
+main(void)
 {
   int c;
   c = 0;

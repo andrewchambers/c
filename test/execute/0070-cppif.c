@@ -13,7 +13,7 @@ int x = 1;
 #endif
 #endif
 
-int main()
+int main(void)
 {
 	return x;
 }

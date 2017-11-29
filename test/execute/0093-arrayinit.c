@@ -7,7 +7,7 @@ typedef struct {
 S a[1] = {{1, {2, 3}}};
 
 int
-main()
+main(void)
 {
 	if (a[0].v != 1)
 		return 1;

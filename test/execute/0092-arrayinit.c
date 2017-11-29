@@ -2,7 +2,7 @@
 int a[3] = {0, 1, 2};
 
 int
-main()
+main(void)
 {
 	if (a[0] != 0)
 		return 1;

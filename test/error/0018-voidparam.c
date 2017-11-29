@@ -6,7 +6,7 @@ foo(void, int x)
 }
 
 int
-main()
+main(void)
 {
 	return foo();
 }
