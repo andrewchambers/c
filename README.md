@@ -59,7 +59,7 @@ Build musl libc.
 
 ## Status
 
-Pre stage 2. Self hosting with lots of missing edge cases. Though technically these
+Pre stage 2. Self hosting with lots of missing common cases. Though technically these
 bugs can be fixed with the compiler itself :). It uses it's own stubbed out headers
 and cannot correctly process system headers yet (Help wanted). 
 
