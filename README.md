@@ -1,4 +1,8 @@
 # A small, fast C compiler suite.
+
+NOTE - This project is not being actively developed. Please direct yourself to https://github.com/michaelforney/cc which
+is a spiritual successor which is much more complete.
+
 [![Join the chat at https://gitter.im/andrewchambers/c](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/andrewchambers/c?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 - Small.
@@ -66,8 +70,7 @@ and cannot correctly process system headers yet (Help wanted).
 
 ## Contributing
 
-Contributors welcome, preferrably discuss on gitter before starting something.
-Even contributing self contained test cases is useful.
+Project on hold. See https://github.com/michaelforney/cc for a new compiler project that is more complete.
 
 ### Code layout
 
