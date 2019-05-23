@@ -1,7 +1,7 @@
 # A small, fast C compiler suite.
 
 NOTE - This project is not being actively developed. Please direct yourself to https://github.com/michaelforney/cc which
-is a spiritual successor which is much more complete.
+is a successor which is more complete. I direct my own fixes to that project instead now.
 
 [![Join the chat at https://gitter.im/andrewchambers/c](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/andrewchambers/c?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
