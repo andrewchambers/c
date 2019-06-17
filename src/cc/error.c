@@ -1,7 +1,8 @@
 #include <u.h>
 #include <ds/ds.h>
 #include "cc.h"
-
+//second comments 
+//dasfdgfhgjhkj
 static void
 printpos(SrcPos *p)
 {
